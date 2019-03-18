@@ -2,13 +2,14 @@
 function dig()
   local limit = 10
   while turtle.detect() do
-    if attempts > limit then
-      error("failed to dig "..limit.." times when block is present")
+    if attempts > limit then -- If there is something there but cant dig it
+      return false
     end
     if not turtle.dig() then
       attempts = attempts + 1
     end
   end
+  return true
 end
 
 -- Dig the block above until there is nothing left.
@@ -16,12 +17,27 @@ function digUp()
   local limit = 10
   while turtle.detectUp() do
     if attempts > limit then
-      error("failed to dig up "..limit.." times when block is present")
+      return false
     end
     if not turtle.digUp() then
       attempts = attempts + 1
     end
   end
+  return true
+end
+
+-- Dig the block above until there is nothing left.
+function digDown()
+  local limit = 10
+  while turtle.detectDown() do
+    if attempts > limit then
+      return false
+    end
+    if not turtle.digDown() then
+      attempts = attempts + 1
+    end
+  end
+  return true
 end
 
 -- Mine a single 1x2 block infront of the turtle. If shouldReturn
@@ -29,13 +45,16 @@ end
 -- This function will consume 1 fuel when shouldReturn is false 
 -- and 2 fuel when it is true.
 function mineOnce()
-  if not shouldReturn then shouldReturn = false end
-  dig()
-  if not move.forward() then
-    print("error: unable to move forward after digging")
+  if not dig() then 
     return false
   end
-  digUp()
+  if not move.forward() then
+    return false
+  end
+  if not digUp() then
+    move.back() -- last restort to go back, try and keep it consistent
+    return false
+  end
   return true
 end
 
@@ -49,56 +68,66 @@ function mineLine(length, torch, tDistance)
   local distance = 0
   local lastTorch = 0
   local completed = true
-  -- Mine the line in front and place torches
   while distance < length do
     if mineOnce() then
       distance = distance + 1
       lastTorch = lastTorch + 1
     else
-      print("warn: unable to complete a full mine")
       break
     end
     if torch and lastTorch > tDistance then
-      print("info: placing torch")
-      move.back()
+      if not move.back() then
+        break
+      end
+      distance = distance - 1
       if placeTorch() then
         lastTorch = 0
-      else
-        print("warn: failed to place torch")
       end
-      move.forward()
+      if not move.forward() then
+        break
+      end
+      distance = distance + 1
     end
   end
-  move.back(distance)
-  return true
+  return distance
 end
 
--- Mine out a new strip mine starting position.
+-- Mine out a new strip mine starting position. Returns
+-- the actual distance travelled by the turtle.
 function newMine(sep)
   if not sep then sep = 3 end
   turtle.turnRight()
+  local distance = 0
   for i = 1, sep do
-    mineOnce()
+    if not mineOnce() then
+      break
+    end
+    distance = distance + 1
   end
   turtle.turnLeft()
+  return distance
 end
 
 -- Start stripmining multiple lines. 
 function stripMine(n, sep, length, torch, tDistance)
   if not n then n = 5 end
-  local xd = 0
+  local dx = 0
   for i = 1, n do
-    newMine(sep)
-    xd = xd + sep
-    mineLine(length, torch, tDistance)
-    move.move(-xd, 0) -- Go back to chest
+    local actualSep = newMine(sep)
+    dx = dx + actualSep
+    if actualSep ~= sep then
+      break
+    end
+    local dy = mineLine(length, torch, tDistance)
+    move.back(dy)
+    move.left(dx) -- Go back to chest
     turtle.turnLeft()
     local torchSlots = inventory.find("minecraft:torch")
     inventory.empty(torchSlots) -- blacklisted from empty
     turtle.turnRight()
-    move.move(xd, 0)
+    move.right(dx)
   end
-  move(-xd, 0) -- Go back to chest
+  move.left(dx)
 end
 
 -- Returns the fuel level required to complete a full mineLine.

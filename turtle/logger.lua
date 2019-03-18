@@ -46,14 +46,15 @@ end
 function fellTree()
   local dh = 0
   for i = 1, h do
-    turtle.dig()
-    turtle.digUp()
-    move.up()
+    if not mine.dig() or not mine.digUp() then
+      break
+    end
+    if move.up() == 0 then
+      break
+    end
     dh = dh + 1
   end
-  for i = 1, dh do
-    move.down()
-  end
+  return move.down(dh) ~= dh
 end
 
 while true do
@@ -61,13 +62,13 @@ while true do
   for x = 1, w do
     if turtle.detect() and not isSapling() then
       print("tree detected")
-      fellTree()
-      print("planting sapling")
-      if not plantSapling() then
-        print("error: unable to plant sapling")
+      if not fellTree() then
+        print("unable to fell tree")
       end
-    else
-      plantSapling()
+    end
+    print("planting sapling")
+    if not plantSapling() then
+      print("error: unable to plant sapling")
     end
     move.right()
   end

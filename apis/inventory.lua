@@ -10,6 +10,7 @@ Global Module variables
 Min = 1
 Max = 16
 
+-- Item names used to search the inventory
 ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
 
@@ -35,6 +36,8 @@ function find(item)
   return found
 end
 
+-- Select the first slot that contains the item type
+-- specified.
 function select(item)
   local slots = find(item)
   if not slots then return false end
@@ -114,6 +117,7 @@ function empty(ignore)
   return droppedAll
 end
 
+-- Search for and place a torch from the turtles inventory
 function placeTorch()
   currentSlot = turtle.getSelectedSlot()
   -- Change to the torch slot

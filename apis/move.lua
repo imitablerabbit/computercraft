@@ -115,7 +115,8 @@ end
 
 -- Moves the turtle x and y. x is a left and right movement and y
 -- is a forward and back movement. Positive values are forward and
--- right. Negative values are back and left
+-- right. Negative values are back and left. This function will start
+-- by moving the turtle forward, then back, then right, then left.
 function move(x, y)
   if y > 0 then
     forward(y)
