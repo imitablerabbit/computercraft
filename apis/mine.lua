@@ -83,7 +83,7 @@ function mineLine(length, torch, tDistance)
         break
       end
       distance = distance - 1
-      if placeTorch() then
+      if inventory.placeTorch() then
         lastTorch = 0
       end
       if not move.forward() then
