@@ -8,7 +8,7 @@ function foldFiles(fun, acc, folder)
   if not fx then return end -- nothing to do
   for i, f in pairs(fx) do
     if fs.isDir(f) then
-      fold(fun, acc, f)
+      foldFiles(fun, acc, f)
     else
       acc = fun(f, acc)
     end
@@ -27,7 +27,7 @@ function foldDirs(fun, acc, folder)
   if not fx then return end -- nothing to do
   for i, f in pairs(fx) do
     if fs.isDir(f) then
-      acc = foldFiles(fun, acc, f)
+      acc = foldDirs(fun, acc, f)
     end
   end
   return acc

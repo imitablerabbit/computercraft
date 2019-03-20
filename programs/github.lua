@@ -7,7 +7,7 @@ local files = {
     "apis/inventory.lua",
     "apis/mine.lua",
     "apis/move.lua",
-    "apis/registry",
+    "apis/registry.lua",
 
     "programs/register.lua",
     "programs/registrydisplay.lua",
@@ -22,7 +22,7 @@ local files = {
     "startup.lua"
 }
 
-local githubURL = "https://raw.github.com/imitablerabbit/computercraft/"
+local githubURL = "https://raw.github.com/imitablerabbit/computercraft/master/"
 
 -- Fetch a single raw file from github url
 function fetchFile(url, filepath)
