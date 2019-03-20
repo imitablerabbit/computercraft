@@ -14,9 +14,6 @@ Max = 16
 ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
 
--- Blacklist
-FuelBlacklist = {}
-
 --[[
 Inventory API
 --]]
@@ -65,13 +62,20 @@ end
 
 -- Refuel the turtle with all fuel found in the inventory.
 function refuelAll(blacklist)
-  if not blacklist then blacklist = {} end
+  if not blacklist then blacklist = FuelBlacklist end
   local s = turtle.getSelectedSlot()
   for slot = Min, Max do
     local skip = false
-    for i, ignoreSlot in pairs(blacklist) do
-      if ignoreSlot == slot then
-        skip = true
+    for i, b in pairs(blacklist) do
+      if type(b) == "string" then
+        local data = turtle.getItemDetail(slot)
+        if data and data.name == b then
+          skip = true
+        end
+      elseif type(b) == "number" then
+        if ignoreSlot == slot then
+          skip = true
+        end
       end
     end
     if not skip then
