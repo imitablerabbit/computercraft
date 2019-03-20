@@ -14,6 +14,9 @@ Max = 16
 ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
 
+-- Blacklist
+FuelBlacklist = {}
+
 --[[
 Inventory API
 --]]
@@ -82,10 +85,11 @@ end
 -- Sleeps until the user adds some fuel into the turtle
 -- and presses a button. The turtle will immediately
 -- refuel with all of the fuel placed inside it.
-function waitForFuel()
+function waitForFuel(blacklist)
   print("waiting for fuel...")
+  print("press any key when fuel has been given to the turtle")
   os.pullEvent("key")
-  refuelAll()
+  refuelAll(blacklist)
 end
 
 -- Completely empty the turtle inventory. If there is a

@@ -57,6 +57,11 @@ function fellTree()
   return move.down(dh) == dh
 end
 
+-- Dont use saplings as fuel
+inventory.FuelBlacklist = {
+  inventory.ItemSapling
+}
+
 while true do
   print("Starting...")
   for x = 1, w do
