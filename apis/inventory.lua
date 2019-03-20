@@ -14,6 +14,9 @@ Max = 16
 ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
 
+-- Blacklist of items when refueling
+FuelBlacklist = {}
+
 --[[
 Inventory API
 --]]
