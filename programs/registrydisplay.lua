@@ -7,7 +7,7 @@ Variables and command line args
 --]]
 
 local reg = registry:new()
-local file -- Use registry default if args not used
+local file = "registry_store.dat" -- Use registry default if args not used
 
 -- Parse command line arguments
 local args = {...}

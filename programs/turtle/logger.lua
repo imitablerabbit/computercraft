@@ -54,7 +54,7 @@ function fellTree()
     end
     dh = dh + 1
   end
-  return move.down(dh) ~= dh
+  return move.down(dh) == dh
 end
 
 while true do
@@ -64,11 +64,14 @@ while true do
       print("tree detected")
       if not fellTree() then
         print("unable to fell tree")
+        return
       end
     end
-    print("planting sapling")
-    if not plantSapling() then
-      print("error: unable to plant sapling")
+    if not turtle.detect() then
+      if not plantSapling() then
+        print("unable to plant sapling")
+        return
+      end
     end
     move.right()
   end

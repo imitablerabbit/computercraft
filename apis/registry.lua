@@ -22,7 +22,6 @@ end
 
 -- Read the registry records from a file.
 function Registry:loadFile(file)
-  if not file then file = registryFile end
   local h = fs.open(file, "r")
   local d = h.readAll()
   h.close()

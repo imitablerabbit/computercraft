@@ -1,6 +1,7 @@
 -- Dig the block in front until there is nothing left.
 function dig()
   local limit = 10
+  local attempts = 0
   while turtle.detect() do
     if attempts > limit then -- If there is something there but cant dig it
       return false
@@ -15,6 +16,7 @@ end
 -- Dig the block above until there is nothing left.
 function digUp()
   local limit = 10
+  local attempts = 0
   while turtle.detectUp() do
     if attempts > limit then
       return false
@@ -29,6 +31,7 @@ end
 -- Dig the block above until there is nothing left.
 function digDown()
   local limit = 10
+  local attempts = 0
   while turtle.detectDown() do
     if attempts > limit then
       return false

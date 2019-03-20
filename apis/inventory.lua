@@ -30,7 +30,7 @@ function find(item)
   for i = Min, Max do
     local data = turtle.getItemDetail(i)
     if data and data.name == item then
-      table.insert(found, data)
+      table.insert(found, i)
     end
   end
   return found

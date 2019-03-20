@@ -10,11 +10,28 @@ function foldFiles(fun, acc, folder)
   local wildcard = fs.combine(folder, "*")
   local fx = fs.find(wildcard)
   if not fx then return end -- nothing to do
-  for i, f in iparis(fx) do
+  for i, f in pairs(fx) do
     if fs.isDir(f) then
       foldFiles(fun, acc, f)
     else
       acc = fun(f, acc)
+    end
+  end
+  return acc
+end
+
+-- Fold over files recurse folders. Call fun on all the
+-- individual files.
+function foldDirs(fun, acc, folder)
+  if not fun then error("undefined fold fun") end
+  if not folder then error("undefined folder in fold") end
+  acc = fun(folder, acc)
+  local wildcard = fs.combine(folder, "*")
+  local fx = fs.find(wildcard)
+  if not fx then return end -- nothing to do
+  for i, f in pairs(fx) do
+    if fs.isDir(f) then
+      acc = foldFiles(fun, acc, f)
     end
   end
   return acc
@@ -33,5 +50,5 @@ local programDir = "/programs"
 local addPath = function(f, acc)
   return acc..":"..f
 end
-local newPath = foldFiles(addPath, path, programDir)
+local newPath = foldDirs(addPath, path, programDir)
 shell.setPath(newPath)
