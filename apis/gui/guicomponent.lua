@@ -8,17 +8,24 @@ local GUIComponent = {}
 
 function GUIComponent:new()
     local object = {
+        -- Parent component. This will be nil if there is no parent
+        parent = nil,
+        child = nil,
+
+        -- Terminal object that this component should interact with
+        term = nil,
+
+        -- UI used to paint this component. A repaint will trigger this
+        -- objects paint method
+        ui = nil,
+        
         -- Mouse listeners
         monitorClickListeners = {},
         mouseClickListeners = {},
 
-        -- Update Rate / per second
-        ups = 60,
-        upsSleep = 1/60,
-
         -- Position and size
         x = 0, y = 0,
-        w = 0, h = 0
+        w = 0, h = 0,
     }
     self.__index = GUIComponent
     setmetatable(object, self)
@@ -28,28 +35,35 @@ end
 -- Handle the update loop. This function is responsible for
 -- converting os mouse and key events into GUI events.
 function GUIComponent:update()
-    parallel.waitForAny(handleEvent, sleepRate)
+    -- do nothing
 end
 
-function GUIComponent:handleEvent()
-    local event = table.pack(os.pullEvent())
-    if not event then return end
-    if event[1] == "mouse_click" then
-        local button, x, y = event[2], event[3], event[4]
-        local e = guievents.GUIMouseClickEvent:new(button, x, y)
-        self:triggerMouseClickEvent(e)
-    elseif event[1] == "monitor_touch" then
-        local side, x, y = event[2], event[3], event[4]
-        local e = guievents.GUIMonitorTouchEvent:new(side, x, y)
-        self:triggerMonitorTouchEvent(e)
+-- Repaint will paint this component and propagate through all
+-- other children.
+function GUIComponent:repaint()
+    if self.ui then
+        self.ui:paint()
+    end
+    if self.child then
+        self.child:repaint()
     end
 end
 
-function GUIComponent:sleepRate()
-    sleep(self.upsSleep)
+-- Add a child component to this component.
+function GUIComponent:add(c)
+    self.child = c
+    c:treeInit(self)
 end
 
--- Add the mouse listeners
+-- treeInit is called whenever this component is added to
+-- parent object. The parent object is passed in as a parameter.
+function GUIComponent:treeInit(p)
+    c.parent = p
+
+    
+end
+
+-- Add the mouse listeners, propagate listeners down tree
 
 function GUIComponent:addMonitorTouchListener(l)
     table.insert(self.monitorTouchListeners, l)
@@ -69,13 +83,16 @@ function GUIComponent:triggerMonitorTouchEvent(e)
     for l in pairs(self.monitorTouchListeners) do
         l(e)
     end
+    if self.child then
+        self.child:triggerMonitorTouchEvent(e)
+    end
 end
 
 function GUIComponent:addMouseClickListener(l)
     table.insert(self.mouseClickListeners, l)
 end
 
-function GUIComponent:removeEventListeners(l)
+function GUIComponent:removeMouseClickListeners(l)
     for i, l2 in pairs(self.listeners) do
         if l == l2 then
             table.remove(self.listeners, i)
@@ -89,18 +106,25 @@ function GUIComponent:triggerMouseClickEvent(e)
     for l in pairs(self.mouseClickListeners) do
         l(e)
     end
+    if self.child then
+        self.child:triggerMouseClickEvent(e)
+    end
 end
 
--- Getters and setters
-
--- Set the minimum number of updates that should happen per second.
-function GUIComponent:setUPS(ups)
-    self.ups = ups
-    self.upsSleep = 1/ups
+-- Set the bounds of the object. There is no guarantee that these
+-- bounds will be respected. If a layout manager is used then these
+-- can and probably will be ignored.
+function GUIComponent:setPrefferedBounds(x, y, w, h)
+    self.x = x
+    self.y = y
+    self.w = w
+    self.h = h
 end
 
--- Set bounds of the container. This function should not allow
--- the bounds to be larger than the parent container.
-
--- Set the UI object. This object is responsible for painting
--- what this container looks like.
+-- Set the UI that is going to paint this component. The UI
+function GUIComponent:setUI(ui)
+    self.ui = ui
+    if ui then
+        ui.setComponent(self)
+    end
+end

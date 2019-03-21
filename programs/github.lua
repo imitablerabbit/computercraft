@@ -1,5 +1,5 @@
 --[[
-Pull all of the files from github using the http api    
+Pull all of the files from github using the http api.
 --]]
 
 local files = {
@@ -14,12 +14,13 @@ local files = {
     "programs/registrylistener.lua",
     "programs/remotecommand.lua",
     "programs/remotelistener.lua",
+    "programs/github.lua",
 
     "programs/turtle/logger.lua",
     "programs/turtle/mineline.lua",
     "programs/turtle/stripmine.lua",
 
-    "startup.lua"
+    "startup.lua",
 }
 
 local githubURL = "https://raw.github.com/imitablerabbit/computercraft/master/"
@@ -45,6 +46,7 @@ end
 
 for k, file in pairs(files) do
     url = githubURL .. file
+    print("fetching "..file)
     if not fetchFile(url, file) then
         print("Error: unable to fetch file: "..file)
     end

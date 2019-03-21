@@ -1,16 +1,16 @@
+-- Create the application object
 local app = guiapplication.GUIApplication:new()
 
--- Create root container to handle window object
-local w, h = term.getSize()
-local win = window.create(term.current(), 0, 0, w, h) -- TODO: maybe change to 1, 1
-local root = guiroot.GUIRootComponent:new(win)
+-- Create a root gui component. This is the base component used 
+-- in a similar way to JFrame with no decorations.
+local root = guirootcontainer.GUIRootContainer:new()
 
--- TODO: how does the button setup the mouse listeners when it
--- is being added to the parent? Maybe the parent has to call
--- a function on the button?
-local button = guibutton:GUIButton:new("hello")
+-- Create a new button with desired size and position.
+-- Position is relative to root component.
+local button = guibutton.GUIButton:new("hello")
+button:setPrefferedBounds(5, 5, 10, 20)
 
-root.add(button) -- This is responsible for setting up mouse?
-
-
-app.start()
+-- Add the button to the root container.
+root:add(button)
+app:setRootContainer(root)
+app:start()

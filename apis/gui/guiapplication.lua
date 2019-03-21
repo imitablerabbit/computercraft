@@ -10,12 +10,13 @@ function GUIApplication:new()
         -- The child container of the GUIApplication
         child = nil,
 
-        -- The monitor that the GUI application should be displayed on
-        monitor = nil,
-
         -- Whether or not the application should continue running
         running = false,
-        shouldRun = false
+        shouldRun = false,
+
+        -- Update Rate / per second
+        ups = 60,
+        upsSleep = 1/60,
     }
     self.__index = GUIApplication
     setmetatable(object, self)
@@ -26,8 +27,11 @@ end
 function GUIApplication:start()
     self.running = true
     self.shouldRun = true
+    if self.child then -- intial paint of component tree
+        self.child:repaint()
+    end
     while self.ShouldRun do
-        self.update()
+        self:update()
     end
 end
 
@@ -35,12 +39,43 @@ function GUIApplication:stop()
     self.shouldRun = false
 end
 
-function GUIApplucation:update()
+function GUIApplication:update()
     if self.child then
         self.child.update()
     end
+
+    function handleEvent()
+        local event = table.pack(os.pullEvent())
+        if not event then return end
+        if event[1] == "mouse_click" then
+            local button, x, y = event[2], event[3], event[4]
+            local e = guievents.GUIMouseClickEvent:new(button, x, y)
+            if self.child then
+                self.child:triggerMouseClickEvent(e)
+            end
+        elseif event[1] == "monitor_touch" then
+            local side, x, y = event[2], event[3], event[4]
+            local e = guievents.GUIMonitorTouchEvent:new(side, x, y)
+            if self.child then
+                self.child:triggerMonitorTouchEvent(e)
+            end
+        else
+            -- os.queueEvent(table.unpack(event)) -- add event back to queue
+        end
+    end
+    
+    function sleepRate() -- TODO: change this to a new stop event and add it to queue
+        sleep(self.upsSleep)
+    end
+
+    parallel.waitForAny(handleEvent, sleepRate)
 end
 
 function GUIApplication:setRootContainer(container)
     self.child = container
+end
+
+function GUIComponent:setUPS(ups)
+    self.ups = ups
+    self.upsSleep = 1/ups
 end
