@@ -1,10 +1,6 @@
 local GUIRootContainer = GUIComponent:new{}
 
-function GUIRootContainer:new(t)
-    t = t or term.current()
-    width, height = t:getSize()
-    w = window.create(t, self.x, self.y, width, height)
-
+function GUIRootContainer:new()
     local object = {
         term = w,
         w = width,
@@ -22,6 +18,3 @@ function GUIRootContainer:new(t)
     return object
 end
 
-function GUIRootContainer:setPrefferedBounds(x, y, w, h)
-    self.term:reposition(x, y, w, h)
-end
