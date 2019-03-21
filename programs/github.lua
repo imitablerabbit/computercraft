@@ -9,6 +9,17 @@ local files = {
     "apis/move.lua",
     "apis/registry.lua",
 
+    "apis/gui/guiapplication.lua",
+    "apis/gui/guicomponent.lua",
+    "apis/gui/guicomponentui.lua",
+    "apis/gui/guievent.lua",
+    "apis/gui/guimodel.lua",
+    "apis/gui/guirootcontainer.lua",
+    "apis/gui/button/guibutton.lua",
+    "apis/gui/button/guibuttonmodel.lua",
+    "apis/gui/button/guibuttonui.lua",
+    "apis/gui/examples/button.lua",
+
     "programs/register.lua",
     "programs/registrydisplay.lua",
     "programs/registrylistener.lua",
