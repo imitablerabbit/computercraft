@@ -6,14 +6,18 @@ and key listeners.
 
 local GUIComponent = {}
 
-function GUIComponent:new()
+function GUIComponent:new(t)
+    t = t or term.current()
+    width, height = t:getSize()
+    w = window.create(t, 0, 0, width, height)
+
     local object = {
         -- Parent component. This will be nil if there is no parent
         parent = nil,
         child = nil,
 
         -- Terminal object that this component should interact with
-        term = nil,
+        term = w,
 
         -- UI used to paint this component. A repaint will trigger this
         -- objects paint method
@@ -24,8 +28,9 @@ function GUIComponent:new()
         mouseClickListeners = {},
 
         -- Position and size
-        x = 0, y = 0,
-        w = 0, h = 0,
+        ax = 0, ay = 0, -- absolute position
+        x = 0, y = 0, -- relative position
+        w = 0, h = 0, -- relative dimensions
     }
     self.__index = GUIComponent
     setmetatable(object, self)
@@ -59,8 +64,9 @@ end
 -- parent object. The parent object is passed in as a parameter.
 function GUIComponent:treeInit(p)
     c.parent = p
-
-    
+    self.ax = p.ax + self.x
+    self.ay = p.ay + self.y
+    self.term = window.create(p.term, self.x, self.y, self.w, self.h)
 end
 
 -- Add the mouse listeners, propagate listeners down tree
@@ -114,11 +120,16 @@ end
 -- Set the bounds of the object. There is no guarantee that these
 -- bounds will be respected. If a layout manager is used then these
 -- can and probably will be ignored.
-function GUIComponent:setPrefferedBounds(x, y, w, h)
+function GUIComponent:setPreferredBounds(x, y, w, h)
     self.x = x
     self.y = y
     self.w = w
     self.h = h
+    if self.parent then
+        self.ax = self.parent.ax
+        self.ay = self.parent.ay
+    end
+    self.term.reposition(x, y, w, h)
 end
 
 -- Set the UI that is going to paint this component. The UI

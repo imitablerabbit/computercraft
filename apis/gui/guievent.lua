@@ -53,3 +53,19 @@ function GUIMonitorTouchEvent:new(side, x, y)
     setmetatable(object, self)
     return object
 end
+
+--[[
+GUIButtonClick is an event that is triggered whenever a
+button is clicked within its bounds.
+--]]
+
+local GUIButtonClickEvent = GUIEvent:new{}
+
+function GUIButtonClickEvent:new(x, y)
+    local object = GUIEvent:new("button_click")
+    object.x = x
+    object.y = y
+    self.__index = self
+    setmetatable(object, self)
+    return object
+end
