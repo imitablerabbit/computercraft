@@ -49,13 +49,13 @@ function GUIApplication:update()
         if not event then return end
         if event[1] == "mouse_click" then
             local button, x, y = event[2], event[3], event[4]
-            local e = guievents.GUIMouseClickEvent:new(button, x, y)
+            local e = guievent.GUIMouseClickEvent:new(button, x, y)
             if self.child then
                 self.child:triggerMouseClickEvent(e)
             end
         elseif event[1] == "monitor_touch" then
             local side, x, y = event[2], event[3], event[4]
-            local e = guievents.GUIMonitorTouchEvent:new(side, x, y)
+            local e = guievent.GUIMonitorTouchEvent:new(side, x, y)
             if self.child then
                 self.child:triggerMonitorTouchEvent(e)
             end

@@ -1,9 +1,9 @@
-local GUIButton = GUIComponent:new{}
+local GUIButton = guicomponent.GUIComponent:new()
 
 function GUIButton:new(text)
     local object = {
-        model = GUIButtonModel:new{},
-        ui = GUIButtonUI:new{model},
+        model = guibuttonmodel.GUIButtonModel:new(),
+        ui = guibuttonui.GUIButtonUI:new(self.term),
 
         buttonListeners = {},
 
@@ -22,7 +22,8 @@ function GUIButton:new(text)
 end
 
 function GUIButton:treeInit(p)
-    GUIComponent.treeInit(self, p)
+    guicomponent.GUIComponent.treeInit(self, p)
+    self.ui:setTerm(self.term)
 end
 
 function GUIButton:mouseClickHandler(e)

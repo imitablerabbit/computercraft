@@ -1,4 +1,4 @@
-local GUIRootContainer = GUIComponent:new{}
+local GUIRootContainer = guicomponent.GUIComponent:new()
 
 function GUIRootContainer:new()
     local object = {

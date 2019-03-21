@@ -1,7 +1,7 @@
-local GUIButtonUI = GUIComponentUI:new{}
+local GUIButtonUI = guicomponentui.GUIComponentUI:new()
 
 function GUIButtonUI:new(term)
-    local object = GUIComponentUI:new(term)
+    local object = guicomponentui.GUIComponentUI:new(term)
     self.__index = GUIComponent
     setmetatable(object, self)
     return object
