@@ -30,7 +30,7 @@ function GUIApplication:start()
     if self.child then -- intial paint of component tree
         self.child:repaint()
     end
-    while self.ShouldRun do
+    while self.shouldRun do
         self:update()
     end
 end
