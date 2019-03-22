@@ -9,10 +9,10 @@ end
 
 function GUIButtonUI:paint()
     guicomponentui.GUIComponentUI.paint(self) -- Call parent paint
-    if not self.term then
+    if not self.component then
         return
     end
-    if not self.component then
+    if not self.component.term then
         return
     end
     local w, h = term.getSize()

@@ -1,15 +1,12 @@
 --[[
 GUIComponentUI is used to render the components inside
-their bounds. The passed in term object should be used to
-paint the ui.
+their bounds.
 --]]
 
 GUIComponentUI = {}
 
-function GUIComponentUI:new(t)
-    t = t or term.current()
+function GUIComponentUI:new(component)
     local object = {
-        term = t,
         component = nil,
     }
     self.__index = self
@@ -18,21 +15,17 @@ function GUIComponentUI:new(t)
 end
 
 function GUIComponentUI:paint()
-    if not self.term then
-        return
-    end
     if not self.component then
         return
     end
+    if not self.component.term then
+        return
+    end
     
-    t = term.current()
-    term.redirect(self.term)
-    w, h = term.getSize()
+    term.redirect(self.component.term)
     term.clear()
-end
-
-function GUIComponentUI:setTerm(t)
-    self.term = t
+    w, h = term.getSize()
+    paintutils.drawFilledBox(1, 1, w, h, self.component.backgroundColor)
 end
 
 function GUIComponentUI:setComponent(c)

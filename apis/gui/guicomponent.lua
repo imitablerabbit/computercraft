@@ -18,10 +18,6 @@ function GUIComponent:new(t)
 
         -- Terminal object that this component should interact with
         term = w,
-
-        -- UI used to paint this component. A repaint will trigger this
-        -- objects paint method
-        ui = nil,
         
         -- Mouse listeners
         monitorClickListeners = {},
@@ -34,6 +30,7 @@ function GUIComponent:new(t)
     }
     self.__index = self
     setmetatable(object, self)
+    object.ui = guicomponentui.GUIComponentUI:new(object)
     return object
 end
 
@@ -130,6 +127,7 @@ function GUIComponent:setPreferredBounds(x, y, w, h)
         self.ay = self.parent.ay
     end
     self.term.reposition(x, y, w, h)
+    self:repaint()
 end
 
 -- Set the UI that is going to paint this component. The UI
@@ -138,4 +136,5 @@ function GUIComponent:setUI(ui)
     if ui then
         ui.setComponent(self)
     end
+    self:repaint()
 end

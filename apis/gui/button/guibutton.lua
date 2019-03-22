@@ -2,8 +2,7 @@ GUIButton = guicomponent.GUIComponent:new()
 
 function GUIButton:new(text)
     local object = {
-        model = guibuttonmodel.GUIButtonModel:new(),
-        ui = guibuttonui.GUIButtonUI:new(self.term),
+        model = guibuttonmodel.GUIButtonModel:new(), -- TODO: link model to ui and component.
 
         buttonListeners = {},
 
@@ -18,13 +17,12 @@ function GUIButton:new(text)
         object:mouseClickHandler(e)    
     end
     object:addMouseClickListener(l)
-    object.ui:setComponent(object)
+    object.ui = guibuttonui.GUIButtonUI:new(object)
     return object
 end
 
 function GUIButton:treeInit(p)
     guicomponent.GUIComponent.treeInit(self, p)
-    self.ui:setTerm(self.term)
 end
 
 function GUIButton:mouseClickHandler(e)
@@ -33,6 +31,9 @@ function GUIButton:mouseClickHandler(e)
     if e.x > self.ax and e.x < self.ax + self.w and
        e.y > self.ay and e.y < self.ay + self.h then
 
+        -- TODO: update the model here so the button looks
+        -- like it is being clicked.
+        self:repaint()
         local event = guievent.GUIButtonClickEvent:new(e.x, e.y)
         self:triggerButtonClickEvent(event)
     end
