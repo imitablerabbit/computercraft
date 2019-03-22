@@ -86,7 +86,7 @@ end
 function GUIComponent:triggerMonitorTouchEvent(e)
     if not e then error("missing GUIEvent") end
     if e.type ~= "monitor_touch" then error("incorrect event") end
-    for l in pairs(self.monitorTouchListeners) do
+    for i, l in pairs(self.monitorTouchListeners) do
         l(e)
     end
     if self.child then
@@ -109,7 +109,7 @@ end
 function GUIComponent:triggerMouseClickEvent(e)
     if not e then error("missing GUIEvent") end
     if e.type ~= "mouse_click" then error("incorrect event") end
-    for l in pairs(self.mouseClickListeners) do
+    for i, l in pairs(self.mouseClickListeners) do
         l(e)
     end
     if self.child then

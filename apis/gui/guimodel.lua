@@ -31,7 +31,7 @@ end
 function GUIModel:triggerEvent(e)
     if not e then error("missing GUIEvent") end
     if not e.type then error("missing event type") end
-    for l in pairs(self.listeners) do
+    for i, l in pairs(self.listeners) do
         l(e)
     end
 end

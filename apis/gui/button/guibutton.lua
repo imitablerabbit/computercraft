@@ -52,7 +52,7 @@ end
 function GUIButton:triggerButtonListener(e)
     if not e then error("missing GUIEvent") end
     if e.type ~= "button_click" then error("incorrect event") end
-    for l in pairs(self.buttonListeners) do
+    for i, l in pairs(self.buttonListeners) do
         l(e)
     end
     if self.child then -- There probably wont be a child
