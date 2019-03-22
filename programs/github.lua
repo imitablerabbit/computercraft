@@ -18,8 +18,8 @@ local files = {
     "apis/gui/button/guibutton.lua",
     "apis/gui/button/guibuttonmodel.lua",
     "apis/gui/button/guibuttonui.lua",
-    "apis/gui/examples/button.lua",
-
+    
+    "programs/gui/examples/button.lua",
     "programs/register.lua",
     "programs/registrydisplay.lua",
     "programs/registrylistener.lua",
