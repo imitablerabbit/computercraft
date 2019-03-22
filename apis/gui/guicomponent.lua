@@ -63,7 +63,7 @@ end
 -- treeInit is called whenever this component is added to
 -- parent object. The parent object is passed in as a parameter.
 function GUIComponent:treeInit(p)
-    c.parent = p
+    self.parent = p
     self.ax = p.ax + self.x
     self.ay = p.ay + self.y
     self.term = window.create(p.term, self.x, self.y, self.w, self.h)
