@@ -33,7 +33,7 @@ function GUIButton:mouseClickHandler(e)
        e.y > self.ay and e.y < self.ay + self.h then
 
         local event = guievent.GUIButtonClickEvent:new(e.x, e.y)
-        self.triggerButtonClickEvent(event)
+        self:triggerButtonClickEvent(event)
     end
 end
 
