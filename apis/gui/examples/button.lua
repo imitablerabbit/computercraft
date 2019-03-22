@@ -13,7 +13,7 @@ local onClick = function(e)
     print("Ya clicked the button ya goof")
     print("x: "..e.x..", y: "..e.y)
 end
-button:setButtonListener(onClick)
+button:addButtonListener(onClick)
 
 -- Add the button to the root container.
 root:add(button)

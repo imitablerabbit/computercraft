@@ -17,7 +17,7 @@ function GUIButton:new(text)
     local l = function(e)
         object:mouseClickHandler(e)    
     end
-    object:setMouseClickListener(l)
+    object:addMouseClickListener(l)
     return object
 end
 
