@@ -7,7 +7,7 @@ GUIComponentUI = {}
 
 function GUIComponentUI:new(component)
     local object = {
-        component = nil,
+        component = component,
     }
     self.__index = self
     setmetatable(object, self)
