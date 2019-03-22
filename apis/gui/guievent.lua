@@ -28,7 +28,7 @@ will also need to handle the GUIMonitorTouchEvent.
 GUIMouseClickEvent = GUIEvent:new{}
 
 function GUIMouseClickEvent:new(button, x, y)
-    local object = GUIEvent:new("button_click")
+    local object = GUIEvent:new("mouse_click")
     object.button = button
     object.x = x
     object.y = y
