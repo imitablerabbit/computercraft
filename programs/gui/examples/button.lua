@@ -8,7 +8,7 @@ local root = guirootcontainer.GUIRootContainer:new()
 -- Create a new button with desired size and position.
 -- Position is relative to root component.
 local button = guibutton.GUIButton:new("hello")
-button:setPreferredBounds(5, 5, 10, 20)
+button:setPreferredBounds(5, 5, 20, 10)
 local onClick = function(e)
     print("Ya clicked the button ya goof")
     print("x: "..e.x..", y: "..e.y)
