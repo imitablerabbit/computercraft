@@ -75,7 +75,7 @@ function GUIApplication:setRootContainer(container)
     self.child = container
 end
 
-function GUIComponent:setUPS(ups)
+function GUIApplication:setUPS(ups)
     self.ups = ups
     self.upsSleep = 1/ups
 end

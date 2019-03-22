@@ -1,4 +1,4 @@
-GUIButtonUI = guicomponentui.GUIComponent:new()
+GUIButtonUI = guicomponentui.GUIComponentUI:new()
 
 function GUIButtonUI:new(term)
     local object = guicomponentui.GUIComponentUI:new(term)
