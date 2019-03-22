@@ -4,7 +4,7 @@ of information needed for a GUIEvent. GUIEvents are passed to
 listener functions whenever an event they are observing happens.
 --]]
 
-local GUIEvent = {}
+GUIEvent = {}
 
 -- Constructor
 function GUIEvent:new(type)
@@ -25,7 +25,7 @@ is clicked inside the normal terminal. If a monitor is used then you
 will also need to handle the GUIMonitorTouchEvent.    
 --]]
 
-local GUIMouseClickEvent = GUIEvent:new{}
+GUIMouseClickEvent = GUIEvent:new{}
 
 function GUIMouseClickEvent:new(button, x, y)
     local object = GUIEvent:new("button_click")
@@ -42,7 +42,7 @@ GUIMonitorTouchEvent is an event that is triggered whenever a
 monitor is right clicked.
 --]]
 
-local GUIMonitorTouchEvent = GUIEvent:new{}
+GUIMonitorTouchEvent = GUIEvent:new{}
 
 function GUIMonitorTouchEvent:new(side, x, y)
     local object = GUIEvent:new("monitor_touch")
@@ -59,7 +59,7 @@ GUIButtonClick is an event that is triggered whenever a
 button is clicked within its bounds.
 --]]
 
-local GUIButtonClickEvent = GUIEvent:new{}
+GUIButtonClickEvent = GUIEvent:new{}
 
 function GUIButtonClickEvent:new(x, y)
     local object = GUIEvent:new("button_click")

@@ -1,4 +1,4 @@
-local GUIButton = guicomponent.GUIComponent:new()
+GUIButton = guicomponent.GUIComponent:new()
 
 function GUIButton:new(text)
     local object = {

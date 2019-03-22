@@ -4,7 +4,7 @@ their bounds. The passed in term object should be used to
 paint the ui.
 --]]
 
-local GUIComponentUI = {}
+GUIComponentUI = {}
 
 function GUIComponentUI:new(t)
     t = t or term.current()
@@ -14,7 +14,7 @@ function GUIComponentUI:new(t)
         x = 0, y = 0,
         w = 0, h = 0,
     }
-    self.__index = GUIComponent
+    self.__index = self
     setmetatable(object, self)
     return object
 end

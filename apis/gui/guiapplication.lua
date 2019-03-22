@@ -3,7 +3,7 @@ GUIApplication is the main root level object for creating a
 gui application.
 --]]
 
-local GUIApplication = {}
+GUIApplication = {}
 
 function GUIApplication:new()
     local object = {
@@ -18,7 +18,7 @@ function GUIApplication:new()
         ups = 60,
         upsSleep = 1/60,
     }
-    self.__index = GUIApplication
+    self.__index = self
     setmetatable(object, self)
     return object
 end

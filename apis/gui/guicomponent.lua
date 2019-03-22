@@ -4,7 +4,7 @@ for all GUI containers. This base class contains code for adding mouse
 and key listeners.
 --]]
 
-local GUIComponent = {}
+GUIComponent = {}
 
 function GUIComponent:new(t)
     t = t or term.current()
@@ -32,7 +32,7 @@ function GUIComponent:new(t)
         x = 0, y = 0, -- relative position
         w = 0, h = 0, -- relative dimensions
     }
-    self.__index = GUIComponent
+    self.__index = self
     setmetatable(object, self)
     return object
 end

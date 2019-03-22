@@ -3,14 +3,14 @@ GUIModel is a representation of a model used to store and
 handle the state of GUI objects. Models can have observers
 attached to them.    
 --]]
-local GUIModel = {}
+GUIModel = {}
 
 -- Constructor
 function GUIModel:new()
     local object = {
         listeners = {}
     }
-    self.__index = GUIModel
+    self.__index = self
     setmetatable(object, self)
     return object
 end
