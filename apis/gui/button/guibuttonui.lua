@@ -8,7 +8,7 @@ function GUIButtonUI:new(term, button)
 end
 
 function GUIButtonUI:paint()
-    GUIComponentUI.paint(self) -- Call parent paint
+    guicomponentui.GUIComponentUI.paint(self) -- Call parent paint
 
     -- Button background
     paintutils.drawFilledBox(2, 2, w-1, h-1, self.component.backgroundColor)
