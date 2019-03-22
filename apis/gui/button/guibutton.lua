@@ -33,7 +33,7 @@ function GUIButton:mouseClickHandler(e)
        e.y > self.ay and e.y < self.ay + self.h then
 
         local event = guievent.GUIButtonClickEvent:new(e.x, e.y)
-        self.triggerButtonPress(event)
+        self.triggerButtonClickEvent(event)
     end
 end
 
@@ -49,13 +49,13 @@ function GUIButton:removeButtonListener(l)
     end
 end
 
-function GUIButton:triggerButtonListener(e)
+function GUIButton:triggerButtonClickEvent(e)
     if not e then error("missing GUIEvent") end
     if e.type ~= "button_click" then error("incorrect event") end
     for i, l in pairs(self.buttonListeners) do
         l(e)
     end
     if self.child then -- There probably wont be a child
-        self.child:triggerButtonListener(e)
+        self.child:triggerButtonClickEvent(e)
     end
 end
