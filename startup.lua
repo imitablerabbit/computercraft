@@ -37,6 +37,19 @@ function foldDirs(fun, acc, folder)
   return acc
 end
 
+-- Temporary loading of GUI while it is still multiple api files.
+-- We should not have to do this when the gui api is all put in a single file 
+-- or have implicit requiring.
+os.loadAPI("apis/gui/guicomponent.lua")
+os.loadAPI("apis/gui/guicomponentui.lua")
+os.loadAPI("apis/gui/guievent.lua")
+os.loadAPI("apis/gui/guimodel.lua")
+os.loadAPI("apis/gui/guiapplication.lua")
+os.loadAPI("apis/gui/guirootcontainer.lua")
+os.loadAPI("apis/gui/button/guibutton.lua")
+os.loadAPI("apis/gui/button/guibuttonmodel.lua")
+os.loadAPI("apis/gui/button/guibuttonui.lua")
+
 -- Recursively load all files nested under the apis folder.
 local apiDir = "/apis"
 local loadAPIs = function(f, acc) 
