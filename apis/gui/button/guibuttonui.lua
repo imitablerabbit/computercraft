@@ -17,10 +17,10 @@ function GUIButtonUI:paint()
     w, h = term.getSize()
 
     -- Button background
-    paintutils.paintBox(1, 1, w, h, self.backgroundColor)
+    paintutils.drawBox(1, 1, w, h, self.backgroundColor)
 
     -- draw button border
-    paintutils.paintBox(2, 2, w-1, h-1, self.borderColor)
+    paintutils.drawBox(2, 2, w-1, h-1, self.borderColor)
 
     -- Write the text
     -- TODO: make this centered in the button
