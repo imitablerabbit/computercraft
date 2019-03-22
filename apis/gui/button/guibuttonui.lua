@@ -8,26 +8,19 @@ function GUIButtonUI:new(term, button)
 end
 
 function GUIButtonUI:paint()
-    if not self.term then
-        return
-    end
-    if not self.component then
-        return
-    end
-    
-    t = term.current()
-    term.redirect(self.term)
-    w, h = term.getSize()
+    GUIComponentUI.paint(self) -- Call parent paint
 
     -- Button background
-    paintutils.fillBox(2, 2, w-1, h-1, self.component.backgroundColor)
+    paintutils.drawFilledBox(2, 2, w-1, h-1, self.component.backgroundColor)
 
     -- draw button border
     paintutils.drawBox(1, 1, w, h, self.component.borderColor)
 
     -- Write the text
     -- TODO: make this centered in the button
-    term.setCursorPos(w/2, h/2)
+    local x = math.floor(w / 2) + 1
+    local y = math.floor(h / 2) + 1
+    term.setCursorPos(x, y)
     local tc = term.getTextColor()
     local bc = term.getBackgroundColor()
     term.setTextColor(self.component.textColor)

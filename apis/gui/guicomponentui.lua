@@ -18,7 +18,17 @@ function GUIComponentUI:new(t)
 end
 
 function GUIComponentUI:paint()
-
+    if not self.term then
+        return
+    end
+    if not self.component then
+        return
+    end
+    
+    t = term.current()
+    term.redirect(self.term)
+    w, h = term.getSize()
+    term.clear()
 end
 
 function GUIComponentUI:setTerm(t)
