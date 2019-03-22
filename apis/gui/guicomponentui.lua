@@ -11,8 +11,6 @@ function GUIComponentUI:new(t)
     local object = {
         term = t,
         component = nil,
-        x = 0, y = 0,
-        w = 0, h = 0,
     }
     self.__index = self
     setmetatable(object, self)

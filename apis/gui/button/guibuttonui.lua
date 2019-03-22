@@ -1,6 +1,6 @@
 GUIButtonUI = guicomponentui.GUIComponentUI:new()
 
-function GUIButtonUI:new(term)
+function GUIButtonUI:new(term, button)
     local object = guicomponentui.GUIComponentUI:new(term)
     self.__index = self
     setmetatable(object, self)
@@ -11,19 +11,24 @@ function GUIButtonUI:paint()
     if not self.term then
         return
     end
+    if not self.component then
+        return
+    end
     
     t = term.current()
     term.redirect(self.term)
     w, h = term.getSize()
 
     -- Button background
-    paintutils.drawBox(1, 1, w, h, self.backgroundColor)
+    paintutils.drawBox(2, 2, w-1, h-1, self.component.backgroundColor)
 
     -- draw button border
-    paintutils.drawBox(2, 2, w-1, h-1, self.borderColor)
+    paintutils.drawBox(1, 1, w, h, self.component.borderColor)
 
     -- Write the text
     -- TODO: make this centered in the button
+    term.setCursorPos(w/2, h/2)
+    term.blit(self.component.text, self.component.textColor, self.component.backgroundColor)
     
     -- Set the terminal object back to what it was
     term.redirect(t)
