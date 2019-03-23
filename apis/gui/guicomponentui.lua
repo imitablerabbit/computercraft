@@ -22,10 +22,11 @@ function GUIComponentUI:paint()
         return
     end
     
-    term.redirect(self.component.term)
+    local c = term.redirect(self.component.term)
     term.clear()
     w, h = term.getSize()
     paintutils.drawFilledBox(1, 1, w + 1, h + 1, self.component.backgroundColor)
+    term.redirect(c)
 end
 
 function GUIComponentUI:setComponent(c)

@@ -15,6 +15,7 @@ function GUIButtonUI:paint()
     if not self.component.term then
         return
     end
+    local c = term.redirect(self.component.term)
     local w, h = term.getSize()
 
     -- Button background
@@ -35,4 +36,5 @@ function GUIButtonUI:paint()
     term.write(self.component.text)
     term.setTextColor(tc)
     term.setBackgroundColor(bc)
+    term.redirect(c)
 end

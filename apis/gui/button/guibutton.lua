@@ -7,8 +7,6 @@ function GUIButton:new(text)
         buttonListeners = {},
 
         text = text,
-        borderColor = colors.gray,
-        textColor = colors.white,
     }
     self.__index = self
     setmetatable(object, self)
