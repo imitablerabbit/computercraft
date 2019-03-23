@@ -1,11 +1,7 @@
 GUIRootContainer = guicomponent.GUIComponent:new()
 
-function GUIRootContainer:new()
-    local object = {
-        term = w,
-        w = width,
-        h = height,
-    }
+function GUIRootContainer:new(t)
+    local object = guicomponent.GUIComponent:new(t)
     self.__index = self
     setmetatable(object, self)
 

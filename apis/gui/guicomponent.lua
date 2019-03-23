@@ -9,7 +9,7 @@ GUIComponent = {}
 function GUIComponent:new(t)
     t = t or term.current()
     width, height = t:getSize()
-    w = window.create(t, 0, 0, width, height)
+    w = window.create(t, 1, 1, width, height)
 
     local object = {
         -- Parent component. This will be nil if there is no parent
@@ -24,9 +24,9 @@ function GUIComponent:new(t)
         mouseClickListeners = {},
 
         -- Position and size
-        ax = 0, ay = 0, -- absolute position
-        x = 0, y = 0, -- relative position
-        w = 0, h = 0, -- relative dimensions
+        ax = 1, ay = 1, -- absolute position
+        x = 1, y = 1, -- relative position
+        w = width, h = height, -- relative dimensions
 
         -- Default color settings
         backgroundColor = colors.lightGray,
