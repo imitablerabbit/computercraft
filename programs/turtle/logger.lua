@@ -78,6 +78,7 @@ while true do
         return
       end
     end
+    turtle.suck() -- suck up any loose saplings if possible
     move.right()
   end
   move.left(w)
