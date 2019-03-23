@@ -20,7 +20,7 @@ function GUIComponent:new(t)
         term = w,
         
         -- Mouse listeners
-        monitorClickListeners = {},
+        monitorTouchListeners = {},
         mouseClickListeners = {},
 
         -- Position and size
@@ -132,7 +132,7 @@ function GUIComponent:setPreferredBounds(x, y, w, h)
         self.ay = self.parent.ay
     end
     self.term.reposition(x, y, w, h)
-    self:repaint()
+    self:repaint() -- TODO: stop this from rendering the button when the application has not started
 end
 
 -- Set the UI that is going to paint this component. The UI
@@ -141,5 +141,5 @@ function GUIComponent:setUI(ui)
     if ui then
         ui.setComponent(self)
     end
-    self:repaint()
+    self:repaint() -- TODO: stop this from rendering the button when the application has not started
 end
