@@ -8,7 +8,6 @@ function GUIButton:new(text)
 
         text = text,
         borderColor = colors.gray,
-        backgroundColor = colors.lightGray,
         textColor = colors.white,
     }
     self.__index = self

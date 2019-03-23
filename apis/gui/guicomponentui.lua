@@ -25,7 +25,7 @@ function GUIComponentUI:paint()
     term.redirect(self.component.term)
     term.clear()
     w, h = term.getSize()
-    paintutils.drawFilledBox(1, 1, w, h, self.component.backgroundColor)
+    paintutils.drawFilledBox(1, 1, w + 1, h + 1, self.component.backgroundColor)
 end
 
 function GUIComponentUI:setComponent(c)

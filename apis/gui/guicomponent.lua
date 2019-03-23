@@ -27,6 +27,11 @@ function GUIComponent:new(t)
         ax = 0, ay = 0, -- absolute position
         x = 0, y = 0, -- relative position
         w = 0, h = 0, -- relative dimensions
+
+        -- Default color settings
+        backgroundColor = colors.lightGray,
+        borderColor = colors.gray,
+        textColor = colors.white,
     }
     self.__index = self
     setmetatable(object, self)
