@@ -20,4 +20,3 @@ button:addButtonListener(onClick)
 root:add(button)
 app:setRootContainer(root)
 app:start()
-

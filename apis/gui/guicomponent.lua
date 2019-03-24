@@ -73,8 +73,8 @@ end
 -- parent object. The parent object is passed in as a parameter.
 function GUIComponent:treeInit(p)
     self.parent = p
-    self.ax = p.ax + self.x
-    self.ay = p.ay + self.y
+    self.ax = p.ax + self.x - 1
+    self.ay = p.ay + self.y - 1
     self.term = window.create(p.term, self.x, self.y, self.w, self.h)
 end
 
