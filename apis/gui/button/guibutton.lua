@@ -16,7 +16,7 @@ function GUIButton:new(text)
         object:mouseClickHandler(e)    
     end
     object:addMouseClickListener(l)
-    object.ui = guibuttonui.GUIButtonUI:new(object, self.model)
+    object.ui = guibuttonui.GUIButtonUI:new(object, object.model)
     return object
 end
 

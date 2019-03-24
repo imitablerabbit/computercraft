@@ -18,9 +18,9 @@ button:setPreferredBounds(5, 5, 20, 10)
 print("set button bounds")
 
 local onClick = function(e)
-    print("Ya clicked the button ya goof")
-    print("x: "..e.x..", y: "..e.y)
-    app:stop()
+    -- print("Ya clicked the button ya goof")
+    -- print("x: "..e.x..", y: "..e.y)
+    -- app:stop()
 end
 button:addButtonListener(onClick)
 print("added button listener")

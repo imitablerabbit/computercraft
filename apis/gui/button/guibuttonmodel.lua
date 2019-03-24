@@ -1,8 +1,9 @@
 GUIButtonModel = guimodel.GUIModel:new()
 
 function GUIButtonModel:new()
-    local object = GUIModel:new()
-    object.pressed = false
+    local object = {
+        pressed = false,
+    }
     self.__index = self
     setmetatable(object, self)
     return object
