@@ -79,3 +79,12 @@ function GUIButton:triggerButtonClickEvent(e)
         self.child:triggerButtonClickEvent(e)
     end
 end
+
+function GUIButton:setText(t)
+    self.text = t
+    self:repaint()
+end
+
+function GUIButton:getText()
+    return self.text
+end

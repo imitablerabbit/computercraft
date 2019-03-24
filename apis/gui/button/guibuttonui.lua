@@ -1,8 +1,7 @@
 GUIButtonUI = guicomponentui.GUIComponentUI:new()
 
-function GUIButtonUI:new(component, button)
-    local object = guicomponentui.GUIComponentUI:new(component)
-    object.button = button
+function GUIButtonUI:new(component, model)
+    local object = guicomponentui.GUIComponentUI:new(component, model)
     self.__index = self
     setmetatable(object, self)
     return object
@@ -21,7 +20,7 @@ function GUIButtonUI:paint()
     -- If the button is pressed then we need to render a
     -- darker background
     local bc = self.component.backgroundColor
-    if self.button:isPressed() then
+    if self.model:isPressed() then
         bc = self.component.pressColor
     end
 

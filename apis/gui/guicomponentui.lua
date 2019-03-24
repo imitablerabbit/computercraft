@@ -5,9 +5,10 @@ their bounds.
 
 GUIComponentUI = {}
 
-function GUIComponentUI:new(component)
+function GUIComponentUI:new(component, model)
     local object = {
         component = component,
+        model = model,
     }
     self.__index = self
     setmetatable(object, self)
@@ -34,4 +35,8 @@ end
 
 function GUIComponentUI:setComponent(c)
     self.component = c
+end
+
+function GUIComponentUI:setModel(m)
+    self.model = m
 end
