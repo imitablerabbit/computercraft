@@ -95,8 +95,13 @@ end
 -- refuel with all of the fuel placed inside it.
 function waitForFuel(blacklist)
   print("waiting for fuel...")
-  print("press any key when fuel has been given to the turtle")
-  os.pullEvent("key")
+  print("press the space bar when fuel has been given to the turtle")
+  while true do
+    local event, key = os.pullEvent("key")
+    if key == keys.space then
+      break
+    end
+  end
   refuelAll(blacklist)
 end
 
