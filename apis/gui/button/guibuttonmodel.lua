@@ -10,7 +10,7 @@ function GUIButtonModel:new()
 end
 
 function GUIButtonModel:setPressed(p)
-    self.pressed = true
+    self.pressed = p
 end
 
 function GUIButtonModel:isPressed()

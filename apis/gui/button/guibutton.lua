@@ -32,6 +32,7 @@ function GUIButton:update()
         self.buttonTicksRemaining = self.buttonTicksRemaining - 1
         if self.buttonTicksRemaining == 0 then
             self.model:setPressed(false)
+            self:repaint()
         end
     end
 end
