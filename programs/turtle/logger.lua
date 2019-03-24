@@ -1,7 +1,8 @@
 --[[
 Tree cutting script. The turtle is placed at the far left
 of the farm. There should be no blocks to the left and right
-of the farm as these blocks will be dug.
+or below the turtle for the whole farm as these blocks will
+be dug. This script is meant to be run with lines of trees.
 --]]
 
 local w, h = 10, 6
@@ -10,17 +11,29 @@ local saplingName = inventory.ItemSapling
 
 local args = {...}
 
-if #args > 3 then
-  error("Usage: logger width height sleeptime")
+if #args > 4 then
+  usage()
+  return
 end
 if args[1] then
+  if args[1] == "help" or args[1] == "-help" or args[1] == "--help" then
+    usage()
+    return
+  end
   w = tonumber(args[1])
 end
 if args[2] then
   h = tonumber(args[2])
 end
 if args[3] then
-  sleepTime = tonumber(args[3])
+  saplingName = args[3]
+end
+if args[4] then
+  sleepTime = tonumber(args[4])
+end
+
+function usage()
+  print("Usage: logger [width] [height] [saplingName] [sleeptime]")
 end
 
 function isSapling()
@@ -61,11 +74,10 @@ function fellTree()
         end
       end
     end
-    dh = dh + 1
   end
 
   -- Try and move down
-  for i = 1, dh do
+  for i = 1, h do
     while true do
       if mine.digDown() then
         if move.up() == 1 then
