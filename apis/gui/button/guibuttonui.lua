@@ -2,6 +2,7 @@ GUIButtonUI = guicomponentui.GUIComponentUI:new()
 
 function GUIButtonUI:new(component, button)
     local object = guicomponentui.GUIComponentUI:new(component)
+    object.button = button
     self.__index = self
     setmetatable(object, self)
     return object
@@ -17,6 +18,19 @@ function GUIButtonUI:paint()
     end
     local c = term.redirect(self.component.term)
     local w, h = term.getSize()
+
+    -- If the button is pressed then we need to render a
+    -- darker background
+    local bc = self.component.backgroundColor
+    if self.button:isPressed() then
+        bc = colors.combine(bc, colors.gray)
+    end
+
+    -- Re-render background and border
+    paintutils.drawFilledBox(1, 1, w + 1, h + 1, self.component.backgroundColor)
+    if self.component.hasBorder then
+        paintutils.drawBox(1, 1, w, h, self.component.borderColor)
+    end
 
     -- Write the text
     local textOffset = math.floor(string.len(self.component.text) / 2)

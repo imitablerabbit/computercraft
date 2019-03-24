@@ -47,7 +47,9 @@ end
 -- Handle the update loop. This function is responsible for
 -- converting os mouse and key events into GUI events.
 function GUIComponent:update()
-    -- do nothing
+    if self.child then
+        self.child:update()
+    end
 end
 
 -- Repaint will paint this component and propagate through all

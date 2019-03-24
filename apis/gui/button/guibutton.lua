@@ -2,11 +2,13 @@ GUIButton = guicomponent.GUIComponent:new()
 
 function GUIButton:new(text)
     local object = {
-        model = guibuttonmodel.GUIButtonModel:new(), -- TODO: link model to ui and component.
-
         buttonListeners = {},
-
         text = text,
+        model = guibuttonmodel.GUIButtonModel:new(),
+        
+        -- Button press rendering controls
+        buttonTicks = 60,
+        buttonTicksRemaining = 0,
     }
     self.__index = self
     setmetatable(object, self)
@@ -14,12 +16,24 @@ function GUIButton:new(text)
         object:mouseClickHandler(e)    
     end
     object:addMouseClickListener(l)
-    object.ui = guibuttonui.GUIButtonUI:new(object)
+    object.ui = guibuttonui.GUIButtonUI:new(object, self.model)
     return object
 end
 
 function GUIButton:treeInit(p)
     guicomponent.GUIComponent.treeInit(self, p)
+end
+
+function GUIButton:update()
+    guicomponent.GUIComponent.update(self)
+
+    -- Update button mode based on tick count
+    if self.model:isPressed() then
+        self.buttonTicksRemaining = self.buttonTicksRemaining - 1
+        if self.buttonTicksRemaining == 0 then
+            self.model:setPressed(false)
+        end
+    end
 end
 
 function GUIButton:mouseClickHandler(e)
@@ -28,8 +42,13 @@ function GUIButton:mouseClickHandler(e)
     if e.x > self.ax and e.x < self.ax + self.w and
        e.y > self.ay and e.y < self.ay + self.h then
 
-        -- TODO: update the model here so the button looks
-        -- like it is being clicked.
+        -- Update the model and keep the button pressed for
+        -- min number of ticks.
+        if not self.model:isPressed() then
+            self.model:setPressed(true)
+            self.buttonTicksRemaining = self.buttonTicks
+        end
+
         self:repaint()
         local event = guievent.GUIButtonClickEvent:new(e.x, e.y)
         self:triggerButtonClickEvent(event)
