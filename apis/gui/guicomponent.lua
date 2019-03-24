@@ -33,10 +33,10 @@ function GUIComponent:new(t)
 
         -- Default color settings
         visible = true,
-        backgroundColor = colors.lightGray,
+        backgroundColor = colors.white,
         hasBorder = true,
         borderColor = colors.gray,
-        textColor = colors.white,
+        textColor = colors.black,
     }
     self.__index = self
     setmetatable(object, self)

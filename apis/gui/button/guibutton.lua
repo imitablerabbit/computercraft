@@ -9,6 +9,7 @@ function GUIButton:new(text)
         -- Button press rendering controls
         buttonTicks = 60,
         buttonTicksRemaining = 0,
+        pressColor = colors.lightGray,
     }
     self.__index = self
     setmetatable(object, self)

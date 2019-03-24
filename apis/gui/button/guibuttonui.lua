@@ -9,7 +9,6 @@ function GUIButtonUI:new(component, button)
 end
 
 function GUIButtonUI:paint()
-    guicomponentui.GUIComponentUI.paint(self) -- Call parent paint
     if not self.component then
         return
     end
@@ -23,11 +22,11 @@ function GUIButtonUI:paint()
     -- darker background
     local bc = self.component.backgroundColor
     if self.button:isPressed() then
-        bc = colors.combine(bc, colors.gray)
+        bc = self.component.pressColor
     end
 
     -- Re-render background and border
-    paintutils.drawFilledBox(1, 1, w + 1, h + 1, self.component.backgroundColor)
+    paintutils.drawFilledBox(1, 1, w + 1, h + 1, bc)
     if self.component.hasBorder then
         paintutils.drawBox(1, 1, w, h, self.component.borderColor)
     end
@@ -38,9 +37,9 @@ function GUIButtonUI:paint()
     local y = math.floor(h / 2) + 1
     term.setCursorPos(x, y)
     local tc = term.getTextColor()
-    local bc = term.getBackgroundColor()
+    local oldbc = term.getBackgroundColor()
     term.setTextColor(self.component.textColor)
-    term.setBackgroundColor(self.component.backgroundColor)
+    term.setBackgroundColor(bc)
     term.write(self.component.text)
     term.setTextColor(tc)
     term.setBackgroundColor(bc)
