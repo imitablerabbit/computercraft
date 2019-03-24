@@ -49,22 +49,24 @@ function GUIApplication:update()
     end
 
     function handleEvent()
-        local event = table.pack(os.pullEvent())
-        if not event then return end
-        if event[1] == "mouse_click" then
-            local button, x, y = event[2], event[3], event[4]
-            local e = guievent.GUIMouseClickEvent:new(button, x, y)
-            if self.child then
-                self.child:triggerMouseClickEvent(e)
+        while true do
+            local event = table.pack(os.pullEvent())
+            if not event then return end
+            if event[1] == "mouse_click" then
+                local button, x, y = event[2], event[3], event[4]
+                local e = guievent.GUIMouseClickEvent:new(button, x, y)
+                if self.child then
+                    self.child:triggerMouseClickEvent(e)
+                end
+            elseif event[1] == "monitor_touch" then
+                local side, x, y = event[2], event[3], event[4]
+                local e = guievent.GUIMonitorTouchEvent:new(side, x, y)
+                if self.child then
+                    self.child:triggerMonitorTouchEvent(e)
+                end
+            else
+                -- os.queueEvent(table.unpack(event)) -- add event back to queue
             end
-        elseif event[1] == "monitor_touch" then
-            local side, x, y = event[2], event[3], event[4]
-            local e = guievent.GUIMonitorTouchEvent:new(side, x, y)
-            if self.child then
-                self.child:triggerMonitorTouchEvent(e)
-            end
-        else
-            -- os.queueEvent(table.unpack(event)) -- add event back to queue
         end
     end
     
