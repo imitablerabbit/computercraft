@@ -131,6 +131,10 @@ while true do
           print("Unable to fell tree")
           return
         end
+        if not plantSapling() then -- replant sapling after cutting tree
+          print("Unable to plant sapling")
+          return
+        end
       end
     else
       if not plantSapling() then
