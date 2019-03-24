@@ -13,6 +13,7 @@ Max = 16
 -- Item names used to search the inventory
 ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
+ItemRubberSapling = "ic2:sapling"
 
 -- Blacklist of items when refueling
 FuelBlacklist = {}
