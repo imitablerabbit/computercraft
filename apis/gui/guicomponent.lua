@@ -30,6 +30,7 @@ function GUIComponent:new(t)
 
         -- Default color settings
         backgroundColor = colors.lightGray,
+        hasBorder = true,
         borderColor = colors.gray,
         textColor = colors.white,
     }

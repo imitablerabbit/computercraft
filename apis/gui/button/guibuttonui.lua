@@ -18,12 +18,6 @@ function GUIButtonUI:paint()
     local c = term.redirect(self.component.term)
     local w, h = term.getSize()
 
-    -- Button background
-    paintutils.drawFilledBox(2, 2, w-1, h-1, self.component.backgroundColor)
-
-    -- draw button border
-    paintutils.drawBox(1, 1, w, h, self.component.borderColor)
-
     -- Write the text
     local textOffset = math.floor(string.len(self.component.text) / 2)
     local x = math.floor(w / 2) + 1 - textOffset
