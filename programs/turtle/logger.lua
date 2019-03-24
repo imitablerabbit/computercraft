@@ -41,6 +41,7 @@ end
 function fellTree()
   local dh = 0
   for i = 1, h do
+
     -- Continually try and move up
     while true do
       if mine.dig() then
@@ -51,18 +52,21 @@ function fellTree()
         end
       end
     end
+
   end
 
   -- Try and move down
   for i = 1, h do
     while true do
       if mine.digDown() then
-        if move.up() == 1 then
+        if move.down() == 1 then
           break
         end
       end
     end
   end
+
+  return true
 end
 
 -- Leaves can grow around the turtle. We always need to
