@@ -75,6 +75,7 @@ function moveRight()
   turtle.turnRight()
   while true do
     turtle.dig() -- Remove the leaf block
+    turtle.suck() -- Pick up saplings
     if move.forward() == 1 then
       break
     end
@@ -86,6 +87,7 @@ function moveLeft()
   turtle.turnLeft()
   while true do
     turtle.dig() -- Remove the leaf block
+    turtle.suck() -- Pick up saplings
     if move.forward() == 1 then
       break
     end
@@ -142,7 +144,7 @@ while true do
         return
       end
     end
-    turtle.suck() -- suck up any loose saplings if possible
+    turtle.suck()
     moveRight()
   end
   for x = 1, w do
