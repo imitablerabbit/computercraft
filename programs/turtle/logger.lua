@@ -9,29 +9,6 @@ local w, h = 10, 6
 local sleepTime = 60
 local saplingName = inventory.ItemSapling
 
-local args = {...}
-
-if #args > 4 then
-  usage()
-  return
-end
-if args[1] then
-  if args[1] == "help" or args[1] == "-help" or args[1] == "--help" then
-    usage()
-    return
-  end
-  w = tonumber(args[1])
-end
-if args[2] then
-  h = tonumber(args[2])
-end
-if args[3] then
-  saplingName = args[3]
-end
-if args[4] then
-  sleepTime = tonumber(args[4])
-end
-
 function usage()
   print("Usage: logger [width] [height] [saplingName] [sleeptime]")
 end
@@ -110,6 +87,29 @@ function moveLeft()
     end
   end
   turtle.turnRight()
+end
+
+local args = {...}
+
+if #args > 4 then
+  usage()
+  return
+end
+if args[1] then
+  if args[1] == "help" or args[1] == "-help" or args[1] == "--help" then
+    usage()
+    return
+  end
+  w = tonumber(args[1])
+end
+if args[2] then
+  h = tonumber(args[2])
+end
+if args[3] then
+  saplingName = args[3]
+end
+if args[4] then
+  sleepTime = tonumber(args[4])
 end
 
 -- Dont use saplings as fuel
