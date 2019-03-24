@@ -45,7 +45,7 @@ end
 
 function GUIApplication:update()
     if self.child then
-        self.child.update()
+        self.child:update()
     end
 
     function handleEvent()
