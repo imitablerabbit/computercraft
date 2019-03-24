@@ -7,7 +7,7 @@ function GUIButton:new(text)
         model = guibuttonmodel.GUIButtonModel:new(),
         
         -- Button press rendering controls
-        buttonTicks = 15,
+        buttonTicks = 5,
         buttonTicksRemaining = 0,
         pressColor = colors.lightGray,
     }
