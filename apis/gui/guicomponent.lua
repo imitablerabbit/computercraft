@@ -28,7 +28,11 @@ function GUIComponent:new(t)
         x = 1, y = 1, -- relative position
         w = width, h = height, -- relative dimensions
 
+        -- Has the application been started
+        started = false,
+
         -- Default color settings
+        visible = true,
         backgroundColor = colors.lightGray,
         hasBorder = true,
         borderColor = colors.gray,
@@ -49,7 +53,7 @@ end
 -- Repaint will paint this component and propagate through all
 -- other children.
 function GUIComponent:repaint()
-    if self.ui then
+    if self.ui and self.visible and self.started then
         self.ui:paint()
     end
     if self.child then
@@ -143,4 +147,19 @@ function GUIComponent:setUI(ui)
         ui.setComponent(self)
     end
     self:repaint() -- TODO: stop this from rendering the button when the application has not started
+end
+
+function GUIComponent:setStarted(s)
+    self.started = s
+    if self.child then
+        self.child:setStarted(s)
+    end
+end
+
+function GUIComponent:setVisible(v)
+    self.visible = v
+    if self.child then
+        self.child:setVisible(v)
+    end
+    self:repaint()
 end

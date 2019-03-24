@@ -28,6 +28,7 @@ function GUIApplication:start()
     self.running = true
     self.shouldRun = true
     if self.child then -- intial paint of component tree
+        self.child:setStarted(true)
         self.child:repaint()
     end
     while self.shouldRun do
@@ -36,6 +37,9 @@ function GUIApplication:start()
 end
 
 function GUIApplication:stop()
+    if self.child then
+        self.child:setStarted(false)
+    end
     self.shouldRun = false
 end
 
