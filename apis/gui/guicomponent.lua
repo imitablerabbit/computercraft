@@ -14,7 +14,7 @@ function GUIComponent:new(t)
     local object = {
         -- Parent component. This will be nil if there is no parent
         parent = nil,
-        child = nil,
+        children = {},
 
         -- Terminal object that this component should interact with
         term = w,
@@ -47,8 +47,10 @@ end
 -- Handle the update loop. This function is responsible for
 -- converting os mouse and key events into GUI events.
 function GUIComponent:update()
-    if self.child then
-        self.child:update()
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:update()
+        end
     end
 end
 
@@ -58,15 +60,25 @@ function GUIComponent:repaint()
     if self.ui and self.visible and self.started then
         self.ui:paint()
     end
-    if self.child then
-        self.child:repaint()
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:repaint()
+        end
     end
 end
 
--- Add a child component to this component.
+-- Add a children component to this component.
 function GUIComponent:add(c)
-    self.child = c
+    table.insert(self.children, c)
     c:treeInit(self)
+end
+
+function GUIComponent:remove(c)
+    for i, c2 in pairs(self.children) do
+        if c == c2 then
+            table.remove(self.children, i)
+        end
+    end
 end
 
 -- treeInit is called whenever this component is added to
@@ -84,7 +96,7 @@ function GUIComponent:addMonitorTouchListener(l)
     table.insert(self.monitorTouchListeners, l)
 end
 
-function GUIComponent:removeMonitorTouchListeners(l)
+function GUIComponent:removeMouseClickListeners(l)
     for i, l2 in pairs(self.monitorTouchListeners) do
         if l == l2 then
             table.remove(self.monitorTouchListeners, i)
@@ -98,8 +110,10 @@ function GUIComponent:triggerMonitorTouchEvent(e)
     for i, l in pairs(self.monitorTouchListeners) do
         l(e)
     end
-    if self.child then
-        self.child:triggerMonitorTouchEvent(e)
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:triggerMonitorTouchEvent(e)
+        end
     end
 end
 
@@ -108,9 +122,9 @@ function GUIComponent:addMouseClickListener(l)
 end
 
 function GUIComponent:removeMouseClickListeners(l)
-    for i, l2 in pairs(self.listeners) do
+    for i, l2 in pairs(self.mouseClickListeners) do
         if l == l2 then
-            table.remove(self.listeners, i)
+            table.remove(self.mouseClickListeners, i)
         end
     end
 end
@@ -121,8 +135,10 @@ function GUIComponent:triggerMouseClickEvent(e)
     for i, l in pairs(self.mouseClickListeners) do
         l(e)
     end
-    if self.child then
-        self.child:triggerMouseClickEvent(e)
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:triggerMouseClickEvent(e)
+        end
     end
 end
 
@@ -139,7 +155,7 @@ function GUIComponent:setPreferredBounds(x, y, w, h)
         self.ay = self.parent.ay
     end
     self.term.reposition(x, y, w, h)
-    self:repaint() -- TODO: stop this from rendering the button when the application has not started
+    self:repaint()
 end
 
 -- Set the UI that is going to paint this component. The UI
@@ -148,20 +164,24 @@ function GUIComponent:setUI(ui)
     if ui then
         ui.setComponent(self)
     end
-    self:repaint() -- TODO: stop this from rendering the button when the application has not started
+    self:repaint()
 end
 
 function GUIComponent:setStarted(s)
     self.started = s
-    if self.child then
-        self.child:setStarted(s)
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:setStarted(s)
+        end
     end
 end
 
 function GUIComponent:setVisible(v)
     self.visible = v
-    if self.child then
-        self.child:setVisible(v)
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:setVisible(v)
+        end
     end
     self:repaint()
 end
