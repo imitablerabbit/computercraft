@@ -5,7 +5,7 @@ or below the turtle for the whole farm as these blocks will
 be dug. This script is meant to be run with lines of trees.
 --]]
 
-local w, h = 10, 6
+local w, h = 10, 7
 local sleepTime = 60
 local saplingName = inventory.ItemSapling
 
@@ -135,13 +135,11 @@ while true do
         end
         if not plantSapling() then -- replant sapling after cutting tree
           print("Unable to plant sapling")
-          return
         end
       end
     else
       if not plantSapling() then
         print("Unable to plant sapling")
-        return
       end
     end
     turtle.suck()

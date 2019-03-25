@@ -27,6 +27,7 @@ clickCount:setPreferredBounds((w / 2) + 1, 6, (w - 2) / 2, 3)
 clickCount:setBorder(false)
 
 -- Add and subtract buttons
+-- TODO: These are somehow getting 2 events triggered when the button is pressed.
 local count = 0
 local addClick = function(e)
     count = count + 1
