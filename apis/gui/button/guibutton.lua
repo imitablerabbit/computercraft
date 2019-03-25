@@ -41,8 +41,8 @@ end
 function GUIButton:mouseClickHandler(e)
     -- Check if the mouse click is within the bounds
     -- of the absolute button position.
-    if e.x > self.ax and e.x < self.ax + self.w and
-       e.y > self.ay and e.y < self.ay + self.h then
+    if e.x >= self.ax and e.x < self.ax + self.w and
+       e.y >= self.ay and e.y < self.ay + self.h then
 
         -- Update the model and keep the button pressed for
         -- min number of ticks.
