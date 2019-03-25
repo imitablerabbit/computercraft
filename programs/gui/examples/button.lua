@@ -17,19 +17,19 @@ title:setPreferredBounds(2, 3, w - 2, 3)
 local clickLabel = guitext.GUIText:new("Click Count:")
 clickLabel:setTextAlign("right")
 clickLabel:setTextVerticalAlign("middle")
-clickLabel:setPreferredBounds(2, 8, (w - 2) / 2, 3)
+clickLabel:setPreferredBounds(2, 6, (w - 2) / 2, 3)
 clickLabel:setBorder(false)
 
 local clickCount = guitext.GUIText:new("0")
 clickCount:setTextAlign("left")
 clickCount:setTextVerticalAlign("middle")
-clickCount:setPreferredBounds((w / 2) + 1, 8, (w - 2) / 2, 3)
+clickCount:setPreferredBounds((w / 2) + 1, 6, (w - 2) / 2, 3)
 clickCount:setBorder(false)
 
 -- Create a new button with desired size and position.
 -- Position is relative to root component.
 local button = guibutton.GUIButton:new("Click me!")
-button:setPreferredBounds(3, 15, w - 2, 9)
+button:setPreferredBounds(3, 10, w - 4, 7)
 local count = 0
 local onClick = function(e)
     count = count + 1
