@@ -22,12 +22,39 @@ function GUITextUI:paint()
     -- Should it be centered or at the start, e.g alignment
     -- Should the text be cut off and elipses used.
 
-    local y = math.floor(h / 2) + 1
-    local x = 1
-    if self.component.hasBorder then
-        x = 2
+    local y
+    if self.component.textVerticalAlign == "top" then
+        if self.component.hasBorder then
+            y = 2
+        else
+            y = 1
+        end
+    elseif self.component.textVerticalAlign == "middle" then
+        y = math.floor(h / 2) + 1
+    elseif self.component.textVerticalAlign == "bottom" then
+        if self.component.hasBorder then
+            y = h - 1
+        else
+            y = h
+        end
     end
-    term.setCursorPos(x, y) -- default at the start of window
+
+    local x
+    if self.component.textAlign == "left" then
+        if self.component.hasBorder then
+            x = 2
+        else
+            x = 1
+        end
+    elseif self.component.textAlign == "center" then
+        local textOffset = math.floor(string.len(self.component.text) / 2)
+        x = math.floor(w / 2) + 1 - textOffset 
+    elseif self.component.textAlign == "right" then
+        x = w - string.len(self.component.text)
+    end
+
+    -- Render the text with the proper colors
+    term.setCursorPos(x, y)
     local tc = term.getTextColor()
     local oldbc = term.getBackgroundColor()
     term.setTextColor(self.component.textColor)
