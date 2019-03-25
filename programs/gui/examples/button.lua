@@ -41,7 +41,7 @@ addButton:setPreferredBounds(3, 10, (w - 4) / 2, 7)
 addButton:addButtonListener(addClick)
 
 local subtractButton = guibutton.GUIButton:new("Subtract Click")
-subtractButton:setPreferredBounds((w - 4) / 2, 10, (w - 4) / 2, 7)
+subtractButton:setPreferredBounds((w - 4) / 2 + 4, 10, (w - 4) / 2, 7)
 subtractButton:addButtonListener(subtractClick)
 
 -- Add the button to the root container.
