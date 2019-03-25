@@ -26,21 +26,29 @@ clickCount:setTextVerticalAlign("middle")
 clickCount:setPreferredBounds((w / 2) + 1, 6, (w - 2) / 2, 3)
 clickCount:setBorder(false)
 
--- Create a new button with desired size and position.
--- Position is relative to root component.
-local button = guibutton.GUIButton:new("Click me!")
-button:setPreferredBounds(3, 10, w - 4, 7)
+-- Add and subtract buttons
 local count = 0
-local onClick = function(e)
+local addClick = function(e)
     count = count + 1
     clickCount:setText(tostring(count))
 end
-button:addButtonListener(onClick)
+local subtractClick = function(e)
+    count = count - 1
+    clickCount:setText(tostring(count))
+end
+local addButton = guibutton.GUIButton:new("Add Click")
+addButton:setPreferredBounds(3, 10, (w - 4) / 2, 7)
+addButton:addButtonListener(addClick)
+
+local subtractButton = guibutton.GUIButton:new("Subtract Click")
+subtractButton:setPreferredBounds((w - 4) / 2, 10, (w - 4) / 2, 7)
+subtractButton:addButtonListener(subtractClick)
 
 -- Add the button to the root container.
 root:add(title)
 root:add(clickLabel)
 root:add(clickCount)
-root:add(button)
+root:add(addButton)
+root:add(subtractButton)
 app:setRootContainer(root)
 app:start()
