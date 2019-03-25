@@ -22,7 +22,12 @@ function GUITextUI:paint()
     -- Should it be centered or at the start, e.g alignment
     -- Should the text be cut off and elipses used.
 
-    term.setCursorPos(1, 1) -- default at the start of window
+    local y = math.floor(h / 2) + 1
+    local x = 1
+    if self.component.hasBorder then
+        x = 2
+    end
+    term.setCursorPos(x, y) -- default at the start of window
     local tc = term.getTextColor()
     local oldbc = term.getBackgroundColor()
     term.setTextColor(self.component.textColor)
