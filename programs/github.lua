@@ -19,7 +19,6 @@ local files = {
     "apis/gui/button/guibuttonmodel.lua",
     "apis/gui/button/guibuttonui.lua",
     "apis/gui/text/guitext.lua",
-    "apis/gui/text/guitextmodel.lua",
     "apis/gui/text/guitextui.lua",
     
     "programs/gui/examples/button.lua",
