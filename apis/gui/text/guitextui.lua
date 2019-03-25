@@ -1,7 +1,7 @@
 GUITextUI = guicomponentui.GUIComponentUI:new()
 
-function GUITextUI:new(component, model)
-    local object = guicomponentui.GUIComponentUI:new(component, model)
+function GUITextUI:new(component)
+    local object = guicomponentui.GUIComponentUI:new(component, nil)
     self.__index = self
     setmetatable(object, self)
     return object
