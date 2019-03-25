@@ -185,3 +185,13 @@ function GUIComponent:setVisible(v)
     end
     self:repaint()
 end
+
+function GUIComponent:setBorder(b)
+    self.border = b
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:setBorder(b)
+        end
+    end
+    self:repaint()
+end
