@@ -9,20 +9,20 @@ local root = guirootcontainer.GUIRootContainer:new()
 
 -- Title text that should be centered
 local title = guitext.GUIText:new("Example Button Application")
-title:setAlign("center")
-title:setVerticalAlign("middle")
+title:setTextAlign("center")
+title:setTextVerticalAlign("middle")
 title:setBorder(false)
 title:setPreferredBounds(2, 3, w - 2, 3)
 
 local clickLabel = guitext.GUIText:new("Click Count:")
-clickLabel:setAlign("right")
-clickLabel:setVerticalAlign("middle")
+clickLabel:setTextAlign("right")
+clickLabel:setTextVerticalAlign("middle")
 clickLabel:setPreferredBounds(2, 8, (w - 2) / 2, 3)
 clickLabel:setBorder(false)
 
 local clickCount = guitext.GUIText:new("0")
-clickCount:setAlign("left")
-clickCount:setVerticalAlign("middle")
+clickCount:setTextAlign("left")
+clickCount:setTextVerticalAlign("middle")
 clickCount:setPreferredBounds((w / 2) + 1, 8, (w - 2) / 2, 3)
 clickCount:setBorder(false)
 
