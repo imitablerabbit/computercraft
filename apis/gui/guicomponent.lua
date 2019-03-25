@@ -187,7 +187,7 @@ function GUIComponent:setVisible(v)
 end
 
 function GUIComponent:setBorder(b)
-    self.border = b
+    self.hasBorder = b
     if self.children then
         for i, c in pairs(self.children) do
             c:setBorder(b)
