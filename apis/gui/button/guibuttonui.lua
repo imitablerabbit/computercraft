@@ -41,6 +41,6 @@ function GUIButtonUI:paint()
     term.setBackgroundColor(bc)
     term.write(self.component.text)
     term.setTextColor(tc)
-    term.setBackgroundColor(bc)
+    term.setBackgroundColor(oldbc)
     term.redirect(c)
 end
