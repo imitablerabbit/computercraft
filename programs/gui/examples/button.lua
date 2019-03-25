@@ -16,7 +16,11 @@ local onClick = function(e)
 end
 button:addButtonListener(onClick)
 
+local text = guitext.GUIText:new("Hello World")
+text:setPreferredBounds(3, 15, 15, 1)
+
 -- Add the button to the root container.
 root:add(button)
+root:add(text)
 app:setRootContainer(root)
 app:start()
