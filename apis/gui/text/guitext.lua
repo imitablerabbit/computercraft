@@ -1,14 +1,15 @@
-GUIText= guicomponent.GUIComponent:new()
+GUIText = {}
+GUIText.__index = GUIText
+setmetatable(GUIText, {__index = guicomponent.GUIComponent})
 
-function GUIText:new(text)
+function GUIText.new(text)
     local object = {
         text = text,
         textAlign = "left",
         textVerticalAlign = "middle",
     }
-    self.__index = self
-    setmetatable(object, self)
-    object.ui = guitextui.GUITextUI:new(object)
+    setmetatable(object, GUIText)
+    object.ui = guitextui.GUITextUI.new(object)
     return object
 end
 

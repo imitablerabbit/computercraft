@@ -5,8 +5,9 @@ and key listeners.
 --]]
 
 GUIComponent = {}
+GUIComponent.__index = GUIComponent
 
-function GUIComponent:new(t)
+function GUIComponent.new(t)
     t = t or term.current()
     width, height = t:getSize()
     w = window.create(t, 1, 1, width, height)
@@ -38,9 +39,8 @@ function GUIComponent:new(t)
         borderColor = colors.gray,
         textColor = colors.black,
     }
-    self.__index = self
-    setmetatable(object, self)
-    object.ui = guicomponentui.GUIComponentUI:new(object)
+    setmetatable(object, GUIComponent)
+    object.ui = guicomponentui.GUIComponentUI.new(object)
     return object
 end
 

@@ -1,11 +1,12 @@
-GUIButtonModel = guimodel.GUIModel:new()
+GUIButtonModel = {}
+GUIButtonModel.__index = GUIButtonModel
+setmetatable(GUIButtonModel, {__index = guimodel.GUIModel})
 
-function GUIButtonModel:new()
+function GUIButtonModel.new()
     local object = {
         pressed = false,
     }
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIButtonModel)
     return object
 end
 

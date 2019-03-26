@@ -1,9 +1,10 @@
-GUITextUI = guicomponentui.GUIComponentUI:new()
+GUITextUI = {}
+GUITextUI.__index = GUITextUI
+setmetatable(GUITextUI, {__index = guicomponentui.GUIComponentUI})
 
-function GUITextUI:new(component)
-    local object = guicomponentui.GUIComponentUI:new(component, nil)
-    self.__index = self
-    setmetatable(object, self)
+function GUITextUI.new(component)
+    local object = guicomponentui.GUIComponentUI.new(component, nil)
+    setmetatable(object, GUITextUI)
     return object
 end
 
