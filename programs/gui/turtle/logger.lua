@@ -140,8 +140,8 @@ saplingNameLabel:setBorder(false)
 
 -- Add the button to the root container.
 root:add(title)
-root:add(clickLabel)
-root:add(clickCount)
+root:add(saplingLabel)
+root:add(saplingNameLabel)
 -- root:add(addButton)
 -- root:add(subtractButton)
 app:setRootContainer(root)
