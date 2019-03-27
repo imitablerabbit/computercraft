@@ -3,9 +3,8 @@ GUIButtonModel.__index = GUIButtonModel
 setmetatable(GUIButtonModel, {__index = guimodel.GUIModel})
 
 function GUIButtonModel.new()
-    local object = {
-        pressed = false,
-    }
+    local object = guimodel.GUIModel.new()
+    object.pressed = false
     setmetatable(object, GUIButtonModel)
     return object
 end

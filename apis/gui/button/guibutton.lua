@@ -3,22 +3,19 @@ GUIButton.__index = GUIButton
 setmetatable(GUIButton, {__index = guicomponent.GUIComponent})
 
 function GUIButton.new(text)
-    local object = {
-        buttonListeners = {},
-        text = text,
-        model = guibuttonmodel.GUIButtonModel.new(),
-        
-        -- Button press rendering controls
-        buttonTicks = 5,
-        buttonTicksRemaining = 0,
-        pressColor = colors.lightGray,
-    }
+    local object = guicomponent.GUIComponent.new()
+    object.buttonListeners = {}
+    object.text = text
+    object.model = guibuttonmodel.GUIButtonModel.new()
+    object.buttonTicks = 5
+    object.buttonTicksRemaining = 0
+    object.pressColor = colors.lightGray
+    object.ui = guibuttonui.GUIButtonUI.new(object, object.model)
     setmetatable(object, GUIButton)
     local l = function(e)
         object:mouseClickHandler(e)
     end
     object:addMouseClickListener(l)
-    object.ui = guibuttonui.GUIButtonUI.new(object, object.model)
     return object
 end
 
