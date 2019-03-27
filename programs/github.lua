@@ -47,6 +47,7 @@ local files = {
     "apis/gui/text/guitextui.lua",
     
     "programs/gui/examples/button.lua",
+    "programs/gui/turtle/logger.lua",
     "programs/register.lua",
     "programs/registrydisplay.lua",
     "programs/registrylistener.lua",
