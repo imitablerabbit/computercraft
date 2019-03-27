@@ -1,6 +1,6 @@
 GUIRootContainerUI = {}
 GUIRootContainerUI.__index = GUIRootContainerUI
-setmetatable(GUIRootContainerUI, {__index = GUIComponentUI}
+setmetatable(GUIRootContainerUI, {__index = GUIComponentUI})
 
 function GUIRootContainerUI.new(component)
     local object = guicomponentui.GUIComponentUI.new(component, nil)
