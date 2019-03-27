@@ -32,10 +32,13 @@ function GUIComponent.new(t)
         -- Has the application been started
         started = false,
 
-        -- Default color settings
+        -- Is this element going to be shown and is it
+        -- going to handle any events
         visible = true,
+
+        -- Default color settings
         backgroundColor = colors.white,
-        hasBorder = true,
+        hasBorder = false,
         borderColor = colors.gray,
         textColor = colors.black,
     }
@@ -47,7 +50,7 @@ end
 -- Handle the update loop. This function is responsible for
 -- converting os mouse and key events into GUI events.
 function GUIComponent:update()
-    if self.children then
+    if self.children and self.visible then
         for i, c in pairs(self.children) do
             c:update()
         end
@@ -194,4 +197,28 @@ function GUIComponent:setBorder(b)
         end
     end
     self:repaint()
+end
+
+function GUIComponent:setBackground(c)
+    self.backgroundColor = c
+end
+
+function GUIComponent:getBackground()
+    return self.backgroundColor
+end
+
+function GUIComponent:setTextColor(c)
+    self.textColor = c
+end
+
+function GUIComponent:getTextColor()
+    return self.textColor
+end
+
+function GUIComponent:setBorderColor(c)
+    self.borderColor = c
+end
+
+function GUIComponent:getBorderColor()
+    return self.borderColor
 end
