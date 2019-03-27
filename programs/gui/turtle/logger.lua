@@ -104,18 +104,18 @@ local title = guitext.GUIText.new("Tree Logger")
 title:setTextAlign("center")
 title:setTextVerticalAlign("middle")
 title:setBorder(false)
-title:setPreferredBounds(2, 3, w - 2, 3)
+title:setPreferredBounds(2, 3, w - 2, 1)
 
 local saplingLabel = guitext.GUIText.new("Sapling:")
 saplingLabel:setTextAlign("left")
 saplingLabel:setTextVerticalAlign("middle")
-saplingLabel:setPreferredBounds(3, 6, 9, 3) 
+saplingLabel:setPreferredBounds(3, 5, 9, 1) 
 saplingLabel:setBorder(false)
 
 local saplingNameLabel = guitext.GUIText.new(saplingName)
 saplingNameLabel:setTextAlign("left")
 saplingNameLabel:setTextVerticalAlign("middle")
-saplingNameLabel:setPreferredBounds(3 + 9 + 1, 6, (w - 2) / 2, 3)
+saplingNameLabel:setPreferredBounds(3 + 9 + 1, 6, (w - 2) / 2, 1)
 saplingNameLabel:setBorder(false)
 
 local fuelLabel = guitext.GUIText.new("Fuel Level:")
@@ -127,28 +127,23 @@ fuelLabel:setBorder(false)
 local fuelLevelLabel = guitext.GUIText.new(turtle.getFuelLevel())
 fuelLevelLabel:setTextAlign("left")
 fuelLevelLabel:setTextVerticalAlign("middle")
-fuelLevelLabel:setPreferredBounds(3 + 9 + 1, 6, (w - 2) / 2, 3)
+fuelLevelLabel:setPreferredBounds(3 + 11 + 1, 7, (w - 2) / 2, 1)
 fuelLevelLabel:setBorder(false)
 
--- Add and subtract buttons
--- TODO: These are somehow getting 2 events triggered when the button is pressed.
--- local count = 0
--- local addClick = function(e)
---     count = count + 1
---     clickCount:setText(tostring(count))
--- end
--- local subtractClick = function(e)
---     count = count - 1
---     clickCount:setText(tostring(count))
--- end
--- local bw = math.floor((w - 4) / 2)
--- local addButton = guibutton.GUIButton.new("Add Click")
--- addButton:setPreferredBounds(3, 10, bw, 7)
--- addButton:addButtonListener(addClick)
+-- Select the sapling type
+local saplingSelectLabel = guitext.GUIText.new("Select Sapling:")
+saplingSelectLabel:setTextAlign("left")
+saplingSelectLabel:setTextVerticalAlign("middle")
+saplingSelectLabel:setPreferredBounds(3, 9, w, 1)
+saplingSelectLabel:setBorder(false)
 
--- local subtractButton = guibutton.GUIButton.new("Subtract Click")
--- subtractButton:setPreferredBounds(w - 1 - bw, 10, bw, 7)
--- subtractButton:addButtonListener(subtractClick)
+local minecraftButton = guibutton.GUIButton.new("Minecraft")
+minecraftButton:setPreferredBounds(3, 11, w-2, 3)
+minecraftButton:addButtonListener(addClick)
+
+local rubberButton = guibutton.GUIButton.new("Rubber")
+rubberButton:setPreferredBounds(3, 13, w-2, 3)
+rubberButton:addButtonListener(subtractClick)
 
 -- Add the button to the root container.
 root:add(title)
@@ -156,8 +151,9 @@ root:add(saplingLabel)
 root:add(saplingNameLabel)
 root:add(fuelLabel)
 root:add(fuelLevelLabel)
--- root:add(addButton)
--- root:add(subtractButton)
+root:add(saplingSelectLabel)
+root:add(minecraftButton)
+root:add(rubberButton)
 app:setRootContainer(root)
 app:start()
 
