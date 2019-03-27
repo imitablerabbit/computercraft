@@ -5,13 +5,13 @@ listener functions whenever an event they are observing happens.
 --]]
 
 GUIEvent = {}
+GUIEvent.__index = GUIEvent
 
 -- Constructor
-function GUIEvent:new(type)
+function GUIEvent.new(type)
     local object = {}
     object.type = type
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIEvent)
     return object
 end
 
@@ -25,15 +25,16 @@ is clicked inside the normal terminal. If a monitor is used then you
 will also need to handle the GUIMonitorTouchEvent.    
 --]]
 
-GUIMouseClickEvent = GUIEvent:new{}
+GUIMouseClickEvent = {}
+GUIMouseClickEvent.__index = GUIMouseClickEvent
+setmetatable(GUIMouseClickEvent, {__index = GUIEvent})
 
-function GUIMouseClickEvent:new(button, x, y)
-    local object = GUIEvent:new("mouse_click")
+function GUIMouseClickEvent.new(button, x, y)
+    local object = GUIEvent.new("mouse_click")
     object.button = button
     object.x = x
     object.y = y
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIMouseClickEvent)
     return object
 end
 
@@ -42,15 +43,16 @@ GUIMonitorTouchEvent is an event that is triggered whenever a
 monitor is right clicked.
 --]]
 
-GUIMonitorTouchEvent = GUIEvent:new{}
+GUIMonitorTouchEvent = {}
+GUIMonitorTouchEvent.__index = GUIMonitorTouchEvent
+setmetatable(GUIMonitorTouchEvent, {__index = GUIEvent})
 
-function GUIMonitorTouchEvent:new(side, x, y)
-    local object = GUIEvent:new("monitor_touch")
+function GUIMonitorTouchEvent.new(side, x, y)
+    local object = GUIEvent.new("monitor_touch")
     object.side = side
     object.x = x
     object.y = y
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIMonitorTouchEvent)
     return object
 end
 
@@ -59,13 +61,14 @@ GUIButtonClick is an event that is triggered whenever a
 button is clicked within its bounds.
 --]]
 
-GUIButtonClickEvent = GUIEvent:new{}
+GUIButtonClickEvent = {}
+GUIButtonClickEvent.__index = GUIButtonClickEvent
+setmetatable(GUIButtonClickEvent, {__index = GUIEvent})
 
-function GUIButtonClickEvent:new(x, y)
-    local object = GUIEvent:new("button_click")
+function GUIButtonClickEvent.new(x, y)
+    local object = GUIEvent.new("button_click")
     object.x = x
     object.y = y
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIButtonClickEvent)
     return object
 end

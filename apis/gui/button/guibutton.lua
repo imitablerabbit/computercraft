@@ -1,23 +1,21 @@
-GUIButton = guicomponent.GUIComponent:new()
+GUIButton = {}
+GUIButton.__index = GUIButton
+setmetatable(GUIButton, {__index = guicomponent.GUIComponent})
 
-function GUIButton:new(text)
-    local object = {
-        buttonListeners = {},
-        text = text,
-        model = guibuttonmodel.GUIButtonModel:new(),
-        
-        -- Button press rendering controls
-        buttonTicks = 5,
-        buttonTicksRemaining = 0,
-        pressColor = colors.lightGray,
-    }
-    self.__index = self
-    setmetatable(object, self)
+function GUIButton.new(text)
+    local object = guicomponent.GUIComponent.new()
+    object.buttonListeners = {}
+    object.text = text
+    object.model = guibuttonmodel.GUIButtonModel.new()
+    object.buttonTicks = 5
+    object.buttonTicksRemaining = 0
+    object.pressColor = colors.lightGray
+    object.ui = guibuttonui.GUIButtonUI.new(object, object.model)
+    setmetatable(object, GUIButton)
     local l = function(e)
-        object:mouseClickHandler(e)    
+        object:mouseClickHandler(e)
     end
     object:addMouseClickListener(l)
-    object.ui = guibuttonui.GUIButtonUI:new(object, object.model)
     return object
 end
 
@@ -52,7 +50,7 @@ function GUIButton:mouseClickHandler(e)
         end
 
         self:repaint()
-        local event = guievent.GUIButtonClickEvent:new(e.x, e.y)
+        local event = guievent.GUIButtonClickEvent.new(e.x, e.y)
         self:triggerButtonClickEvent(event)
     end
 end

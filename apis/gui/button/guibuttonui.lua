@@ -1,9 +1,10 @@
-GUIButtonUI = guicomponentui.GUIComponentUI:new()
+GUIButtonUI = {}
+GUIButtonUI.__index = GUIButtonUI
+setmetatable(GUIButtonUI, {__index = guicomponentui.GUIComponentUI})
 
-function GUIButtonUI:new(component, model)
-    local object = guicomponentui.GUIComponentUI:new(component, model)
-    self.__index = self
-    setmetatable(object, self)
+function GUIButtonUI.new(component, model)
+    local object = guicomponentui.GUIComponentUI.new(component, model)
+    setmetatable(object, GUIButtonUI)
     return object
 end
 

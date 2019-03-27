@@ -1,26 +1,26 @@
 -- Create the application object
-local app = guiapplication.GUIApplication:new()
+local app = guiapplication.GUIApplication.new()
 
 local w, h = term.getSize()
 
 -- Create a root gui component. This is the base component used 
 -- in a similar way to JFrame with no decorations.
-local root = guirootcontainer.GUIRootContainer:new()
+local root = guirootcontainer.GUIRootContainer.new()
 
 -- Title text that should be centered
-local title = guitext.GUIText:new("Example Button Application")
+local title = guitext.GUIText.new("Example Button Application")
 title:setTextAlign("center")
 title:setTextVerticalAlign("middle")
 title:setBorder(false)
 title:setPreferredBounds(2, 3, w - 2, 3)
 
-local clickLabel = guitext.GUIText:new("Click Count:")
+local clickLabel = guitext.GUIText.new("Click Count:")
 clickLabel:setTextAlign("right")
 clickLabel:setTextVerticalAlign("middle")
 clickLabel:setPreferredBounds(2, 6, (w - 2) / 2, 3) 
 clickLabel:setBorder(false)
 
-local clickCount = guitext.GUIText:new("0")
+local clickCount = guitext.GUIText.new("0")
 clickCount:setTextAlign("left")
 clickCount:setTextVerticalAlign("middle")
 clickCount:setPreferredBounds((w / 2) + 1, 6, (w - 2) / 2, 3)
@@ -38,11 +38,11 @@ local subtractClick = function(e)
     clickCount:setText(tostring(count))
 end
 local bw = math.floor((w - 4) / 2)
-local addButton = guibutton.GUIButton:new("Add Click")
+local addButton = guibutton.GUIButton.new("Add Click")
 addButton:setPreferredBounds(3, 10, bw, 7)
 addButton:addButtonListener(addClick)
 
-local subtractButton = guibutton.GUIButton:new("Subtract Click")
+local subtractButton = guibutton.GUIButton.new("Subtract Click")
 subtractButton:setPreferredBounds(w - 1 - bw, 10, bw, 7)
 subtractButton:addButtonListener(subtractClick)
 

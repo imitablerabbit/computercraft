@@ -4,14 +4,14 @@ handle the state of GUI objects. Models can have observers
 attached to them.    
 --]]
 GUIModel = {}
+GUIModel.__index = GUIModel
 
 -- Constructor
-function GUIModel:new()
+function GUIModel.new()
     local object = {
         listeners = {}
     }
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIModel)
     return object
 end
 

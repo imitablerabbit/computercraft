@@ -4,14 +4,14 @@ their bounds.
 --]]
 
 GUIComponentUI = {}
+GUIComponentUI.__index = GUIComponentUI
 
-function GUIComponentUI:new(component, model)
+function GUIComponentUI.new(component, model)
     local object = {
         component = component,
         model = model,
     }
-    self.__index = self
-    setmetatable(object, self)
+    setmetatable(object, GUIComponentUI)
     return object
 end
 
