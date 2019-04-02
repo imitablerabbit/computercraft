@@ -19,8 +19,8 @@ function GUIRootContainerUI:paint()
     local w, h = term.getSize()
     if self.component:hasDecorations() then
         paintutils.drawLine(1, 1, w, 1, self.component.borderColor)
-        if self.component.cb then
-            self.component.cb:repaint()
+        if self.component.closeButton then
+            self.component.closeButton:repaint()
         end
     end
     term.redirect(t)
