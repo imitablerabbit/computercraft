@@ -21,7 +21,7 @@ function GUIRootContainer.new(t)
     cb:setTextColor(colors.white)
     cb:setPreferredBounds(1, object.w, 1, 1)
     local close = function(event)
-        parent:stop()
+        object.parent:stop()
     end
     cb:addButtonListener(close)
     object.closeButton = cb

@@ -20,5 +20,5 @@ function GUIRootContainerUI:paint()
     if self.component:hasDecorations() then
         paintutils.drawLine(1, 1, w, 1, self.component.borderColor)
     end
-    term.redirect(c)
+    term.redirect(t)
 end
