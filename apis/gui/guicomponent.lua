@@ -199,11 +199,11 @@ function GUIComponent:setBorder(b)
     self:repaint()
 end
 
-function GUIComponent:setBackground(c)
+function GUIComponent:setBackgroundColor(c)
     self.backgroundColor = c
 end
 
-function GUIComponent:getBackground()
+function GUIComponent:getBackgroundColor()
     return self.backgroundColor
 end
 

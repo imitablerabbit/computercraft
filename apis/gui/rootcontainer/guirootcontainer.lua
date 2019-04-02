@@ -15,7 +15,7 @@ setmetatable(GUIRootContainer, {__index = guicomponent.GUIComponent})
 function GUIRootContainer.new(t)
     local object = guicomponent.GUIComponent.new(t)
     object.ui = guirootcontainerui.GUIRootContainerUI.new(object)
-    object.hasDecorations = true
+    object.decorations = true
     local cb = guibutton.GUIButton.new("x")
     cb:setBackgroundColor(colors.red)
     cb:setTextColor(colors.white)
@@ -31,16 +31,16 @@ end
 
 function GUIRootContainer:treeInit(parent)
     GUIComponent.treeInit(self, parent)
-    if self.hasDecorations then
+    if self.decorations then
         self:addCloseButton()
     end
 end
 
 function GUIRootContainer:setDecorations(d)
-    self.hasDecorations = d
+    self.decorations = d
     self.closeButton:setVisible(d)
 end
 
 function GUIRootContainer:hasDecorations()
-    return self.hasDecorations
+    return self.decorations
 end
