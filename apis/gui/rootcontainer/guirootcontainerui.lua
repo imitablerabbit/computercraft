@@ -23,6 +23,9 @@ function GUIRootContainerUI:paint()
         if self.component.closeButton then
             self.component.closeButton:repaint()
         end
+        term.setCursorPos(1, 1)
+        term.setTextColor(self.component.textColor)
+        term.write(self.component.title)
     end
     term.redirect(t)
 end

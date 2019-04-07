@@ -17,6 +17,10 @@ function GUIRootContainer.new(t)
     object.ui = guirootcontainerui.GUIRootContainerUI.new(object)
     object.decorations = true
     object:setBorder(false)
+    
+    object.title = ""
+    
+    -- Create the close button
     local cb = guibutton.GUIButton.new("x")
     cb:setBackgroundColor(colors.red)
     cb:setTextColor(colors.white)
@@ -29,6 +33,7 @@ function GUIRootContainer.new(t)
     cb:addButtonListener(close)
     object.closeButton = cb
     object:add(cb)
+    
     setmetatable(object, GUIRootContainer)
     return object
 end
@@ -45,3 +50,12 @@ end
 function GUIRootContainer:hasDecorations()
     return self.decorations
 end
+
+function GUIRootContainer:setTitle(t)
+    self.title = t
+end
+
+function GUIRootContainer:getTitle()
+    return self.title
+end
+
