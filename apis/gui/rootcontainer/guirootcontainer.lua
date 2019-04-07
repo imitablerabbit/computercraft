@@ -23,6 +23,8 @@ function GUIRootContainer.new(t)
     cb:setPreferredBounds(object.w, 1, 1, 1)
     local close = function(event)
         object.parent:stop()
+        term.clear()
+        term.setCursorPos(1, 1)
     end
     cb:addButtonListener(close)
     object.closeButton = cb
