@@ -25,15 +25,13 @@ function GUIRootContainer.new(t)
     end
     cb:addButtonListener(close)
     object.closeButton = cb
+    object:add(cb)
     setmetatable(object, GUIRootContainer)
     return object
 end
 
 function GUIRootContainer:treeInit(parent)
     GUIComponent.treeInit(self, parent)
-    if self.decorations then
-        self:addCloseButton()
-    end
 end
 
 function GUIRootContainer:setDecorations(d)
