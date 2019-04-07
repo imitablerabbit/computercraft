@@ -38,7 +38,7 @@ function GUIComponent.new(t)
 
         -- Default color settings
         backgroundColor = colors.white,
-        hasBorder = false,
+        border = false,
         borderColor = colors.gray,
         textColor = colors.black,
     }
@@ -190,13 +190,17 @@ function GUIComponent:setVisible(v)
 end
 
 function GUIComponent:setBorder(b)
-    self.hasBorder = b
+    self.border = b
     if self.children then
         for i, c in pairs(self.children) do
             c:setBorder(b)
         end
     end
     self:repaint()
+end
+
+function GUIComponent:hasBorder()
+    return self.border
 end
 
 function GUIComponent:setBackgroundColor(c)

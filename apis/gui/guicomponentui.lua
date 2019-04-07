@@ -27,7 +27,7 @@ function GUIComponentUI:paint()
     term.clear()
     w, h = term.getSize()
     paintutils.drawFilledBox(1, 1, w + 1, h + 1, self.component.backgroundColor)
-    if self.component.hasBorder then
+    if self.component:hasBorder() then
         paintutils.drawBox(1, 1, w, h, self.component.borderColor)
     end
     term.redirect(c)

@@ -16,6 +16,7 @@ function GUIRootContainer.new(t)
     local object = guicomponent.GUIComponent.new(t)
     object.ui = guirootcontainerui.GUIRootContainerUI.new(object)
     object.decorations = true
+    object:setBorder(false)
     local cb = guibutton.GUIButton.new("x")
     cb:setBackgroundColor(colors.red)
     cb:setTextColor(colors.white)

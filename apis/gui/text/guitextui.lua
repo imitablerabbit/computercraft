@@ -25,7 +25,7 @@ function GUITextUI:paint()
 
     local y
     if self.component.textVerticalAlign == "top" then
-        if self.component.hasBorder then
+        if self.component:hasBorder() then
             y = 2
         else
             y = 1
@@ -33,7 +33,7 @@ function GUITextUI:paint()
     elseif self.component.textVerticalAlign == "middle" then
         y = math.floor(h / 2) + 1
     elseif self.component.textVerticalAlign == "bottom" then
-        if self.component.hasBorder then
+        if self.component:hasBorder() then
             y = h - 1
         else
             y = h
@@ -42,7 +42,7 @@ function GUITextUI:paint()
 
     local x
     if self.component.textAlign == "left" then
-        if self.component.hasBorder then
+        if self.component:hasBorder() then
             x = 2
         else
             x = 1

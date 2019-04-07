@@ -10,7 +10,7 @@ function GUIButton.new(text)
     object.buttonTicks = 5
     object.buttonTicksRemaining = 0
     object.pressColor = colors.lightGray
-    object.hasBorder = true
+    object:setBorder(true)
     object.ui = guibuttonui.GUIButtonUI.new(object, object.model)
     setmetatable(object, GUIButton)
     local l = function(e)
