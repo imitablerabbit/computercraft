@@ -6,6 +6,7 @@ local w, h = term.getSize()
 -- Create a root gui component. This is the base component used 
 -- in a similar way to JFrame with no decorations.
 local root = guirootcontainer.GUIRootContainer.new()
+root:setTitle("Example Button Application")
 
 -- Title text that should be centered
 local title = guitext.GUIText.new("Example Button Application")

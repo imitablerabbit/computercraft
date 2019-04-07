@@ -19,6 +19,7 @@ function GUIRootContainer.new(t)
     object:setBorder(false)
     
     object.title = ""
+    object.textColor = colors.white
     
     -- Create the close button
     local cb = guibutton.GUIButton.new("x")
