@@ -20,7 +20,7 @@ function GUIRootContainer.new(t)
     local cb = guibutton.GUIButton.new("x")
     cb:setBackgroundColor(colors.red)
     cb:setTextColor(colors.white)
-    cb:setPreferredBounds(1, object.w, 1, 1)
+    cb:setPreferredBounds(object.w, 1, 1, 1)
     local close = function(event)
         object.parent:stop()
     end

@@ -9,6 +9,7 @@ function GUIRootContainerUI.new(component)
 end
 
 function GUIRootContainerUI:paint()
+    guicomponentui.GUIComponentUI.paint(self)
     if not self.component then
         return
     end
