@@ -27,7 +27,7 @@ function GUIButtonUI:paint()
 
     -- Re-render background and border
     paintutils.drawFilledBox(1, 1, w + 1, h + 1, bc)
-    if self.component.hasBorder then
+    if self.component:hasBorder() then
         paintutils.drawBox(1, 1, w, h, self.component.borderColor)
     end
 

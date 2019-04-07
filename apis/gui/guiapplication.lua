@@ -79,6 +79,7 @@ end
 
 function GUIApplication:setRootContainer(container)
     self.child = container
+    container.parent = self
 end
 
 function GUIApplication:setUPS(ups)

@@ -45,10 +45,11 @@ os.loadAPI("apis/gui/guicomponentui.lua")
 os.loadAPI("apis/gui/guievent.lua")
 os.loadAPI("apis/gui/guimodel.lua")
 os.loadAPI("apis/gui/guiapplication.lua")
-os.loadAPI("apis/gui/guirootcontainer.lua")
 os.loadAPI("apis/gui/button/guibutton.lua")
 os.loadAPI("apis/gui/button/guibuttonmodel.lua")
 os.loadAPI("apis/gui/button/guibuttonui.lua")
+os.loadAPI("apis/gui/rootcontainer/guirootcontainerui.lua")
+os.loadAPI("apis/gui/rootcontainer/guirootcontainer.lua")
 
 -- Recursively load all files nested under the apis folder.
 local apiDir = "/apis"
