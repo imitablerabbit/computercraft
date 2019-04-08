@@ -1,3 +1,19 @@
+local count = 0
+local addCount = 0
+local subCount = 0
+
+function clickCount()
+    return "Click Count: "..count
+end
+
+function addClickCount()
+    return "Add Click Count: "..addCount
+end
+
+function subtractClickCount()
+    return "Subtract Click Count: "..subCount
+end
+
 -- Create the application object
 local app = guiapplication.GUIApplication.new()
 
@@ -8,49 +24,51 @@ local w, h = term.getSize()
 local root = guirootcontainer.GUIRootContainer.new()
 root:setTitle("Example Button Application")
 
--- Title text that should be centered
-local title = guitext.GUIText.new("Example Button Application")
-title:setTextAlign("center")
-title:setTextVerticalAlign("middle")
-title:setBorder(false)
-title:setPreferredBounds(2, 3, w - 2, 3)
-
-local clickLabel = guitext.GUIText.new("Click Count:")
-clickLabel:setTextAlign("right")
+local clickLabel = guitext.GUIText.new(clickCount())
+clickLabel:setTextAlign("left")
 clickLabel:setTextVerticalAlign("middle")
-clickLabel:setPreferredBounds(2, 6, (w - 2) / 2, 3) 
+clickLabel:setPreferredBounds(2, 3, w, 1) 
 clickLabel:setBorder(false)
 
-local clickCount = guitext.GUIText.new("0")
-clickCount:setTextAlign("left")
-clickCount:setTextVerticalAlign("middle")
-clickCount:setPreferredBounds((w / 2) + 1, 6, (w - 2) / 2, 3)
-clickCount:setBorder(false)
+local addClickLabel = guitext.GUIText.new(addClickCount())
+addClickLabel:setTextAlign("left")
+addClickLabel:setTextVerticalAlign("middle")
+addClickLabel:setPreferredBounds(2, 4, w, 1) 
+addClickLabel:setBorder(false)
+
+local subtractClickLabel = guitext.GUIText.new(subtractClickCount())
+subtractClickLabel:setTextAlign("left")
+subtractClickLabel:setTextVerticalAlign("middle")
+subtractClickLabel:setPreferredBounds(2, 5, w, 1) 
+subtractClickLabel:setBorder(false)
 
 -- Add and subtract buttons
 -- TODO: These are somehow getting 2 events triggered when the button is pressed.
-local count = 0
 local addClick = function(e)
     count = count + 1
-    clickCount:setText(tostring(count))
+    addCount = addCount + 1
+    clickLabel:setText(clickCount())
+    addClickLabel:setText(addClickCount())
 end
 local subtractClick = function(e)
     count = count - 1
-    clickCount:setText(tostring(count))
+    subCount = subCount + 1
+    clickLabel:setText(clickCount())
+    subtractClickLabel:setText(subtractClickCount())
 end
 local bw = math.floor((w - 4) / 2)
 local addButton = guibutton.GUIButton.new("Add Click")
-addButton:setPreferredBounds(3, 10, bw, 7)
+addButton:setPreferredBounds(3, 7, bw, 7)
 addButton:addButtonListener(addClick)
 
 local subtractButton = guibutton.GUIButton.new("Subtract Click")
-subtractButton:setPreferredBounds(w - 1 - bw, 10, bw, 7)
+subtractButton:setPreferredBounds(w - 1 - bw, 7, bw, 7)
 subtractButton:addButtonListener(subtractClick)
 
 -- Add the button to the root container.
-root:add(title)
 root:add(clickLabel)
-root:add(clickCount)
+root:add(addClickLabel)
+root:add(subtractClickLabel)
 root:add(addButton)
 root:add(subtractButton)
 app:setRootContainer(root)
