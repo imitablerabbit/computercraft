@@ -23,7 +23,7 @@ deltaLabel:setPreferredBounds(3, 5, w, 1)
 deltaLabel:setBorder(false)
 
 local delta = guiinput.GUIInput.new("1")
-delta:setPreferredBounds(3, 6, w, 3) 
+delta:setPreferredBounds(3, 6, w-2, 3) 
 delta:setBorder(true)
 
 -- Add and subtract buttons
