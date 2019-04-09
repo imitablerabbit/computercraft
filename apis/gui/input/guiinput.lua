@@ -56,10 +56,10 @@ end
 -- TODO: This should eventually be moved to a more
 -- appropriate text util location so multiple components
 -- can use text editor functionality.
-function GUIInput:mouseClickHandler(e)
+function GUIInput:keyPressHandler(e)
     local s = self.text
     local cPos = self.cursorPos
-    if self.model.isActive() then
+    if self.model:isActive() then
         local k = e.keycode
         if k == keys.backspace then -- backspace
             s = self.deleteChar(s, cPos)

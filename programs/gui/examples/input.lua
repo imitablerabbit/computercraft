@@ -10,7 +10,7 @@ local w, h = term.getSize()
 local root = guirootcontainer.GUIRootContainer.new()
 root:setTitle("Example Input Application")
 
-local clickLabel = guitext.GUIText.new(clickCount())
+local clickLabel = guitext.GUIText.new("Count: "..count)
 clickLabel:setTextAlign("left")
 clickLabel:setTextVerticalAlign("middle")
 clickLabel:setPreferredBounds(3, 3, w, 1) 
@@ -31,7 +31,7 @@ delta:setBorder(true)
 local addClick = function(e)
     local countDelta = tonumber(delta:getText())
     count = count + countDelta
-    clickLabel:setText(count)
+    clickLabel:setText("Count: "..count)
 end
 local bw = math.floor((w - 4) / 2)
 local addButton = guibutton.GUIButton.new("Add Click")
@@ -40,7 +40,8 @@ addButton:addButtonListener(addClick)
 
 -- Add the button to the root container.
 root:add(clickLabel)
-root:add(addClickLabel)
+root:add(deltaLabel)
+root:add(delta)
 root:add(addButton)
 app:setRootContainer(root)
 app:start()
