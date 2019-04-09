@@ -73,16 +73,16 @@ function GUIInput:keyPressHandler(e)
             self:moveCursor(1)
         elseif k == keys.escape then -- escape
             self.model:setActive(false)        
-        elseif isPrintable(k) then -- normal printable charaters.
-            s = s .. k
+        elseif self.isPrintable(k) then -- normal printable charaters.
+            s = s .. self.toPrintable(k, false)
         end
     end
-    self.setText(s)
+    self:setText(s)
 end
 
 -- Delete the char located at 'pos' in the string 's'.
 function GUIInput.deleteChar(s, pos)
-    return s:sub(1, pos-1) .. s.sub(pos+1)
+    return s:sub(1, pos-1) .. s:sub(pos+1)
 end
 
 function GUIInput:moveCursor(delta)
@@ -94,6 +94,28 @@ end
 -- printable charater.
 function GUIInput.isPrintable(keycode)
     return true
+end
+
+function GUIInput.toPrintable(keycode, shift)
+    local lower = {
+        [2]="1", [3]="2", [4]="3", [5]="4", [6]="5", [7]="6", [8]="7", [9]="8", [10]="9", [11]="0", [12]="-", [13]="=",
+        [16]="q", [17]="w", [18]="e", [19]="r", [20]="t", [21]="y", [22]="u", [23]="i", [24]="o", [25]="p", [26]="[", [27]="]",
+        [30]="a", [31]="s", [32]="d", [33]="f", [34]="g", [35]="h", [36]="j", [37]="k", [38]="l", [39]=";", [40]="'",
+        [44]="z", [45]="x", [46]="c", [47]="v", [48]="b", [49]="n", [50]="m", [51]=",", [52]=".", [53]="/",
+    }
+    local upper = {
+        [2]="1", [3]="2", [4]="3", [5]="4", [6]="5", [7]="6", [8]="7", [9]="8", [10]="9", [11]="0", [12]="-", [13]="=",
+        [16]="q", [17]="w", [18]="e", [19]="r", [20]="t", [21]="y", [22]="u", [23]="i", [24]="o", [25]="p", [26]="[", [27]="]",
+        [30]="a", [31]="s", [32]="d", [33]="f", [34]="g", [35]="h", [36]="j", [37]="k", [38]="l", [39]=";", [40]="'",
+        [44]="z", [45]="x", [46]="c", [47]="v", [48]="b", [49]="n", [50]="m", [51]=",", [52]=".", [53]="/",
+    }
+    
+    if not shift then
+        return lower[keycode]
+    else 
+        return upper[keycode]
+    end
+    return nil
 end
 
 function GUIInput:setText(t)
