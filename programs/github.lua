@@ -51,6 +51,7 @@ local files = {
     "apis/gui/input/guiinputui.lua",
     
     "programs/gui/examples/button.lua",
+    "programs/gui/examples/input.lua",
     "programs/register.lua",
     "programs/registrydisplay.lua",
     "programs/registrylistener.lua",
