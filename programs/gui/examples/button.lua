@@ -27,19 +27,19 @@ root:setTitle("Example Button Application")
 local clickLabel = guitext.GUIText.new(clickCount())
 clickLabel:setTextAlign("left")
 clickLabel:setTextVerticalAlign("middle")
-clickLabel:setPreferredBounds(2, 3, w, 1) 
+clickLabel:setPreferredBounds(3, 3, w, 1) 
 clickLabel:setBorder(false)
 
 local addClickLabel = guitext.GUIText.new(addClickCount())
 addClickLabel:setTextAlign("left")
 addClickLabel:setTextVerticalAlign("middle")
-addClickLabel:setPreferredBounds(2, 4, w, 1) 
+addClickLabel:setPreferredBounds(3, 4, w, 1) 
 addClickLabel:setBorder(false)
 
 local subtractClickLabel = guitext.GUIText.new(subtractClickCount())
 subtractClickLabel:setTextAlign("left")
 subtractClickLabel:setTextVerticalAlign("middle")
-subtractClickLabel:setPreferredBounds(2, 5, w, 1) 
+subtractClickLabel:setPreferredBounds(3, 5, w, 1) 
 subtractClickLabel:setBorder(false)
 
 -- Add and subtract buttons
@@ -58,11 +58,11 @@ local subtractClick = function(e)
 end
 local bw = math.floor((w - 4) / 2)
 local addButton = guibutton.GUIButton.new("Add Click")
-addButton:setPreferredBounds(3, 7, bw, 7)
+addButton:setPreferredBounds(3, 7, bw, 5)
 addButton:addButtonListener(addClick)
 
 local subtractButton = guibutton.GUIButton.new("Subtract Click")
-subtractButton:setPreferredBounds(w - 1 - bw, 7, bw, 7)
+subtractButton:setPreferredBounds(w - 1 - bw, 7, bw, 5)
 subtractButton:addButtonListener(subtractClick)
 
 -- Add the button to the root container.
