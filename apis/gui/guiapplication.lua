@@ -64,6 +64,12 @@ function GUIApplication:update()
                 if self.child then
                     self.child:triggerMonitorTouchEvent(e)
                 end
+            elseif event[1] == "key" then
+                local keycode = event[2]
+                local e = guievent.GUIKeyPressEvent.new(keycode)
+                if self.child then
+                    self.child:triggerKeyPressEvent(e)
+                end
             else
                 -- os.queueEvent(table.unpack(event)) -- add event back to queue
             end

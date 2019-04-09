@@ -20,9 +20,10 @@ function GUIComponent.new(t)
         -- Terminal object that this component should interact with
         term = w,
         
-        -- Mouse listeners
+        -- Listeners
         monitorTouchListeners = {},
         mouseClickListeners = {},
+        keyPressListeners = {},
 
         -- Position and size
         ax = 1, ay = 1, -- absolute position
@@ -141,6 +142,31 @@ function GUIComponent:triggerMouseClickEvent(e)
     if self.children then
         for i, c in pairs(self.children) do
             c:triggerMouseClickEvent(e)
+        end
+    end
+end
+
+function GUIComponent:addKeyPressListener(l)
+    table.insert(self.keyPressListeners, l)
+end
+
+function GUIComponent:removeKeyPressListeners(l)
+    for i, l2 in pairs(self.keyPressListeners) do
+        if l == l2 then
+            table.remove(self.keyPressListeners, i)
+        end
+    end
+end
+
+function GUIComponent:triggerKeyPressEvent(e)
+    if not e then error("missing GUIEvent") end
+    if e.type ~= "key_press" then error("incorrect event") end
+    for i, l in pairs(self.keyPressListeners) do
+        l(e)
+    end
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:triggerKeyPressEvent(e)
         end
     end
 end
