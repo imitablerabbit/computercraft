@@ -77,7 +77,8 @@ function GUIInput:keyPressHandler(e)
         elseif k == keys.escape then -- escape
             self.model:setActive(false)        
         elseif self.isPrintable(k) then -- normal printable charaters.
-            s = s .. self.toPrintable(k, false)
+            s = s:sub(1, cPos+1) .. self.toPrintable(k, false) .. s:sub(cPos+2)
+            self:setText(s) -- Need to apply text so cursor can move
             self:moveCursor(1)
         end
     end
@@ -92,7 +93,7 @@ end
 function GUIInput:moveCursor(delta)
     self.cursorPos = self.cursorPos + delta
     if self.cursorPos < 0 then self.cursorPos = 0 end
-    if self.cursorPos >= self.text:len()-1 then self.cursorPos = self.text:len()-1 end
+    if self.cursorPos > self.text:len() then self.cursorPos = self.text:len() end
     return self.cursorPos
 end
 
