@@ -65,7 +65,7 @@ function GUIInputUI:paint()
     elseif self.component.textAlign == "right" then
         x = w - string.len(self.component.text)
     end
-
+    
     -- Render the text with the proper colors
     term.setCursorPos(x, y)
     local tc = term.getTextColor()
@@ -73,6 +73,12 @@ function GUIInputUI:paint()
     term.setTextColor(self.component.textColor)
     term.setBackgroundColor(self.component.backgroundColor)
     term.write(self.component.text)
+    term.setTextColor(self.component.cursorTextColor)
+    term.setBackgroundColor(self.component.cursorBackgroundColor)
+    term.setCursorPos(x + self.component.cursorPos, y)
+    local cPos = self.component.cursorPos
+    local c = self.component.text:sub(cPos, cPos)
+    term.write(c)
     term.setTextColor(tc)
     term.setBackgroundColor(oldbc)
     term.redirect(c)

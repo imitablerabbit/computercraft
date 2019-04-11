@@ -13,6 +13,8 @@ function GUIInput.new(text)
     object.textAlign = "left"
     object.textVerticalAlign = "middle"  
     object.cursorPos = 0
+    object.cursorTextColor = colors.black
+    object.cursorBackgroundColor = colors.white
     
     object.model = guiinputmodel.GUIInputModel.new()
     object.activeColor = colors.lightGray
