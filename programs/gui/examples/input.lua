@@ -26,10 +26,20 @@ local delta = guiinput.GUIInput.new("1")
 delta:setPreferredBounds(3, 6, w-4, 3) 
 delta:setBorder(true)
 
--- Add and subtract buttons
--- TODO: These are somehow getting 2 events triggered when the button is pressed.
+local status = guitext.GUIText.new("Status: ")
+status:setPrefferedBounds(1, h, w, 1)
+status:setBackgroundColor(colors.lightgrey)
+status:setBorder(false)
+
 local addClick = function(e)
     local countDelta = tonumber(delta:getText())
+    if not countDelta then 
+        status:setText("Status: "..countDelta.." not a number")
+        status:setTextColor(red)
+    else
+        status:setText("Status:")
+        status:setTextColor(black)
+    end
     count = count + countDelta
     clickLabel:setText("Count: "..count)
 end
@@ -43,5 +53,6 @@ root:add(clickLabel)
 root:add(deltaLabel)
 root:add(delta)
 root:add(addButton)
+root:add(status)
 app:setRootContainer(root)
 app:start()
