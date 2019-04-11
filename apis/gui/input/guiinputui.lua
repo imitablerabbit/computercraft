@@ -71,14 +71,21 @@ function GUIInputUI:paint()
     local tc = term.getTextColor()
     local oldbc = term.getBackgroundColor()
     term.setTextColor(self.component.textColor)
-    term.setBackgroundColor(self.component.backgroundColor)
+    term.setBackgroundColor(bc)
     term.write(self.component.text)
     term.setTextColor(self.component.cursorTextColor)
+
+    -- Render the cursor
     term.setBackgroundColor(self.component.cursorBackgroundColor)
-    term.setCursorPos(x + self.component.cursorPos, y)
     local cPos = self.component.cursorPos
-    local c = self.component.text:sub(cPos, cPos)
-    term.write(c)
+    if cPos + 1 > self.component.text:len() then
+        paintutils.drawPixel(x + self.component.cursorPos, y)
+    else
+        term.setCursorPos(x + self.component.cursorPos, y)
+        local char = self.component.text:sub(cPos+1, cPos+1)
+        term.write(char)
+    end
+    
     term.setTextColor(tc)
     term.setBackgroundColor(oldbc)
     term.redirect(c)

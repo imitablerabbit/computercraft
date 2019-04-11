@@ -11,7 +11,7 @@ function GUIInput.new(text)
     
     object.text = text
     object.textAlign = "left"
-    object.textVerticalAlign = "middle"  
+    object.textVerticalAlign = "middle"
     object.cursorPos = 0
     object.cursorTextColor = colors.black
     object.cursorBackgroundColor = colors.white
@@ -92,6 +92,7 @@ end
 function GUIInput:moveCursor(delta)
     self.cursorPos = self.cursorPos + delta
     if self.cursorPos < 0 then self.cursorPos = 0 end
+    if self.cursorPos >= self.text:len()-1 then self.cursorPos = self.text:len()-1 end
     return self.cursorPos
 end
 
