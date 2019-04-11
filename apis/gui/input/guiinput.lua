@@ -1,9 +1,6 @@
 GUIInput = {}
 GUIInput.__index = GUIInput
-setmetatable(GUIInput, {__index = guicomponent.GUIComponent})
-
--- TODO: Change this to use GUIText as the base class. This stops
--- the need to duplicate the text functions and attributes.
+setmetatable(GUIInput, {__index = guitext.GUIText})
 
 function GUIInput.new(text)
     local object = guitext.GUIText.new(text)
