@@ -82,7 +82,7 @@ end
 -- Delete the char located at 'pos' in the string 's'.
 function GUIInput.deleteChar(s, pos)
     if s:len() <= 0 then return s end
-    if cPos < 1 then return s end
+    if pos < 1 then return s end
     return s:sub(1, pos-1) .. s:sub(pos+1)
 end
 

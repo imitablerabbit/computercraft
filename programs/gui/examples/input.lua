@@ -27,7 +27,7 @@ delta:setPreferredBounds(3, 6, w-4, 3)
 delta:setBorder(true)
 
 local status = guitext.GUIText.new("Status: ")
-status:setPreferredBounds(1, h-1, w, 1)
+status:setPreferredBounds(1, h, w, 1)
 status:setBackgroundColor(colors.lightgray)
 status:setBorder(false)
 
@@ -35,11 +35,11 @@ local addClick = function(e)
     local countDelta = tonumber(delta:getText())
     if not countDelta then 
         status:setText("Status: "..countDelta.." not a number")
-        status:setTextColor(red)
+        status:setTextColor(colors.red)
         return
     else
         status:setText("Status:")
-        status:setTextColor(black)
+        status:setTextColor(colors.black)
     end
     count = count + countDelta
     clickLabel:setText("Count: "..count)
