@@ -14,17 +14,18 @@ B = Block
 T = Turtle
 . = Air
 G = Grass
+C = Chest
 
 Top Down:   Front:      Back:       Side:
-BBBBBBBBBB  BBBBBBBBBB  BBBBBBBBBB  .B
-TGGGGGGGGG  ..........  ..........  ..
-            ..........  ..........  ..
-            ..........  ..........  ..
-            ..........  ..........  ..
-            ..........  ..........  ..
-            ..........  ..........  ..
-            TSSSSSSSSS  SSSSSSSSSS  TS
-            GGGGGGGGGG  GGGGGGGGGG  GG
+BBBBBBBBBB  BBBBBBBBBB  BBBBBBBBBB  ..B
+TGGGGGGGGG  ..........  ..........  ...
+C           ..........  ..........  ...
+            ..........  ..........  ...
+            ..........  ..........  ...
+            ..........  ..........  ...
+            ..........  ..........  ...
+            TSSSSSSSSS  SSSSSSSSSS  CTS
+            GGGGGGGGGG  GGGGGGGGGG  .GG
 
 --]]
 
