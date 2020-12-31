@@ -72,3 +72,19 @@ function GUIButtonClickEvent.new(x, y)
     setmetatable(object, GUIButtonClickEvent)
     return object
 end
+
+--[[
+GUIButtonClick is an event that is triggered whenever a
+button is clicked within its bounds.
+--]]
+
+GUIKeyPressEvent = {}
+GUIKeyPressEvent.__index = GUIKeyPressEvent
+setmetatable(GUIKeyPressEvent, {__index = GUIEvent})
+
+function GUIKeyPressEvent.new(keycode)
+    local object = GUIEvent.new("key_press")
+    object.keycode = keycode
+    setmetatable(object, GUIKeyPressEvent)
+    return object
+end

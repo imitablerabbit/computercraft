@@ -1,16 +1,41 @@
 --[[
-Tree cutting script. The turtle is placed at the far left
-of the farm. There should be no blocks to the left and right
-or below the turtle for the whole farm as these blocks will
-be dug. This script is meant to be run with lines of trees.
+Tree cutting script.
+
+Setup:
+Clear a 2 x 10 area at ground level. Make the back of the 2 x 10 is made up of
+dirt blocks. Place the turtle at the front on the left of the 2 x 10 then make
+sure all of the programs and apis are loaded onto it. Place a block 8 blocks
+high on the back row. These blocks will stop the trees from growing too large.
+Place saplings in the back row in front of the turtle. Place fuel inside the
+turtle ready for it to start logging.
+
+Schematics Key:
+B = Block
+T = Turtle
+. = Air
+G = Grass
+
+Top Down:   Front:      Back:       Side:
+BBBBBBBBBB  BBBBBBBBBB  BBBBBBBBBB  .B
+TGGGGGGGGG  ..........  ..........  ..
+            ..........  ..........  ..
+            ..........  ..........  ..
+            ..........  ..........  ..
+            ..........  ..........  ..
+            ..........  ..........  ..
+            TSSSSSSSSS  SSSSSSSSSS  TS
+            GGGGGGGGGG  GGGGGGGGGG  GG
+
 --]]
 
-local w, h = 10, 7
+local w = 10
+local h = 7
 local sleepTime = 60
 local saplingName = inventory.ItemSapling
+local dumpItems = true
 
 function usage()
-  print("Usage: logger [width] [height] [saplingName] [sleeptime]")
+  print("Usage: logger [width] [height] [saplingName] [sleeptime] [dumpItems]")
 end
 
 function isSapling()
@@ -31,11 +56,6 @@ function plantSapling()
     return false
   end
   return true
-end
-
-function waitForInput()
-  print("press any key to to resume...")
-  os.pullEvent("key")
 end
 
 function fellTree()
@@ -97,7 +117,7 @@ end
 
 local args = {...}
 
-if #args > 4 then
+if #args > 5 then
   usage()
   return
 end
@@ -116,6 +136,9 @@ if args[3] then
 end
 if args[4] then
   sleepTime = tonumber(args[4])
+end
+if args[5] and args[5] == "false" then
+  dumpItems = false
 end
 
 -- Dont use saplings as fuel
@@ -149,6 +172,15 @@ while true do
     turtle.suck()
     moveLeft()
   end
+  
+  -- Try and dump the items in a chest
+  if dumpItems then
+    turtle.turnLeft()
+    turtle.turnLeft()
+    local saplingSlots = inventory.find(saplingName)
+    inventory.empty(saplingSlots)
+  end
+    
   print("Sleeping...")
   os.sleep(sleepTime)
 end

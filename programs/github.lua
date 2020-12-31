@@ -46,8 +46,12 @@ local files = {
     "apis/gui/button/guibuttonui.lua",
     "apis/gui/text/guitext.lua",
     "apis/gui/text/guitextui.lua",
+    "apis/gui/input/guiinput.lua",
+    "apis/gui/input/guiinputmodel.lua",
+    "apis/gui/input/guiinputui.lua",
     
     "programs/gui/examples/button.lua",
+    "programs/gui/examples/input.lua",
     "programs/register.lua",
     "programs/registrydisplay.lua",
     "programs/registrylistener.lua",
