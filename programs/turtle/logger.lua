@@ -179,6 +179,8 @@ while true do
     turtle.turnLeft()
     local saplingSlots = inventory.find(saplingName)
     inventory.empty(saplingSlots)
+    turtle.turnRight()
+    turtle.turnRight()
   end
     
   print("Sleeping...")
