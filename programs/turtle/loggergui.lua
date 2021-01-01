@@ -42,6 +42,26 @@ local heightInput = guiinput.GUIInput.new(loggerHeight)
 heightInput:setPreferredBounds(inputX, 6, inputW, inputH) 
 heightInput:setBorder(true)
 
+-- Setup the logging sleepTime label and input.
+local sleepTimeLabel = guitext.GUIText.new("Sleep:")
+sleepTimeLabel:setTextAlign("left")
+sleepTimeLabel:setTextVerticalAlign("middle")
+sleepTimeLabel:setPreferredBounds(labelX, 9, labelW, labelH)
+sleepTimeLabel:setBorder(false)
+local sleepTimeInput = guiinput.GUIInput.new(sleepTime)
+sleepTimeInput:setPreferredBounds(inputX, 9, inputW, inputH) 
+sleepTimeInput:setBorder(true)
+
+-- Setup the logging height label and input.
+local saplingLabel = guitext.GUIText.new("Sapling:")
+saplingLabel:setTextAlign("left")
+saplingLabel:setTextVerticalAlign("middle")
+saplingLabel:setPreferredBounds(labelX, 12, labelW, labelH)
+saplingLabel:setBorder(false)
+local saplingInput = guiinput.GUIInput.new(saplingName)
+saplingInput:setPreferredBounds(inputX, 12, inputW, inputH) 
+saplingInput:setBorder(true)
+
 -- Add button to change whether the contents of the turtle should be dumped in
 -- the chest placed behind it.
 --local dumpItemsButton = guibutton.GUIButton.new("Dump Items")
@@ -70,6 +90,10 @@ root:add(widthLabel)
 root:add(widthInput)
 root:add(heightLabel)
 root:add(heightInput)
+root:add(sleepTimeLabel)
+root:add(sleepTimeInput)
+root:add(saplingLabel)
+root:add(saplingInput)
 --root:add(addClickLabel)
 --root:add(subtractClickLabel)
 --root:add(startButton)
