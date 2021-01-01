@@ -95,6 +95,6 @@ if shouldExecute then
   sleepTime = sleepTimeInput:getText()
   saplingName = saplingInput:getText()
   local prog = {"logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true"}
-  print(table.unpack(t))
-  shell.run(table.unpack(t))
+  print(table.unpack(prog))
+  shell.run(table.unpack(prog))
 end
