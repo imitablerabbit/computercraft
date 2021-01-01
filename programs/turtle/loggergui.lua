@@ -71,10 +71,10 @@ local startClick = function(e)
   loggerHeight = heightInput:getText()
   sleepTime = sleepTimeInput:getText()
   saplingName = saplingInput:getText()
-  --shell.run("logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true")
-  startButton:setText("logger"..loggerWidth.." "..loggerHeight.." "..sleepTime.." "..saplingName.." true")
+  shell.run("logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true")
+  --startButton:setText("logger"..loggerWidth.." "..loggerHeight.." "..sleepTime.." "..saplingName.." true")
 end
-startButton:addButtonListener(addClick)
+startButton:addButtonListener(startClick)
 
 -- Add the button to the root container.
 root:add(widthLabel)
