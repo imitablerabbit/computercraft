@@ -60,6 +60,7 @@ local files = {
     "programs/github.lua",
 
     "programs/turtle/logger.lua",
+    "programs/turtle/loggergui.lua",
     "programs/turtle/mineline.lua",
     "programs/turtle/stripmine.lua",
 
