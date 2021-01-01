@@ -67,12 +67,8 @@ local bw = w - (outerPadding * 2)
 local startButton = guibutton.GUIButton.new("Start Logging")
 startButton:setPreferredBounds(outerPadding, 11, bw, 3)
 local startClick = function(e)
-  loggerWidth = widthInput:getText()
-  loggerHeight = heightInput:getText()
-  sleepTime = sleepTimeInput:getText()
-  saplingName = saplingInput:getText()
-  shell.run("logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true")
-  --startButton:setText("logger"..loggerWidth.." "..loggerHeight.." "..sleepTime.." "..saplingName.." true")
+  shouldExecute = true
+  app:stop()
 end
 startButton:addButtonListener(startClick)
 
@@ -88,3 +84,15 @@ root:add(saplingInput)
 root:add(startButton)
 app:setRootContainer(root)
 app:start()
+
+-- Check whether the button was clicked to say whether we should execute the
+-- command. This is needed as we might exit the application in other ways.
+-- Ultimately this should be fixed by having seperate coroutines. One for UI
+-- the other for the model side of things.
+if shouldExecute then
+  loggerWidth = widthInput:getText()
+  loggerHeight = heightInput:getText()
+  sleepTime = sleepTimeInput:getText()
+  saplingName = saplingInput:getText()
+  shell.run("logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true")
+end

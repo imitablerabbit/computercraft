@@ -34,6 +34,8 @@ function GUIApplication:start()
   while self.shouldRun do
     self:update()
   end
+  term.clear()
+  term.setCursorPos(1, 1)
 end
 
 function GUIApplication:stop()
