@@ -94,7 +94,7 @@ if shouldExecute then
   loggerHeight = heightInput:getText()
   sleepTime = sleepTimeInput:getText()
   saplingName = saplingInput:getText()
-  local prog = {"logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true"}
+  local prog = {"logger", loggerWidth, loggerHeight, saplingName, sleepTime, "true"}
   print(table.unpack(prog))
   shell.run(table.unpack(prog))
 end
