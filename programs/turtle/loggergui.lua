@@ -26,64 +26,55 @@ root:setTitle("LoggerGUI")
 local widthLabel = guitext.GUIText.new("Width:")
 widthLabel:setTextAlign("left")
 widthLabel:setTextVerticalAlign("middle")
-widthLabel:setPreferredBounds(labelX, 3, labelW, labelH)
+widthLabel:setPreferredBounds(labelX, 2, labelW, labelH)
 widthLabel:setBorder(false)
 local widthInput = guiinput.GUIInput.new(loggerWidth)
-widthInput:setPreferredBounds(inputX, 3, inputW, inputH) 
+widthInput:setPreferredBounds(inputX, 2, inputW, inputH) 
 widthInput:setBorder(true)
 
 -- Setup the logging height label and input.
 local heightLabel = guitext.GUIText.new("Height:")
 heightLabel:setTextAlign("left")
 heightLabel:setTextVerticalAlign("middle")
-heightLabel:setPreferredBounds(labelX, 6, labelW, labelH)
+heightLabel:setPreferredBounds(labelX, 4, labelW, labelH)
 heightLabel:setBorder(false)
 local heightInput = guiinput.GUIInput.new(loggerHeight)
-heightInput:setPreferredBounds(inputX, 6, inputW, inputH) 
+heightInput:setPreferredBounds(inputX, 4, inputW, inputH) 
 heightInput:setBorder(true)
 
 -- Setup the logging sleepTime label and input.
 local sleepTimeLabel = guitext.GUIText.new("Sleep:")
 sleepTimeLabel:setTextAlign("left")
 sleepTimeLabel:setTextVerticalAlign("middle")
-sleepTimeLabel:setPreferredBounds(labelX, 9, labelW, labelH)
+sleepTimeLabel:setPreferredBounds(labelX, 6, labelW, labelH)
 sleepTimeLabel:setBorder(false)
 local sleepTimeInput = guiinput.GUIInput.new(sleepTime)
-sleepTimeInput:setPreferredBounds(inputX, 9, inputW, inputH) 
+sleepTimeInput:setPreferredBounds(inputX, 6, inputW, inputH) 
 sleepTimeInput:setBorder(true)
 
 -- Setup the logging height label and input.
 local saplingLabel = guitext.GUIText.new("Sapling:")
 saplingLabel:setTextAlign("left")
 saplingLabel:setTextVerticalAlign("middle")
-saplingLabel:setPreferredBounds(labelX, 12, labelW, labelH)
+saplingLabel:setPreferredBounds(labelX, 8, labelW, labelH)
 saplingLabel:setBorder(false)
 local saplingInput = guiinput.GUIInput.new(saplingName)
-saplingInput:setPreferredBounds(inputX, 12, inputW, inputH) 
+saplingInput:setPreferredBounds(inputX, 8, inputW, inputH) 
 saplingInput:setBorder(true)
 
--- Add button to change whether the contents of the turtle should be dumped in
--- the chest placed behind it.
---local dumpItemsButton = guibutton.GUIButton.new("Dump Items")
---dumpItemsButton:setPreferredBounds(w - 1 - bw, 7, bw, 5)
---local dumpItemsClick = function(e)
---  dumpItems = not dumpItems
---  if dumpItems then
---    dumpItemsButton:setText("Dumping Items")
---  else
---    dumpItemsButton:setText("Not Dumping Items")
---  end
---end
---dumpItemsButton:addButtonListener(dumpItemsClick)
-
 -- Start logging button. When clicked the turtle will start chooping down trees.
---local bw = math.floor((w - 4) / 2)
---local startButton = guibutton.GUIButton.new("Start Logging")
---startButton:setPreferredBounds(3, 7, bw, 5)
---local startClick = function(e)
---  shell.run("logger.lua", loggerWidth, loggerHeight, sleepTime, saplingName, tostring(dumpItems))
---end
---startButton:addButtonListener(addClick)
+local bw = w - (outerPadding * 2)
+local startButton = guibutton.GUIButton.new("Start Logging")
+startButton:setPreferredBounds(outerPadding, 11, bw, 3)
+local startClick = function(e)
+  loggerWidth = widthInput:getText()
+  loggerHeight = heightInput:getText()
+  sleepTime = sleepTimeInput:getText()
+  saplingName = saplingInput:getText()
+  --shell.run("logger", loggerWidth, loggerHeight, sleepTime, saplingName, "true")
+  startButton:setText("logger"..loggerWidth.." "..loggerHeight.." "..sleepTime.." "..saplingName.." true")
+end
+startButton:addButtonListener(addClick)
 
 -- Add the button to the root container.
 root:add(widthLabel)
@@ -94,9 +85,6 @@ root:add(sleepTimeLabel)
 root:add(sleepTimeInput)
 root:add(saplingLabel)
 root:add(saplingInput)
---root:add(addClickLabel)
---root:add(subtractClickLabel)
---root:add(startButton)
---root:add(dumpItemsButton)
+root:add(startButton)
 app:setRootContainer(root)
 app:start()
