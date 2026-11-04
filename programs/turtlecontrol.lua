@@ -17,6 +17,8 @@ Screens:
           turtle, with its output streamed back
   items   the turtle's inventory as a 4x4 grid with fuel (F) and block
           (B) icons, refreshed from the turtle while open
+  discover a dropdown of the items the turtle carries, to pick a text
+          value such as the sapling name from them
   item    details of one slot with Select, Refuel and Drop buttons
 
 Turtles are found by their status broadcasts. If a registry file from
@@ -113,7 +115,7 @@ local app = guiapplication.GUIApplication.new()
 local icons = {}   -- id -> GUITurtleIcon on the main screen
 local screen = nil -- the open screen: { id, refresh, tick, onAck, onOutput }
 local showMain, showTurtle, showMove, showShell, showJobForm, showTextInput
-local showInventory, showItemDetail
+local showInventory, showItemDetail, showDiscover
 
 local function setScreen(root, handlers)
   icons = {}
@@ -704,6 +706,7 @@ showJobForm = function(id, job)
           if o == current then known = true end
         end
         if current ~= nil and current ~= "" and not known then table.insert(options, 1, tostring(current)) end
+        table.insert(options, "Discover...")
         table.insert(options, "Other...")
       end
       local longest = 0
@@ -714,6 +717,11 @@ showJobForm = function(id, job)
         if custom and e.value == "Other..." then
           showTextInput(param.label, tostring(values[param.name] or ""), function(text)
             values[param.name] = text
+            showJobForm(id, job)
+          end, function() showJobForm(id, job) end)
+        elseif custom and e.value == "Discover..." then
+          showDiscover(id, param, function(name)
+            values[param.name] = name
             showJobForm(id, job)
           end, function() showJobForm(id, job) end)
         else
@@ -738,6 +746,84 @@ showJobForm = function(id, job)
   end))
 
   setScreen(root, { id = id })
+end
+
+--[[
+Discover: pick a value for a text parameter from what the turtle is
+carrying. The turtle is asked for its inventory and the item names are
+offered in a dropdown, saplings first. onPick(name) or onCancel().
+--]]
+
+-- Distinct item names in an inventory with their counts, saplings
+-- first, then the rest, each group sorted.
+local function carriedItems(inventory)
+  local counts = {}
+  for slot, item in pairs(inventory or {}) do
+    if type(item) == "table" and item.name then
+      counts[item.name] = (counts[item.name] or 0) + (tonumber(item.count) or 0)
+    end
+  end
+  local saplings, others = {}, {}
+  for name in pairs(counts) do
+    if name:find("sapling") or name:find("propagule") then saplings[#saplings + 1] = name else others[#others + 1] = name end
+  end
+  table.sort(saplings)
+  table.sort(others)
+  local names = {}
+  for i, name in ipairs(saplings) do names[#names + 1] = name end
+  for i, name in ipairs(others) do names[#names + 1] = name end
+  return names, counts
+end
+
+showDiscover = function(id, param, onPick, onCancel, fresh)
+  local t = turtles[id]
+  if not t then return showMain() end
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, param.label .. " from " .. t.label, onCancel)
+  local names, counts = carriedItems(t.inventory)
+  local signature = {}
+  for i, name in ipairs(names) do signature[i] = name .. "=" .. counts[name] end
+  signature = table.concat(signature, ",")
+
+  local dropdown
+  if #names == 0 then
+    root:add(newLabel(t.inventory and "The turtle is carrying nothing." or "Asking the turtle what it carries...", 2, 3, w - 2, colors.lightGray))
+  else
+    root:add(newLabel("Touch to pick one of the " .. #names .. " items it carries:", 2, 3, w - 2, colors.lightGray))
+    local options, longest = {}, 0
+    for i, name in ipairs(names) do
+      options[i] = name .. " x" .. counts[name]
+      longest = math.max(longest, #options[i])
+    end
+    dropdown = newDropdown(options, nil, 2, 5, math.min(w - 2, longest + 3))
+    dropdown:addSelectListener(function(e) onPick(names[e.index]) end)
+    root:add(dropdown)
+  end
+
+  if not fresh then turtlectl.requestInventory(id) end
+  local ticks = 0
+  setScreen(root, {
+    id = id,
+    onInventory = function()
+      -- Only rebuild when what is carried changed, so an open list is
+      -- not reset by every reply.
+      local newNames, newCounts = carriedItems(t.inventory)
+      local newSignature = {}
+      for i, name in ipairs(newNames) do newSignature[i] = name .. "=" .. newCounts[name] end
+      if table.concat(newSignature, ",") ~= signature then
+        showDiscover(id, param, onPick, onCancel, true)
+      end
+    end,
+    tick = function()
+      ticks = ticks + 1
+      if ticks * animateEvery >= inventoryEvery then
+        ticks = 0
+        turtlectl.requestInventory(id)
+      end
+    end,
+  })
+  if dropdown then dropdown:openList() end
 end
 
 --[[

@@ -27,8 +27,11 @@ A job with parameters opens a form first: numbers have -10, -1, +1 and +10
 buttons, switches toggle on touch, choices such as the chest side are
 dropdowns that open a list on touch, and text values open an on screen
 keyboard. A text value with suggestions, such as the logger's sapling, is a
-dropdown too, listing the vanilla saplings with Other... at the end for
-typing anything else; a typed name then shows at the top of the list. Start sends the job with those values, which are remembered per
+dropdown too, listing the vanilla saplings with Discover... and Other...
+at the end. Discover... asks the turtle what it is carrying and offers
+those items in a second dropdown, saplings first, so the exact name never
+has to be typed; Other... opens the keyboard, and a typed name then shows
+at the top of the list. Start sends the job with those values, which are remembered per
 turtle for next time. Each job's parameters, defaults and limits are the
 `params` table of its catalogue entry in `apis/turtlectl.lua`, one entry per
 program argument in order, so adding a program means adding one entry there.
