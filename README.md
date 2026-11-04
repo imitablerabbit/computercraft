@@ -11,8 +11,8 @@ turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
-(strip mine, mine line, logger, refuel), plus Items, Move, Shell, Stop and
-Back. Mine line has a Return switch that walks the turtle back to where it started
+(strip mine, mine line, quarry, flatten, logger, refuel), plus Items, Move,
+Shell, Stop and Back. Mine line has a Return switch that walks the turtle back to where it started
 once the line is done, so it can be run again from the same spot.
 
 Items shows the turtle's inventory as the same 4x4 grid as `inventorygui`
@@ -58,6 +58,30 @@ turtleagent [heartbeatSeconds]
 ```
 
 Stop aborts the running job on the turtle, which is left wherever it got to.
+
+## Quarry and flatten
+
+`quarry` digs a box straight down and `flatten` clears one straight up; both
+bring what they dig back to a chest. Put the turtle in the bottom left
+corner of the area, looking along it, with a chest on its left:
+
+```
+quarry [width] [length] [depth]     defaults 8 8 8
+flatten [width] [length] [height]   defaults 8 8 4
+```
+
+Width is to the turtle's right and length straight ahead. For a quarry the
+first layer is the one under the turtle, so it can stand on the ground; for
+flatten the first layer is the turtle's own, so it can stand beside the
+hill. Each layer is cleared in a snake pattern before moving to the next.
+Whenever the inventory is full, and once the job is done, the turtle goes
+back to its starting block, turns to the chest and empties itself, then
+returns to where it left off. Without a chest on the left it keeps the
+items. If it hits bedrock or something it cannot dig through it gives up,
+goes home and empties itself, and reports why. When fuel runs lower than
+the way home it burns fuel it has dug up (coal, logs, ...) rather than
+stopping. Both are jobs in the turtle control job list with forms for the
+three sizes; the engine is `apis/excavate.lua`.
 
 ## Turtle inventory viewer
 

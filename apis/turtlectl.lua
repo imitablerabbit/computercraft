@@ -46,6 +46,16 @@ jobs = {
     { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
     { name = "returnHome", label = "Return", type = "bool", default = false },
   } },
+  { id = "quarry", name = "Quarry", program = "quarry", params = {
+    { name = "width", label = "Width", type = "number", default = 8, min = 1 },
+    { name = "length", label = "Length", type = "number", default = 8, min = 1 },
+    { name = "depth", label = "Depth", type = "number", default = 8, min = 1 },
+  } },
+  { id = "flatten", name = "Flatten", program = "flatten", params = {
+    { name = "width", label = "Width", type = "number", default = 8, min = 1 },
+    { name = "length", label = "Length", type = "number", default = 8, min = 1 },
+    { name = "height", label = "Height", type = "number", default = 4, min = 1 },
+  } },
   { id = "logger", name = "Logger", program = "logger", params = {
     { name = "width", label = "Width", type = "number", default = 10, min = 1 },
     { name = "height", label = "Height", type = "number", default = 7, min = 1 },

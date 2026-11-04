@@ -28,6 +28,7 @@ end
 
 -- Global variables
 local files = {
+    "apis/excavate.lua",
     "apis/files.lua",
     "apis/inventory.lua",
     "apis/mine.lua",
@@ -67,9 +68,11 @@ local files = {
     "programs/turtlecontrol.lua",
 
     "programs/turtle/logger.lua",
+    "programs/turtle/flatten.lua",
     "programs/turtle/inventorygui.lua",
     "programs/turtle/loggergui.lua",
     "programs/turtle/mineline.lua",
+    "programs/turtle/quarry.lua",
     "programs/turtle/stripmine.lua",
     "programs/turtle/turtleagent.lua",
 
