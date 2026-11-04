@@ -19,6 +19,8 @@ Screens:
           (B) icons, refreshed from the turtle while open
   discover a dropdown of the items the turtle carries, to pick a text
           value such as the sapling name from them
+  fuel    the items the turtle never burns as fuel, with Remove buttons
+          and Add from what it carries or by name
   item    details of one slot with Select, Refuel and Drop buttons
 
 Turtles are found by their status broadcasts. If a registry file from
@@ -67,7 +69,8 @@ monitor.setTextScale(textScale)
 Turtle records: id -> { id, label, state, job, message, fuel, lastSeen,
                         output = {}, command = "", lastMove,
                         inventory = {}, selected, inventoryMessage,
-                        alerts = {} (kind -> message of help needed) }
+                        alerts = {} (kind -> message of help needed),
+                        fuelBlacklist (list of item names, nil until asked) }
 --]]
 
 local turtles = {}
@@ -115,7 +118,7 @@ local app = guiapplication.GUIApplication.new()
 local icons = {}   -- id -> GUITurtleIcon on the main screen
 local screen = nil -- the open screen: { id, refresh, tick, onAck, onOutput }
 local showMain, showTurtle, showMove, showShell, showJobForm, showTextInput
-local showInventory, showItemDetail, showDiscover
+local showInventory, showItemDetail, showDiscover, showFuelRules
 
 local function setScreen(root, handlers)
   icons = {}
@@ -307,6 +310,7 @@ showTurtle = function(id)
     end })
   end
   table.insert(actions, { name = "Items", color = colors.orange, fn = function() showInventory(id) end })
+  table.insert(actions, { name = "Fuel", color = colors.brown, fn = function() showFuelRules(id) end })
   table.insert(actions, { name = "Move", color = colors.green, fn = function() showMove(id) end })
   table.insert(actions, { name = "Shell", color = colors.purple, fn = function() showShell(id) end })
   table.insert(actions, { name = "Stop", color = colors.red, fn = function() sendStop(t); screen.refresh() end })
@@ -827,6 +831,72 @@ showDiscover = function(id, param, onPick, onCancel, fresh)
 end
 
 --[[
+Fuel rules: the items the turtle never burns, with Remove buttons, and
+ways to add one from what it carries (Discover) or by name.
+--]]
+
+showFuelRules = function(id)
+  local t = turtles[id]
+  if not t then return showMain() end
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, "Fuel rules " .. t.label, function() showTurtle(id) end)
+  local status = newLabel("", 1, 2, w, colors.lightGray)
+  root:add(status)
+  root:add(newLabel("Never burnt as fuel:", 1, 3, w, colors.yellow))
+
+  local bh = (h >= 16) and 3 or 1
+  local by = h - bh + 1
+  local lastRow = by - 2
+  local list = t.fuelBlacklist
+  if not list then
+    root:add(newLabel("asking the turtle...", 2, 4, w - 2, colors.lightGray))
+  elseif #list == 0 then
+    root:add(newLabel("nothing, every fuel item may be burnt", 2, 4, w - 2, colors.lightGray))
+  else
+    for i, name in ipairs(list) do
+      local y = 3 + i
+      if y > lastRow then break end
+      root:add(newLabel(tostring(name), 2, y, w - 10, colors.white))
+      root:add(newButton("Remove", w - 7, y, 8, 1, colors.red, function()
+        turtlectl.sendFuelRules(id, "remove", name)
+        t.fuelMessage = "removing " .. tostring(name) .. "..."
+        screen.refresh()
+      end))
+    end
+  end
+
+  local bw = math.floor((w - 3) / 2)
+  root:add(newButton("Add carried item", 2, by, bw, bh, colors.green, function()
+    showDiscover(id, { label = "Never burn" }, function(name)
+      turtlectl.sendFuelRules(id, "add", name)
+      t.fuelMessage = "adding " .. name .. "..."
+      showFuelRules(id)
+    end, function() showFuelRules(id) end)
+  end))
+  root:add(newButton("Add by name", 3 + bw, by, bw, bh, colors.purple, function()
+    showTextInput("Never burn", "", function(text)
+      if text ~= "" then
+        turtlectl.sendFuelRules(id, "add", text)
+        t.fuelMessage = "adding " .. text .. "..."
+      end
+      showFuelRules(id)
+    end, function() showFuelRules(id) end)
+  end))
+
+  if not list then turtlectl.sendFuelRules(id, "get") end
+  setScreen(root, {
+    id = id,
+    refresh = function() status:setText(t.fuelMessage or "") end,
+    onAck = function(msg)
+      if msg.job == "fuel" then t.fuelMessage = msg.message or (msg.ok and "ok" or "refused") end
+      screen.refresh()
+    end,
+    onFuelList = function() showFuelRules(id) end,
+  })
+end
+
+--[[
 Text input: edit one value with the keyboard. onDone(text) or onCancel().
 --]]
 
@@ -951,6 +1021,16 @@ local function onAck(sender, msg)
   end
 end
 
+-- The turtle told us which items it never burns.
+local function onFuelList(sender, msg)
+  local t = turtles[sender]
+  if not t or type(msg.blacklist) ~= "table" then return end
+  local list = {}
+  for i, name in ipairs(msg.blacklist) do list[i] = tostring(name) end
+  t.fuelBlacklist = list
+  if screen and screen.id == sender and screen.onFuelList then screen.onFuelList() end
+end
+
 -- A turtle needs help, or no longer does.
 local function onAlert(sender, msg)
   local t = turtles[sender]
@@ -1022,6 +1102,8 @@ app:addEventListener(function(event)
         onInventory(sender, msg)
       elseif turtlectl.isMessage(msg, "alert") then
         onAlert(sender, msg)
+      elseif turtlectl.isMessage(msg, "fuel") then
+        onFuelList(sender, msg)
       end
     end
   elseif event[1] == "timer" then

@@ -6,7 +6,8 @@ when told to. A running job can be aborted with the stop command. It
 also reports its inventory and selects, refuels from or drops a slot
 on request so the controller can look through the turtle's items, and
 passes on alerts (out of fuel, no chest, ...) raised with the alert
-api so the controller can show that the turtle needs a hand.
+api so the controller can show that the turtle needs a hand, and lets
+the controller see and edit the items it never burns as fuel.
 
 Usage: turtleagent [heartbeatSeconds]
 --]]
@@ -127,6 +128,24 @@ local function doSlot(sender, action, slot)
   sendStatus(sender) -- fuel may have changed
 end
 
+-- Show or change which items are never burnt as fuel.
+local function doFuel(sender, msg)
+  local ok, reason = true, nil
+  if msg.action == "add" then
+    ok = inventory.addFuelBlacklist(msg.item)
+    reason = ok and ("never burning " .. tostring(msg.item)) or "already listed, or not a name"
+  elseif msg.action == "remove" then
+    ok = inventory.removeFuelBlacklist(msg.item)
+    reason = ok and ("may burn " .. tostring(msg.item)) or "not listed"
+  elseif msg.action ~= "get" then
+    ok, reason = false, "unknown fuel action"
+  end
+  if msg.action ~= "get" then
+    rednet.send(sender, turtlectl.newAck(ok, "fuel", reason), turtlectl.PROTOCOL)
+  end
+  rednet.send(sender, turtlectl.newFuelList(inventory.FuelBlacklist), turtlectl.PROTOCOL)
+end
+
 -- Receive commands, moves, inventory requests and discover requests.
 local function listener()
   while true do
@@ -139,6 +158,8 @@ local function listener()
       sendInventory(sender)
     elseif turtlectl.isMessage(msg, "slot") then
       doSlot(sender, msg.action, msg.slot)
+    elseif turtlectl.isMessage(msg, "fuel") then
+      doFuel(sender, msg)
     elseif turtlectl.isMessage(msg, "command") then
       if msg.job == "stop" then
         if state == "busy" then

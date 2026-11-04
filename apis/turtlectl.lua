@@ -204,6 +204,18 @@ function newStatus(state, jobId, message, alerts)
   return status
 end
 
+-- Fuel rules: ask for ("get") or change ("add" / "remove" an item name)
+-- the turtle's fuel blacklist. The turtle answers with newFuelList.
+function newFuelRules(action, item)
+  return { type = "fuel", action = action, item = item }
+end
+
+function newFuelList(blacklist)
+  local list = {}
+  for i, b in ipairs(blacklist or {}) do list[i] = b end
+  return { type = "fuel", blacklist = list }
+end
+
 -- A turtle needs help (active) or no longer does.
 function newAlert(kind, message, active)
   return { type = "alert", id = os.getComputerID(), kind = kind, message = message, active = active and true or false }
@@ -233,6 +245,10 @@ end
 
 function sendSlotAction(turtleId, action, slot)
   return rednet.send(turtleId, newSlotAction(action, slot), PROTOCOL)
+end
+
+function sendFuelRules(turtleId, action, item)
+  return rednet.send(turtleId, newFuelRules(action, item), PROTOCOL)
 end
 
 -- Ask the turtle to run a command line. width is the number of columns

@@ -15,8 +15,11 @@ ItemTorch = "minecraft:torch"
 ItemSapling = "minecraft:sapling"
 ItemRubberSapling = "ic2:sapling"
 
--- Blacklist of items when refueling
+-- Items the turtle never burns as fuel (item names, or slot numbers).
+-- Kept in FuelBlacklistFile so it survives reboots; turtle control
+-- edits it through the agent.
 FuelBlacklist = {}
+FuelBlacklistFile = "fuel_blacklist"
 
 -- Where a chest can sit relative to the turtle's position and heading.
 -- Programs that empty themselves take one of these as an argument.
@@ -82,7 +85,7 @@ function refuelAll(blacklist)
           skip = true
         end
       elseif type(b) == "number" then
-        if ignoreSlot == slot then
+        if b == slot then
           skip = true
         end
       end
@@ -94,6 +97,57 @@ function refuelAll(blacklist)
   end
   turtle.select(s)
 end
+
+-- Fuel blacklist housekeeping.
+
+function loadFuelBlacklist()
+  if fs.exists(FuelBlacklistFile) then
+    local f = fs.open(FuelBlacklistFile, "r")
+    if f then
+      local list = textutils.unserialize(f.readAll() or "")
+      f.close()
+      if type(list) == "table" then FuelBlacklist = list end
+    end
+  end
+  return FuelBlacklist
+end
+
+function saveFuelBlacklist()
+  local f = fs.open(FuelBlacklistFile, "w")
+  if not f then return false end
+  f.write(textutils.serialize(FuelBlacklist))
+  f.close()
+  return true
+end
+
+function isFuelBlacklisted(name)
+  for i, b in ipairs(FuelBlacklist) do
+    if b == name then return true end
+  end
+  return false
+end
+
+-- Never burn this item. Returns false when it is already listed.
+function addFuelBlacklist(name)
+  if type(name) ~= "string" or name == "" or isFuelBlacklisted(name) then return false end
+  table.insert(FuelBlacklist, name)
+  saveFuelBlacklist()
+  return true
+end
+
+-- Allow burning this item again. Returns false when it was not listed.
+function removeFuelBlacklist(name)
+  for i, b in ipairs(FuelBlacklist) do
+    if b == name then
+      table.remove(FuelBlacklist, i)
+      saveFuelBlacklist()
+      return true
+    end
+  end
+  return false
+end
+
+loadFuelBlacklist()
 
 -- Sleeps until fuel is put into the turtle. Adding items fires a
 -- turtle_inventory event, so the turtle refuels and carries on by

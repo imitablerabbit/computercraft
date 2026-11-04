@@ -152,10 +152,8 @@ if not inventory.isChestSide(chest) then
   return
 end
 
--- Dont use saplings as fuel
-inventory.FuelBlacklist = {
-  saplingName,
-}
+-- Dont use saplings as fuel (this is remembered on the turtle)
+inventory.addFuelBlacklist(saplingName)
 
 while true do
   print("Starting...")
