@@ -4,7 +4,9 @@ application see and drive it. It answers discover requests, broadcasts
 its status every few seconds and runs jobs from the turtlectl catalogue
 when told to. A running job can be aborted with the stop command. It
 also reports its inventory and selects, refuels from or drops a slot
-on request so the controller can look through the turtle's items.
+on request so the controller can look through the turtle's items, and
+passes on alerts (out of fuel, no chest, ...) raised with the alert
+api so the controller can show that the turtle needs a hand.
 
 Usage: turtleagent [heartbeatSeconds]
 --]]
@@ -22,9 +24,10 @@ local state = "idle"
 local currentJob = nil
 local message = nil
 local pending = nil -- job table queued by the listener for the worker
+local alerts = {}   -- kind -> message of help currently needed
 
 local function sendStatus(to)
-  local status = turtlectl.newStatus(state, currentJob, message)
+  local status = turtlectl.newStatus(state, currentJob, message, alerts)
   if to then
     rednet.send(to, status, turtlectl.PROTOCOL)
   else
@@ -179,6 +182,28 @@ local function listener()
   end
 end
 
+-- Pass alerts raised by the running program on to the controllers.
+local function alertLoop()
+  while true do
+    local event, kind, text = os.pullEvent()
+    if event == "turtle_alert" then
+      alerts[kind] = text
+      turtlectl.broadcastAlert(kind, text, true)
+    elseif event == "turtle_alert_clear" and alerts[kind] then
+      alerts[kind] = nil
+      turtlectl.broadcastAlert(kind, nil, false)
+    end
+  end
+end
+
+-- A finished job no longer needs anything.
+local function clearAlerts()
+  for kind in pairs(alerts) do
+    turtlectl.broadcastAlert(kind, nil, false)
+  end
+  alerts = {}
+end
+
 -- Broadcast the status regularly so controllers notice us.
 local function heartbeatLoop()
   while true do
@@ -219,9 +244,10 @@ local function worker()
       print("Job " .. task.job.id .. " failed: " .. tostring(err))
     end
     currentJob = nil
+    clearAlerts()
     sendStatus()
   end
 end
 
 print("Turtle agent " .. os.getComputerID() .. " listening on " .. turtlectl.PROTOCOL)
-parallel.waitForAll(listener, heartbeatLoop, worker)
+parallel.waitForAll(listener, heartbeatLoop, worker, alertLoop)

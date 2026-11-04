@@ -172,8 +172,9 @@ local function dump()
   local ok, reason = inventory.dumpTo(chest)
   if ok then
     dumps = dumps + 1
+    alert.clear("chest")
   else
-    print(reason .. ", keeping the items")
+    alert.raise("chest", reason .. ", keeping the items")
   end
   return ok
 end

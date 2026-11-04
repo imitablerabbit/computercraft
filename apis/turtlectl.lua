@@ -177,7 +177,9 @@ function newSlotAction(action, slot)
   return { type = "slot", action = action, slot = slot }
 end
 
-function newStatus(state, jobId, message)
+-- alerts is a table of kind -> message for the help the turtle
+-- currently needs (see the alert api).
+function newStatus(state, jobId, message, alerts)
   local status = {
     type = "status",
     id = os.getComputerID(),
@@ -185,6 +187,7 @@ function newStatus(state, jobId, message)
     state = state,
     job = jobId,
     message = message,
+    alerts = alerts or {},
   }
   if turtle then
     status.fuel = turtle.getFuelLevel()
@@ -193,7 +196,16 @@ function newStatus(state, jobId, message)
   return status
 end
 
+-- A turtle needs help (active) or no longer does.
+function newAlert(kind, message, active)
+  return { type = "alert", id = os.getComputerID(), kind = kind, message = message, active = active and true or false }
+end
+
 -- Senders
+
+function broadcastAlert(kind, message, active)
+  rednet.broadcast(newAlert(kind, message, active), PROTOCOL)
+end
 
 function sendCommand(turtleId, jobId, args)
   return rednet.send(turtleId, newCommand(jobId, args), PROTOCOL)

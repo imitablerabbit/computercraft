@@ -436,6 +436,16 @@ export class World {
     }
   }
 
+  // Put items into a turtle from outside, like a player would. Returns
+  // how many fitted.
+  give(id, name, count) {
+    const t = this.turtles.get(id);
+    if (!t) return 0;
+    const left = this._addItems(t, name, count);
+    this.log(id, `was given ${count - left} ${name}`);
+    return count - left;
+  }
+
   // Interpolated position and heading for drawing.
   turtlePose(t, now) {
     const a = t.anim;

@@ -60,6 +60,15 @@ turtleagent [heartbeatSeconds]
 
 Stop aborts the running job on the turtle, which is left wherever it got to.
 
+When a turtle needs a hand its icon turns red and blinks NEEDS HELP with
+what it needs (NEEDS FUEL, NEEDS CHEST, ...), and its screen shows the
+message in red. The programs raise these through `apis/alert.lua`: running
+out of fuel (the turtle then waits, and carries on by itself once fuel is
+put in), no chest or a full chest to empty into, no torches left, no
+saplings left. `turtleagent` passes alerts to the controller and clears
+them when the job ends, so any program can call `alert.raise(kind,
+message)` and `alert.clear(kind)` to be shown the same way.
+
 ## Quarry and flatten
 
 `quarry` digs a box straight down and `flatten` clears one straight up; both
@@ -144,12 +153,14 @@ What it shows:
   Clicking a monitor tab sends `monitor_touch`, clicking a computer screen
   sends `mouse_click`, so `turtlecontrol`'s buttons work.
 - **Turtle**: position, heading, fuel and the 16 slots of the selected
-  turtle (fuel items marked F), plus every chest's contents.
+  turtle (fuel items marked F), plus every chest's contents. Give puts
+  items into the turtle as a player would, which is how to answer a fuel
+  alert.
 - **Log**: every `print`, every rednet message and every turtle action.
 
 Scenarios in the top bar set up the world and what each computer runs at
 boot: turtle control (a computer with a 3x2 monitor running `turtlecontrol`
-and two turtles running `turtleagent`), quarry, flatten, strip mine, the
+and three turtles running `turtleagent`, one almost out of fuel), quarry, flatten, strip mine, the
 inventory viewer and a blank turtle with a shell. Each computer boots
 `startup.lua` first, so all the APIs are loaded, then its scenario command,
 then drops to a shell where any program can be typed, for example

@@ -9,6 +9,7 @@ header { display: flex; align-items: center; gap: 12px; padding: 6px 12px; backg
 header h1 { font-size: 15px; margin: 0 8px 0 0; color: var(--accent); }
 .spacer { flex: 1; }
 .muted { color: var(--muted); }
+input[type=number] { background: #2a2e37; color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font: inherit; width: 4.5em; }
 button, select { background: #2a2e37; color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font: inherit; cursor: pointer; }
 button:hover { background: #343945; }
 main { display: flex; flex: 1; min-height: 0; }

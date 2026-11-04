@@ -48,11 +48,12 @@ const torches = (n) => ({ name: 'minecraft:torch', count: n });
 export const SCENARIOS = {
   control: {
     name: 'Turtle control',
-    description: 'A computer with a 3x2 advanced monitor running turtlecontrol, and two turtles running turtleagent. Touch the monitor panel to drive them.',
+    description: 'A computer with a 3x2 advanced monitor running turtlecontrol and three turtles running turtleagent. Runner has almost no fuel: start it on a job, watch the alert, then Give it coal.',
     build(world) {
       ground(world, -10, 12, -8, 12, 0, 8);
       world.setBlock(-1, 0, 1, 'chest');
       world.setBlock(-1, 4, 1, 'chest');
+      world.setBlock(-1, 8, 1, 'chest');
       tree(world, 8, 8, 1);
       tree(world, 10, 4, 1);
     },
@@ -74,6 +75,12 @@ export const SCENARIOS = {
       {
         id: 8, label: 'Lumber', kind: 'turtle', advanced: true, pos: { x: 0, y: 4, z: 1 }, heading: 0, fuel: 400,
         slots: [coal(5), { name: 'minecraft:oak_sapling', count: 16 }],
+        peripherals: { left: { type: 'modem' } },
+        autorun: 'turtleagent',
+      },
+      {
+        id: 9, label: 'Runner', kind: 'turtle', advanced: true, pos: { x: 0, y: 8, z: 1 }, heading: 0, fuel: 6,
+        slots: [],
         peripherals: { left: { type: 'modem' } },
         autorun: 'turtleagent',
       },

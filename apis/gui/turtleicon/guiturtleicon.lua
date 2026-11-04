@@ -66,13 +66,18 @@ function GUITurtleIcon:getInfo()
     return self.info
 end
 
+-- A turtle that has raised an alert shows as needing help, whatever
+-- it is doing, until it goes offline.
 function GUITurtleIcon:getState()
-    return self.info.state or "offline"
+    local info = self.info
+    if info.alerts and next(info.alerts) ~= nil and info.state ~= "offline" then return "alert" end
+    return info.state or "offline"
 end
 
--- Advance the busy animation by one frame.
+-- Advance the busy animation (or the alert blink) by one frame.
 function GUITurtleIcon:tick()
-    if self:getState() == "busy" then
+    local state = self:getState()
+    if state == "busy" or state == "alert" then
         self.frame = self.frame + 1
         self:repaint()
     end

@@ -28,6 +28,7 @@ end
 
 -- Global variables
 local files = {
+    "apis/alert.lua",
     "apis/excavate.lua",
     "apis/files.lua",
     "apis/inventory.lua",

@@ -3,7 +3,8 @@ Turtle control is a touch screen dashboard for the turtles running
 turtleagent. It runs on a computer with a modem and an advanced monitor.
 
 Screens:
-  main    an icon per turtle that changes with what the turtle is doing;
+  main    an icon per turtle that changes with what the turtle is doing
+          (red with NEEDS HELP when it raised an alert, e.g. no fuel);
           touch one to open it
   turtle  state and fuel, buttons for the jobs in turtlectl, Items,
           Move, Shell and Stop
@@ -62,7 +63,8 @@ monitor.setTextScale(textScale)
 --[[
 Turtle records: id -> { id, label, state, job, message, fuel, lastSeen,
                         output = {}, command = "", lastMove,
-                        inventory = {}, selected, inventoryMessage }
+                        inventory = {}, selected, inventoryMessage,
+                        alerts = {} (kind -> message of help needed) }
 --]]
 
 local turtles = {}
@@ -77,7 +79,7 @@ end
 local function getTurtle(id)
   local t = turtles[id]
   if not t then
-    t = { id = id, label = "Turtle " .. id, state = "offline", output = {}, command = "", forms = {} }
+    t = { id = id, label = "Turtle " .. id, state = "offline", output = {}, command = "", forms = {}, alerts = {} }
     turtles[id] = t
   end
   return t
@@ -161,6 +163,17 @@ local function addHeader(root, w, title, onBack, onStop)
     x = x - 7
     root:add(newButton("Stop", x, 1, 6, 1, colors.red, onStop))
   end
+end
+
+-- The help a turtle is asking for, as one line, or nil.
+local function alertText(t)
+  local kinds = {}
+  for kind in pairs(t.alerts or {}) do kinds[#kinds + 1] = kind end
+  if #kinds == 0 then return nil end
+  table.sort(kinds)
+  local parts = {}
+  for i, kind in ipairs(kinds) do parts[i] = t.alerts[kind] end
+  return table.concat(parts, "; ")
 end
 
 local function fuelText(t)
@@ -301,13 +314,16 @@ showTurtle = function(id)
     refresh = function()
       local t = turtles[id]
       if icon then icon:setInfo(t) end
+      local help = alertText(t)
       if lines.job then
-        lines.state:setText("State: " .. (t.state or "?"))
+        lines.state:setText("State: " .. (t.state or "?") .. (help and ", needs help" or ""))
         lines.job:setText("Job:   " .. (t.job or "-"))
         lines.fuel:setText("Fuel:  " .. fuelText(t))
-        lines.message:setText(t.message or "")
+        lines.message:setTextColor(help and colors.red or colors.lightGray)
+        lines.message:setText(help and ("NEEDS HELP: " .. help) or (t.message or ""))
       else
-        lines.state:setText((t.state or "?") .. " " .. (t.job or ""))
+        lines.state:setTextColor(help and colors.red or colors.white)
+        lines.state:setText(help and ("HELP: " .. help) or ((t.state or "?") .. " " .. (t.job or "")))
         lines.fuel:setText("Fuel: " .. fuelText(t))
       end
     end,
@@ -756,6 +772,7 @@ local function onStatus(msg)
   t.message = msg.message
   t.fuel = msg.fuel
   t.fuelLimit = msg.fuelLimit
+  if type(msg.alerts) == "table" then t.alerts = msg.alerts end
   t.lastSeen = os.clock()
   if screen and screen.id == id then
     if screen.onStatus then screen.onStatus(msg) elseif screen.refresh then screen.refresh() end
@@ -780,6 +797,24 @@ local function onAck(sender, msg)
   end
   if screen and screen.id == sender then
     if screen.onAck then screen.onAck(msg) elseif screen.refresh then screen.refresh() end
+  end
+end
+
+-- A turtle needs help, or no longer does.
+local function onAlert(sender, msg)
+  local t = turtles[sender]
+  if not t or type(msg.kind) ~= "string" then return end
+  if msg.active then
+    t.alerts[msg.kind] = msg.message or msg.kind
+    t.message = "needs help: " .. (msg.message or msg.kind)
+  else
+    t.alerts[msg.kind] = nil
+    if next(t.alerts) == nil then t.message = "help no longer needed" end
+  end
+  if screen and screen.id == sender then
+    if screen.refresh then screen.refresh() end
+  elseif icons[sender] then
+    icons[sender]:setInfo(t)
   end
 end
 
@@ -834,6 +869,8 @@ app:addEventListener(function(event)
         onOutput(sender, msg)
       elseif turtlectl.isMessage(msg, "inventory") then
         onInventory(sender, msg)
+      elseif turtlectl.isMessage(msg, "alert") then
+        onAlert(sender, msg)
       end
     end
   elseif event[1] == "timer" then

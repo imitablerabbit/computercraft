@@ -52,8 +52,10 @@ end
 
 function plantSapling()
   if not inventory.select(saplingName) then
+    alert.raise("saplings", "no " .. saplingName .. " left to plant")
     return false
   end
+  alert.clear("saplings")
   if not turtle.place() then
     return false
   end

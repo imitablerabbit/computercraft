@@ -95,19 +95,24 @@ function refuelAll(blacklist)
   turtle.select(s)
 end
 
--- Sleeps until the user adds some fuel into the turtle
--- and presses a button. The turtle will immediately
--- refuel with all of the fuel placed inside it.
+-- Sleeps until fuel is put into the turtle. Adding items fires a
+-- turtle_inventory event, so the turtle refuels and carries on by
+-- itself; pressing space does the same. Raises a "fuel" alert while
+-- waiting so turtle control shows the turtle needs help.
 function waitForFuel(blacklist)
   print("waiting for fuel...")
-  print("press the space bar when fuel has been given to the turtle")
+  print("add fuel to the turtle (or add it and press space)")
+  alert.raise("fuel", "out of fuel, add fuel to the turtle")
   while true do
-    local event, key = os.pullEvent("key")
-    if key == keys.space then
-      break
+    local event, key = os.pullEvent()
+    if (event == "key" and key == keys.space) or event == "turtle_inventory" then
+      refuelAll(blacklist)
+      local fuel = turtle.getFuelLevel()
+      if fuel == "unlimited" or fuel > 0 then break end
     end
   end
-  refuelAll(blacklist)
+  alert.clear("fuel")
+  print("fuel level is now " .. tostring(turtle.getFuelLevel()))
 end
 
 -- Completely empty the turtle inventory. If there is a
@@ -192,8 +197,10 @@ function placeTorch()
   currentSlot = turtle.getSelectedSlot()
   -- Change to the torch slot
   if not inventory.select(ItemTorch) then
+    alert.raise("torches", "no torches left")
     return false
   end
+  alert.clear("torches")
   -- Place the torch on the block above the turtle
   if not turtle.placeUp() then
     print("warn: unable to place torch")

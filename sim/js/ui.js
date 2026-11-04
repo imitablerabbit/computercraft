@@ -53,6 +53,18 @@ export class UI {
     this.$('terminate').addEventListener('click', () => { if (this.activeComputer) this.activeComputer.terminate(); this.canvas.focus(); });
     this.$('reboot').addEventListener('click', () => { if (this.activeComputer) this.activeComputer.reboot(); this.canvas.focus(); });
     this.$('turtle-select').addEventListener('change', (e) => this.selectTurtle(parseInt(e.target.value, 10)));
+    const giveItem = this.$('give-item');
+    for (const name of Object.keys(ITEMS)) {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = itemDisplayName(name);
+      giveItem.appendChild(o);
+    }
+    giveItem.value = 'minecraft:coal';
+    this.$('give').addEventListener('click', () => {
+      if (this.selectedTurtle == null) return;
+      const count = Math.max(1, Math.min(64, parseInt(this.$('give-count').value, 10) || 1));
+      this.sim.world.give(this.selectedTurtle, giveItem.value, count);
+    });
     this.$('log-clear').addEventListener('click', () => { this.sim.logs.length = 0; this.$('log-lines').innerHTML = ''; this.logCount = 0; });
     this.$('log-net').addEventListener('change', () => this.redrawLog());
     this.$('log-print').addEventListener('change', () => this.redrawLog());

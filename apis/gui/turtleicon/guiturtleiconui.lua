@@ -19,6 +19,7 @@ local states = {
     idle    = { body = colors.lime,   eye = colors.white, text = "IDLE" },
     busy    = { body = colors.orange, eye = colors.white, text = "WORKING" },
     error   = { body = colors.red,    eye = colors.black, text = "ERROR" },
+    alert   = { body = colors.red,    eye = colors.yellow, text = "NEEDS HELP" },
     offline = { body = colors.gray,   eye = colors.black, text = "OFFLINE" },
 }
 local spinner = { "|", "/", "-", "\\" }
@@ -56,6 +57,7 @@ function GUITurtleIconUI:paintPicture(x, y, state)
             if (key == "p" or key == "h") and not showTool then key = " " end
             local ch = " "
             if key == "e" and state == "error" then ch = "x" end
+            if key == "e" and state == "alert" then ch = "!" end
             text = text .. ch
             fg = fg .. blitChar(colors.white)
             back = back .. blitChar(palette[key] or bg)
@@ -91,6 +93,14 @@ function GUITurtleIconUI:paint()
         local frame = self.component.frame % #spinner + 1
         local job = (info.job or look.text):upper():sub(1, w - 4) -- room for the spinner
         stateText = job .. " " .. spinner[frame]
+    elseif state == "alert" then
+        -- Blink between NEEDS HELP and what is needed (NEEDS FUEL).
+        local kinds = {}
+        for kind in pairs(info.alerts or {}) do kinds[#kinds + 1] = kind end
+        table.sort(kinds)
+        if #kinds > 0 and self.component.frame % 2 == 1 then
+            stateText = ("NEEDS " .. kinds[1]):upper()
+        end
     end
 
     if h >= guiturtleicon.GUITurtleIcon.MinHeight and w >= guiturtleicon.GUITurtleIcon.MinWidth then
