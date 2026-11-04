@@ -36,6 +36,14 @@ PROTOCOL = "turtlectl"
 -- inventory.ChestSides).
 local chestSides = { "left", "right", "behind", "below", "above" }
 
+-- Saplings the logger form offers; any other name can still be typed.
+local saplings = {
+  "minecraft:oak_sapling", "minecraft:spruce_sapling", "minecraft:birch_sapling",
+  "minecraft:jungle_sapling", "minecraft:acacia_sapling", "minecraft:dark_oak_sapling",
+  "minecraft:cherry_sapling", "minecraft:pale_oak_sapling", "minecraft:mangrove_propagule",
+  "minecraft:sapling", "ic2:sapling",
+}
+
 jobs = {
   { id = "stripmine", name = "Strip mine", program = "stripmine", params = {
     { name = "mines", label = "Mines", type = "number", default = 5, min = 1 },
@@ -66,7 +74,7 @@ jobs = {
   { id = "logger", name = "Logger", program = "logger", params = {
     { name = "width", label = "Width", type = "number", default = 10, min = 1 },
     { name = "height", label = "Height", type = "number", default = 7, min = 1 },
-    { name = "sapling", label = "Sapling", type = "string", default = "minecraft:sapling" },
+    { name = "sapling", label = "Sapling", type = "string", default = "minecraft:oak_sapling", options = saplings },
     { name = "sleep", label = "Sleep secs", type = "number", default = 60, min = 0, step = { 10, 60 } },
     { name = "dump", label = "Dump items", type = "bool", default = true },
     { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },

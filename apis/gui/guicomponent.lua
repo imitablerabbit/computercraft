@@ -7,6 +7,12 @@ and key listeners.
 GUIComponent = {}
 GUIComponent.__index = GUIComponent
 
+-- A component that has captured the pointer (an open dropdown) gets
+-- every click and touch until it releases the capture.
+local captured = nil
+function setCapture(c) captured = c end
+function getCapture() return captured end
+
 function GUIComponent.new(t)
     t = t or term.current()
     width, height = t:getSize()

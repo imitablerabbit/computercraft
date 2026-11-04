@@ -8,8 +8,9 @@ Screens:
           touch one to open it
   turtle  state and fuel, buttons for the jobs in turtlectl, Items,
           Move, Shell and Stop
-  job     a form for the job's parameters (length, torches, chest side
-          ...) with a Start button; values are remembered per turtle
+  job     a form for the job's parameters (length, torches, chest side,
+          sapling ...) with a Start button; choices are dropdowns;
+          values are remembered per turtle
   text    an on screen keyboard to edit one text value of a job form
   move    a pad of single steps and actions (forward, turn, dig, place ...)
   shell   an on screen keyboard to type a command line that runs on the
@@ -140,6 +141,21 @@ local function newLabel(text, x, y, w, color)
   label:setBackgroundColor(colors.black)
   label:setTextColor(color or colors.white)
   return label
+end
+
+-- A dropdown showing value (or the first option) from options.
+local function newDropdown(options, value, x, y, w)
+  local index = 1
+  for i, o in ipairs(options) do
+    if o == value then index = i end
+  end
+  local dropdown = guidropdown.GUIDropdown.new(options, index)
+  dropdown:setPreferredBounds(x, y, math.max(3, w), 1)
+  dropdown:setBackgroundColor(colors.cyan)
+  dropdown:setTextColor(colors.white)
+  dropdown:setListColor(colors.gray)
+  dropdown:setHighlightColor(colors.lightGray)
+  return dropdown
 end
 
 local function newButton(text, x, y, w, h, color, onClick)
@@ -675,19 +691,36 @@ showJobForm = function(id, job)
         button:setText(valueText(param))
       end)
       root:add(button)
-    elseif param.type == "choice" then
-      -- Touch to step through the options.
-      local button
-      button = newButton(valueText(param), x, y, cellW * 2 - 1, 1, colors.cyan, function()
-        local options = param.options or {}
-        local index = 1
-        for i, option in ipairs(options) do
-          if option == values[param.name] then index = i end
+    elseif param.type == "choice" or (param.type == "string" and param.options) then
+      -- A dropdown. A text parameter with options also offers Other...
+      -- which opens the keyboard, and shows a typed value at the top.
+      local options = {}
+      for i, o in ipairs(param.options or {}) do options[i] = tostring(o) end
+      local custom = param.type == "string"
+      local current = values[param.name]
+      if custom then
+        local known = false
+        for _, o in ipairs(options) do
+          if o == current then known = true end
         end
-        values[param.name] = options[index % #options + 1]
-        button:setText(valueText(param))
+        if current ~= nil and current ~= "" and not known then table.insert(options, 1, tostring(current)) end
+        table.insert(options, "Other...")
+      end
+      local longest = 0
+      for _, o in ipairs(options) do longest = math.max(longest, #o) end
+      local dw = math.min(w - x + 1, math.max(cellW * 2 - 1, longest + 3))
+      local dropdown = newDropdown(options, current, x, y, dw)
+      dropdown:addSelectListener(function(e)
+        if custom and e.value == "Other..." then
+          showTextInput(param.label, tostring(values[param.name] or ""), function(text)
+            values[param.name] = text
+            showJobForm(id, job)
+          end, function() showJobForm(id, job) end)
+        else
+          values[param.name] = e.value
+        end
       end)
-      root:add(button)
+      root:add(dropdown)
     else
       root:add(newButton(valueText(param), x, y, w - x, 1, colors.purple, function()
         showTextInput(param.label, tostring(values[param.name] or ""), function(text)

@@ -48,11 +48,15 @@ end
 
 function GUIRootContainer:triggerMonitorTouchEvent(e)
     if self.monitorSide and e.side ~= self.monitorSide then return end
+    local captured = guicomponent.getCapture()
+    if captured then return captured:triggerMonitorTouchEvent(e) end
     guicomponent.GUIComponent.triggerMonitorTouchEvent(self, e)
 end
 
 function GUIRootContainer:triggerMouseClickEvent(e)
     if self.monitorSide then return end
+    local captured = guicomponent.getCapture()
+    if captured then return captured:triggerMouseClickEvent(e) end
     guicomponent.GUIComponent.triggerMouseClickEvent(self, e)
 end
 
