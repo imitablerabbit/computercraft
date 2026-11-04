@@ -36,8 +36,10 @@ dig, place, suck and drop, each one touch. The result of the last action and
 the fuel level are shown above the pad. Moves are refused while a job runs.
 
 Shell is a remote command line. Type with the on screen keyboard (Shift
-toggles upper case) and touch Run to run the line on the turtle through its
-shell, as if typed at its own terminal. The output streams back to the
+toggles upper case, `<` and `>` move the cursor so text can be inserted or
+deleted in the middle of the line) and touch Run to run the line on the
+turtle through its shell, as if typed at its own terminal. The same
+keyboard edits text values on the job forms. The output streams back to the
 monitor, capped at 200 lines per command, and the turtle shows as working
 until the command finishes. Stop aborts it, which is also the way out of a
 command that waits for keyboard input, since there is no way to type into a

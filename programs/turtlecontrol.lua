@@ -525,16 +525,58 @@ local keyboard = {
   { "1234567890-=" },
   { "qwertyuiop/" },
   { "asdfghjkl:_" },
-  { "zxcvbnm.," },
+  { "zxcvbnm.,", { name = "<", units = 2, key = "left" }, { name = ">", units = 2, key = "right" } },
   { { name = "Shift", units = 2, key = "shift" }, { name = "Space", units = 5, key = " " },
     { name = "Bksp", units = 2, key = "bksp" }, { name = "Clear", units = 2, key = "clear" },
     { name = "Run", units = 2, key = "enter" } },
 }
 local keyUnits = 13 -- widest row, in key units
 
+-- A line of text with a cursor, driven by keyboard keys: characters
+-- are inserted at the cursor, bksp deletes before it, left and right
+-- move it, clear empties the line. key returns true on enter.
+local function newLineEditor(text)
+  local ed = { text = text or "", pos = #(text or "") }
+  function ed.key(key)
+    if key == "bksp" then
+      if ed.pos > 0 then
+        ed.text = ed.text:sub(1, ed.pos - 1) .. ed.text:sub(ed.pos + 1)
+        ed.pos = ed.pos - 1
+      end
+    elseif key == "clear" then
+      ed.text, ed.pos = "", 0
+    elseif key == "left" then
+      ed.pos = math.max(0, ed.pos - 1)
+    elseif key == "right" then
+      ed.pos = math.min(#ed.text, ed.pos + 1)
+    elseif key == "enter" then
+      return true
+    else
+      ed.text = ed.text:sub(1, ed.pos) .. key .. ed.text:sub(ed.pos + 1)
+      ed.pos = ed.pos + #key
+    end
+    return false
+  end
+  function ed.set(text)
+    ed.text, ed.pos = text, #text
+  end
+  -- The line as shown: prefix, then the text with | at the cursor,
+  -- scrolled so the cursor stays within width.
+  function ed.render(prefix, width)
+    local shown = prefix .. ed.text:sub(1, ed.pos) .. "|" .. ed.text:sub(ed.pos + 1)
+    local cursorAt = #prefix + ed.pos + 1
+    if #shown > width then
+      local start = math.max(1, cursorAt - width + 1)
+      shown = shown:sub(start, start + width - 1)
+    end
+    return shown
+  end
+  return ed
+end
+
 -- Add the keyboard to root with its top row at keyTop. onKey gets a
--- character, or "bksp", "clear" or "enter". Shift is handled here.
--- enterName renames the Run key.
+-- character, or "bksp", "clear", "left", "right" or "enter". Shift is
+-- handled here. enterName renames the Run key.
 local function addKeyboard(root, w, keyTop, onKey, enterName)
   local keyW = math.max(1, math.floor(w / keyUnits))
   local shift = false
@@ -673,20 +715,15 @@ showTextInput = function(prompt, initial, onDone, onCancel)
   local root = newRoot(prompt)
   local w, h = monitor.getSize()
   addHeader(root, w, prompt, onCancel)
-  local text = initial
+  local editor = newLineEditor(initial)
   local keyTop = h - #keyboard + 1
   local line = newLabel("", 1, math.max(2, math.floor((keyTop + 1) / 2)), w, colors.yellow)
   root:add(line)
   local function refresh()
-    local shown = "> " .. text .. "_"
-    if #shown > w then shown = shown:sub(-w) end
-    line:setText(shown)
+    line:setText(editor.render("> ", w))
   end
   addKeyboard(root, w, keyTop, function(key)
-    if key == "bksp" then text = text:sub(1, -2)
-    elseif key == "clear" then text = ""
-    elseif key == "enter" then return onDone(text)
-    else text = text .. key end
+    if editor.key(key) then return onDone(editor.text) end
     refresh()
   end, "Done")
   setScreen(root, { refresh = refresh })
@@ -712,20 +749,17 @@ showShell = function(id)
   local cmdLine = newLabel("", 1, cmdRow, w, colors.yellow)
   root:add(cmdLine)
 
+  -- The half typed command line is kept per turtle between visits.
+  if not t.editor then t.editor = newLineEditor(t.command) end
   addKeyboard(root, w, keyTop, function(key)
-    if key == "bksp" then
-      t.command = t.command:sub(1, -2)
-    elseif key == "clear" then
-      t.command = ""
-    elseif key == "enter" then
-      if t.command ~= "" then
-        addOutput(t, "> " .. t.command)
-        turtlectl.sendShell(id, t.command, w)
-        t.command = ""
+    if t.editor.key(key) then
+      if t.editor.text ~= "" then
+        addOutput(t, "> " .. t.editor.text)
+        turtlectl.sendShell(id, t.editor.text, w)
+        t.editor.set("")
       end
-    else
-      t.command = t.command .. key
     end
+    t.command = t.editor.text
     screen.refresh()
   end, "Run")
 
@@ -738,9 +772,7 @@ showShell = function(id)
       for i = 1, outRows do
         outLines[i]:setText(t.output[first + i - 1] or "")
       end
-      local text = "> " .. t.command .. "_"
-      if #text > w then text = text:sub(-w) end
-      cmdLine:setText(text)
+      cmdLine:setText(t.editor.render("> ", w))
     end,
     onAck = function(msg)
       if msg.job == "shell" and not msg.ok then addOutput(t, "[refused: " .. (msg.message or "") .. "]") end
