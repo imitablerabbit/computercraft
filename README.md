@@ -152,9 +152,12 @@ What it shows:
   (label, fuel and what it runs), a computer (with a modem on top) or a
   monitor of a chosen size for one of the computers, or removing any of
   those, for setting up a test world by hand. Added devices boot at once
-  and get a screen tab like the scenario's own; a program that only looks
-  for monitors when it starts, such as `turtlecontrol`, needs a reboot
-  after a monitor is added.
+  and get a screen tab like the scenario's own. A monitor that touches a
+  computer is attached to it on that side (right, left, top, ...), as in
+  the game; one that touches none joins the computer chosen in On as a
+  networked monitor. A program that only looks for monitors when it
+  starts, such as `turtlecontrol`, needs a reboot after a monitor is
+  added.
 - **Screens**: a tab for every computer screen and every monitor, drawn like
   the game. Click a screen to focus it and type: keys arrive as `key` and
   `char` events, Ctrl+T terminates, Ctrl+R reboots, Ctrl+V pastes a line.

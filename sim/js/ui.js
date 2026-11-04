@@ -70,6 +70,7 @@ export class UI {
     // Block tool in the 3D view
     const blockType = this.$('block-type');
     for (const type of Object.keys(BLOCKS)) {
+      if (type === 'computer' || type === 'monitor') continue; // devices come from their own tools
       const o = document.createElement('option');
       o.value = type; o.textContent = type.replace(/_/g, ' ');
       blockType.appendChild(o);
@@ -81,7 +82,7 @@ export class UI {
       place: 'click a block face to put the chosen block against it',
       turtle: 'click a block face to put a turtle against it; it boots to a shell',
       computer: 'click a block face to put a computer against it (it has a modem on top)',
-      monitor: 'click a block face to stand the monitor against it; reboot the computer if its program only looks for monitors at start',
+      monitor: 'click a block face to stand the monitor against it; touching a computer attaches it to that computer, otherwise it joins the one chosen in On',
       remove: 'click a block, turtle, computer or monitor to take it away',
     };
     const runOptions = {
@@ -95,6 +96,7 @@ export class UI {
       this.$('add-fuel-wrap').style.display = kind === 'turtle' ? '' : 'none';
       this.$('add-run-wrap').style.display = kind === 'monitor' ? 'none' : '';
       this.$('add-on-wrap').style.display = kind === 'monitor' ? '' : 'none';
+      this.$('add-on-wrap').title = 'the computer a monitor joins when it does not touch one';
       this.$('add-size-wrap').style.display = kind === 'monitor' ? '' : 'none';
       if (runOptions[kind]) {
         const run = this.$('add-run');
@@ -207,7 +209,7 @@ export class UI {
       this.afterDevicesChanged();
     } else if (e.tool === 'monitor') {
       const computer = this.sim.computers.get(parseInt(this.$('add-computer').value, 10));
-      if (!computer) { fail('add a computer first, then a monitor for it'); return; }
+      if (!computer && !this.sim.adjacentComputer([{ x: e.x, y: e.y, z: e.z }])) { fail('add a computer first, then a monitor for it'); return; }
       const w = Math.max(1, Math.min(8, parseInt(this.$('add-mw').value, 10) || 1));
       const h = Math.max(1, Math.min(6, parseInt(this.$('add-mh').value, 10) || 1));
       // the array runs sideways along the wall it stands against, and up
@@ -215,7 +217,10 @@ export class UI {
       const blocks = [];
       for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) blocks.push({ x: e.x + i * step.x, y: e.y + i * step.y, z: e.z + j });
       if (!blocks.every((b) => world.isFree(b.x, b.y, b.z))) { fail('not enough room for a ' + w + 'x' + h + ' monitor there'); return; }
-      this.sim.addMonitor(computer, blocks, w, h);
+      // a monitor touching a computer belongs to it, whatever On says
+      const adjacent = this.sim.adjacentComputer(blocks);
+      if (adjacent) this.sim.addMonitor(adjacent.computer, blocks, w, h, adjacent.side);
+      else this.sim.addMonitor(computer, blocks, w, h);
       this.afterDevicesChanged();
     }
   }

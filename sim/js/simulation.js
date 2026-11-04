@@ -92,11 +92,30 @@ export class Simulation {
     return true;
   }
 
-  // Attach a monitor made of the given blocks to a computer.
-  addMonitor(computer, blocks, blocksW, blocksH) {
-    let n = 0;
-    while (computer.peripherals.some((p) => p.name === `monitor_${n}`)) n++;
-    const name = `monitor_${n}`;
+  // The computer one of these blocks touches, and which of its sides it
+  // is on. Computers face north like turtles: right is east, back is
+  // south. Returns null when no computer is adjacent.
+  adjacentComputer(blocks) {
+    const sides = [[1, 0, 0, 'right'], [-1, 0, 0, 'left'], [0, 1, 0, 'front'], [0, -1, 0, 'back'], [0, 0, 1, 'top'], [0, 0, -1, 'bottom']];
+    for (const b of blocks) {
+      for (const [dx, dy, dz, side] of sides) {
+        const c = this.computerAt(b.x - dx, b.y - dy, b.z - dz);
+        if (c) return { computer: c, side };
+      }
+    }
+    return null;
+  }
+
+  // Attach a monitor made of the given blocks to a computer. A monitor
+  // touching the computer is on that side ("right"), as in the game;
+  // otherwise it is a networked monitor named monitor_N.
+  addMonitor(computer, blocks, blocksW, blocksH, side) {
+    let name = side || null;
+    if (!name || computer.peripherals.some((p) => p.name === name)) {
+      let n = 0;
+      while (computer.peripherals.some((p) => p.name === `monitor_${n}`)) n++;
+      name = `monitor_${n}`;
+    }
     computer.addPeripheral(name, { type: 'monitor', advanced: true, blocksW, blocksH, blocks });
     for (const b of blocks) this.world.setBlock(b.x, b.y, b.z, 'monitor');
     this.log({ computer: computer.id, text: `monitor ${name} (${blocksW}x${blocksH}) attached` });
