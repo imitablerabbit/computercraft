@@ -24,7 +24,8 @@ shown for items the turtle has already checked, because checking means
 selecting the slot.
 
 A job with parameters opens a form first: numbers have -10, -1, +1 and +10
-buttons, switches toggle on touch, and text values open an on screen
+buttons, switches toggle on touch, choices such as the chest side step
+through their options on touch, and text values open an on screen
 keyboard. Start sends the job with those values, which are remembered per
 turtle for next time. Each job's parameters, defaults and limits are the
 `params` table of its catalogue entry in `apis/turtlectl.lua`, one entry per
@@ -63,12 +64,21 @@ Stop aborts the running job on the turtle, which is left wherever it got to.
 
 `quarry` digs a box straight down and `flatten` clears one straight up; both
 bring what they dig back to a chest. Put the turtle in the bottom left
-corner of the area, looking along it, with a chest on its left:
+corner of the area, looking along it, with a chest next to it:
 
 ```
-quarry [width] [length] [depth]     defaults 8 8 8
-flatten [width] [length] [height]   defaults 8 8 4
+quarry [width] [length] [depth] [chest]     defaults 8 8 8 left
+flatten [width] [length] [height] [chest]   defaults 8 8 4 left
 ```
+
+`chest` says where the chest is relative to the turtle's starting block
+and heading: `left`, `right`, `behind`, `below` or `above`. A side that is
+inside the area to clear is refused (below for a quarry, right and above
+for flatten). The same argument ends `stripmine` (default left)
+and `logger` (default behind), and the turtle control forms have a Chest
+button that steps through the sides. The turning, dropping and turning
+back is `inventory.dumpTo(side, keepSlots)` in `apis/inventory.lua`, so
+any program that empties itself can take the same option.
 
 Width is to the turtle's right and length straight ahead. For a quarry the
 first layer is the one under the turtle, so it can stand on the ground; for

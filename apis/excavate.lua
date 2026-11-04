@@ -20,8 +20,24 @@ quarry and while going up when flattening). Heading 0 faces forward,
 MaxAttempts = 30 -- tries to dig or attack through one blocked move
 FuelMargin = 10  -- fuel kept spare above the distance home
 
-local pos, heading, direction, firstLayer
+local pos, heading, direction, firstLayer, chest
 local dug, dumps
+
+-- Is the chest on that side inside the box that will be cleared?
+local function chestInside(width, length, height, dir, side)
+  local offsets = { left = { -1, 0, 0 }, right = { 1, 0, 0 }, behind = { 0, -1, 0 }, below = { 0, 0, -1 }, above = { 0, 0, 1 } }
+  local o = offsets[side]
+  if not o then return nil end
+  local x, y, z = o[1], o[2], o[3]
+  local first = (dir == "down") and -1 or 0
+  local last = (dir == "down") and -height or (height - 1)
+  local inside = x >= 0 and x < width and y >= 0 and y < length
+    and ((dir == "down" and z <= first and z >= last) or (dir == "up" and z >= first and z <= last))
+  if inside then
+    return "the chest " .. side .. " is inside the area to clear"
+  end
+  return nil
+end
 
 --[[
 Turning and moving
@@ -149,22 +165,16 @@ local function returnTo(target)
   return true
 end
 
--- Empty the inventory into the chest on the left of the start. Items
--- are kept when there is nothing there to drop them into.
+-- Empty the inventory into the chest beside the start. Items are
+-- kept when there is nothing there to drop them into.
 local function dump()
-  face(3)
-  local ok = false
-  if not turtle.detect() then
-    print("no chest on the left, keeping the items")
-  else
-    ok = inventory.empty()
-    if ok then
-      dumps = dumps + 1
-    else
-      print("the chest is full, some items were kept")
-    end
-  end
   face(0)
+  local ok, reason = inventory.dumpTo(chest)
+  if ok then
+    dumps = dumps + 1
+  else
+    print(reason .. ", keeping the items")
+  end
   return ok
 end
 
@@ -214,15 +224,22 @@ function estimateFuel(width, length, height)
 end
 
 -- Clear width x length x height blocks in the given direction ("down"
--- or "up"). Returns true, or false and a reason, after returning to
--- the start and emptying into the chest either way.
-function run(width, length, height, dir)
+-- or "up"). chestSide is one of inventory.ChestSides (default left) and
+-- says where the chest is relative to the start. Returns true, or
+-- false and a reason, after returning to the start and emptying into
+-- the chest either way.
+function run(width, length, height, dir, chestSide)
   width, length, height = tonumber(width), tonumber(length), tonumber(height)
   if not width or not length or not height or width < 1 or length < 1 or height < 1 then
     return false, "width, length and height must be at least 1"
   end
   if dir ~= "down" and dir ~= "up" then return false, "direction must be down or up" end
+  chestSide = chestSide or inventory.DefaultChestSide
+  if not inventory.isChestSide(chestSide) then return false, "unknown chest side " .. tostring(chestSide) end
+  local conflict = chestInside(width, length, height, dir, chestSide)
+  if conflict then return false, conflict end
   direction = dir
+  chest = chestSide
   firstLayer = (dir == "down") and 1 or 0
   pos = { x = 0, y = 0, z = 0 }
   heading = 0

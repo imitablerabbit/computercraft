@@ -111,9 +111,11 @@ function newMine(sep)
   return distance
 end
 
--- Start stripmining multiple lines. 
-function stripMine(n, sep, length, torch, tDistance)
+-- Start stripmining multiple lines. Items go into the chest on
+-- chestSide of the start (see inventory.ChestSides, default left).
+function stripMine(n, sep, length, torch, tDistance, chestSide)
   if not n then n = 5 end
+  if not chestSide then chestSide = inventory.DefaultChestSide end
   local dx = 0
   for i = 1, n do
     local actualSep = newMine(sep)
@@ -124,10 +126,9 @@ function stripMine(n, sep, length, torch, tDistance)
     local dy = mineLine(length, torch, tDistance)
     move.back(dy)
     move.left(dx) -- Go back to chest
-    turtle.turnLeft()
     local torchSlots = inventory.find("minecraft:torch")
-    inventory.empty(torchSlots) -- blacklisted from empty
-    turtle.turnRight()
+    local ok, reason = inventory.dumpTo(chestSide, torchSlots) -- torches are kept
+    if not ok then print(reason .. ", keeping the items") end
     move.right(dx)
   end
   move.left(dx)

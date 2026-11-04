@@ -13,10 +13,11 @@ local sep = 3
 local length = 64
 local placeTorches = true
 local torchDistance = 10
+local chest = inventory.DefaultChestSide
 
 local args = {...}
-if #args > 5 then
-  print("Usage: stripmine [mines] [seperator] [lineLength] [placeTorches] [torchDistance]")
+if #args > 6 then
+  print("Usage: stripmine [mines] [seperator] [lineLength] [placeTorches] [torchDistance] [chest]")
   return
 end
 
@@ -37,9 +38,16 @@ end
 if args[5] then
   torchDistance = tonumber(args[5])
 end
+if args[6] then
+  chest = args[6]
+end
+if not inventory.isChestSide(chest) then
+  print("chest must be one of " .. table.concat(inventory.ChestSides, ", "))
+  return
+end
 
 --[[
 Script start
 --]]
 
-mine.stripMine(mines, sep, length, placeTorches, torchDistance)
+mine.stripMine(mines, sep, length, placeTorches, torchDistance, chest)

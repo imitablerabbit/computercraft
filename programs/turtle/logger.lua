@@ -34,9 +34,10 @@ local h = 7
 local sleepTime = 60
 local saplingName = inventory.ItemSapling
 local dumpItems = true
+local chest = "behind"
 
 function usage()
-  print("Usage: logger [width] [height] [saplingName] [sleeptime] [dumpItems]")
+  print("Usage: logger [width] [height] [saplingName] [sleeptime] [dumpItems] [chest]")
 end
 
 function isSapling()
@@ -118,7 +119,7 @@ end
 
 local args = {...}
 
-if #args > 5 then
+if #args > 6 then
   usage()
   return
 end
@@ -140,6 +141,13 @@ if args[4] then
 end
 if args[5] and args[5] == "false" then
   dumpItems = false
+end
+if args[6] then
+  chest = args[6]
+end
+if not inventory.isChestSide(chest) then
+  print("chest must be one of " .. table.concat(inventory.ChestSides, ", "))
+  return
 end
 
 -- Dont use saplings as fuel
@@ -174,14 +182,11 @@ while true do
     moveLeft()
   end
   
-  -- Try and dump the items in a chest
+  -- Try and dump the items in the chest, keeping the saplings
   if dumpItems then
-    turtle.turnLeft()
-    turtle.turnLeft()
     local saplingSlots = inventory.find(saplingName)
-    inventory.empty(saplingSlots)
-    turtle.turnRight()
-    turtle.turnRight()
+    local ok, reason = inventory.dumpTo(chest, saplingSlots)
+    if not ok then print(reason .. ", keeping the items") end
   end
     
   print("Sleeping...")

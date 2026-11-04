@@ -7,8 +7,8 @@ Screens:
           touch one to open it
   turtle  state and fuel, buttons for the jobs in turtlectl, Items,
           Move, Shell and Stop
-  job     a form for the job's parameters (length, torches, ...) with a
-          Start button; values are remembered per turtle
+  job     a form for the job's parameters (length, torches, chest side
+          ...) with a Start button; values are remembered per turtle
   text    an on screen keyboard to edit one text value of a job form
   move    a pad of single steps and actions (forward, turn, dig, place ...)
   shell   an on screen keyboard to type a command line that runs on the
@@ -614,6 +614,19 @@ showJobForm = function(id, job)
       button = newButton(valueText(param), x, y, cellW * 2 - 1, 1, values[param.name] and colors.green or colors.red, function()
         values[param.name] = not values[param.name]
         button:setBackgroundColor(values[param.name] and colors.green or colors.red)
+        button:setText(valueText(param))
+      end)
+      root:add(button)
+    elseif param.type == "choice" then
+      -- Touch to step through the options.
+      local button
+      button = newButton(valueText(param), x, y, cellW * 2 - 1, 1, colors.cyan, function()
+        local options = param.options or {}
+        local index = 1
+        for i, option in ipairs(options) do
+          if option == values[param.name] then index = i end
+        end
+        values[param.name] = options[index % #options + 1]
         button:setText(valueText(param))
       end)
       root:add(button)

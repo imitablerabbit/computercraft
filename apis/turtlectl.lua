@@ -32,6 +32,10 @@ PROTOCOL = "turtlectl"
 -- Each param has a name, a label for the form, a type (number, bool or
 -- string) and a default. Numbers may give min, max and step (the small
 -- and big step of the form's buttons, default 1 and 10).
+-- Where the chest is, for jobs that empty the turtle (see
+-- inventory.ChestSides).
+local chestSides = { "left", "right", "behind", "below", "above" }
+
 jobs = {
   { id = "stripmine", name = "Strip mine", program = "stripmine", params = {
     { name = "mines", label = "Mines", type = "number", default = 5, min = 1 },
@@ -39,6 +43,7 @@ jobs = {
     { name = "length", label = "Length", type = "number", default = 64, min = 1 },
     { name = "torches", label = "Torches", type = "bool", default = true },
     { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
+    { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "left" },
   } },
   { id = "mineline", name = "Mine line", program = "mineline", params = {
     { name = "length", label = "Length", type = "number", default = 64, min = 1 },
@@ -50,11 +55,13 @@ jobs = {
     { name = "width", label = "Width", type = "number", default = 8, min = 1 },
     { name = "length", label = "Length", type = "number", default = 8, min = 1 },
     { name = "depth", label = "Depth", type = "number", default = 8, min = 1 },
+    { name = "chest", label = "Chest", type = "choice", options = { "left", "right", "behind", "above" }, default = "left" },
   } },
   { id = "flatten", name = "Flatten", program = "flatten", params = {
     { name = "width", label = "Width", type = "number", default = 8, min = 1 },
     { name = "length", label = "Length", type = "number", default = 8, min = 1 },
     { name = "height", label = "Height", type = "number", default = 4, min = 1 },
+    { name = "chest", label = "Chest", type = "choice", options = { "left", "behind", "below" }, default = "left" },
   } },
   { id = "logger", name = "Logger", program = "logger", params = {
     { name = "width", label = "Width", type = "number", default = 10, min = 1 },
@@ -62,6 +69,7 @@ jobs = {
     { name = "sapling", label = "Sapling", type = "string", default = "minecraft:sapling" },
     { name = "sleep", label = "Sleep secs", type = "number", default = 60, min = 0, step = { 10, 60 } },
     { name = "dump", label = "Dump items", type = "bool", default = true },
+    { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },
   } },
   { id = "refuel", name = "Refuel", fn = function() inventory.refuelAll() end },
 }

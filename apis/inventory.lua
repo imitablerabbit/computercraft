@@ -18,6 +18,11 @@ ItemRubberSapling = "ic2:sapling"
 -- Blacklist of items when refueling
 FuelBlacklist = {}
 
+-- Where a chest can sit relative to the turtle's position and heading.
+-- Programs that empty themselves take one of these as an argument.
+ChestSides = { "left", "right", "behind", "below", "above" }
+DefaultChestSide = "left"
+
 --[[
 Inventory API
 --]]
@@ -109,9 +114,11 @@ end
 -- chest in front of it the turtle will only empty its items
 -- if there is enough room in the chest to store them.
 -- `ignore` contains a list of slots to ignore. These slots will
--- not be emptied.
-function empty(ignore)
+-- not be emptied. `drop` is the turtle function used to drop
+-- (turtle.drop by default, or dropUp / dropDown).
+function empty(ignore, drop)
   if not ignore then ignore = {} end
+  if not drop then drop = turtle.drop end
   local s = turtle.getSelectedSlot()
   local droppedAll = true
   for slot = Min, Max do
@@ -124,7 +131,7 @@ function empty(ignore)
     if not skip then
       turtle.select(slot)
       if turtle.getItemCount() > 0 then
-        if not turtle.drop() then
+        if not drop() then
           droppedAll = false
         end
       end
@@ -132,6 +139,52 @@ function empty(ignore)
   end
   turtle.select(s)
   return droppedAll
+end
+
+-- Is this one of ChestSides?
+function isChestSide(side)
+  for i, s in ipairs(ChestSides) do
+    if s == side then return true end
+  end
+  return false
+end
+
+-- Turn to face a chest side. Returns the detect and drop functions
+-- for that side and a function that turns back the way we were.
+function faceChestSide(side)
+  if side == "left" then
+    turtle.turnLeft()
+    return turtle.detect, turtle.drop, turtle.turnRight
+  elseif side == "right" then
+    turtle.turnRight()
+    return turtle.detect, turtle.drop, turtle.turnLeft
+  elseif side == "behind" then
+    turtle.turnLeft()
+    turtle.turnLeft()
+    return turtle.detect, turtle.drop, function() turtle.turnRight(); turtle.turnRight() end
+  elseif side == "below" then
+    return turtle.detectDown, turtle.dropDown, function() end
+  elseif side == "above" then
+    return turtle.detectUp, turtle.dropUp, function() end
+  end
+  error("unknown chest side " .. tostring(side))
+end
+
+-- Empty the inventory into the chest on a side of the turtle and turn
+-- back. `ignore` lists slots to keep. Returns true when everything was
+-- dropped, otherwise false and the reason (no chest there, or full).
+function dumpTo(side, ignore)
+  side = side or DefaultChestSide
+  if not isChestSide(side) then return false, "unknown chest side " .. tostring(side) end
+  local detect, drop, back = faceChestSide(side)
+  local ok, reason = true, nil
+  if not detect() then
+    ok, reason = false, "no chest " .. side
+  elseif not empty(ignore, drop) then
+    ok, reason = false, "the chest " .. side .. " is full"
+  end
+  back()
+  return ok, reason
 end
 
 -- Search for and place a torch from the turtles inventory
