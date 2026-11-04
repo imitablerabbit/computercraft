@@ -44,6 +44,7 @@ jobs = {
     { name = "length", label = "Length", type = "number", default = 64, min = 1 },
     { name = "torches", label = "Torches", type = "bool", default = true },
     { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
+    { name = "returnHome", label = "Return", type = "bool", default = false },
   } },
   { id = "logger", name = "Logger", program = "logger", params = {
     { name = "width", label = "Width", type = "number", default = 10, min = 1 },

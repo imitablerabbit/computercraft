@@ -12,6 +12,8 @@ orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
 (strip mine, mine line, logger, refuel), plus Move, Shell, Stop and Back.
+Mine line has a Return switch that walks the turtle back to where it started
+once the line is done, so it can be run again from the same spot.
 
 A job with parameters opens a form first: numbers have -10, -1, +1 and +10
 buttons, switches toggle on touch, and text values open an on screen
