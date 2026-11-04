@@ -19,6 +19,10 @@ function GUIInput.new(text)
         object:keyPressHandler(e)
     end
     object:addKeyPressListener(kl)
+    local cl = function(e)
+        object:charHandler(e)
+    end
+    object:addCharListener(cl)
     local ml = function(e)
         object:mouseClickHandler(e)
     end
@@ -35,6 +39,7 @@ function GUIInput:mouseClickHandler(e)
        e.y >= self.ay and e.y < self.ay + self.h then
         if not self.model:isActive() then
             self.model:setActive(true)
+            self.cursorPos = self.text:len() -- start typing at the end
             self:repaint()
         end
     else
@@ -45,38 +50,64 @@ function GUIInput:mouseClickHandler(e)
     end
 end
 
--- If the model is active we should be appending the
--- text with the new text on the key event. Backspaces
--- and delete keys should remove the appropriate
--- characters in the text string.
--- TODO: This should eventually be moved to a more
--- appropriate text util location so multiple components
--- can use text editor functionality.
+-- Control keys while the input is active: backspace and delete
+-- remove characters, the arrows move the cursor, home and end jump,
+-- escape and enter leave the input. Typed text arrives as char
+-- events (charHandler), which works on every game version.
 function GUIInput:keyPressHandler(e)
+    if not self.model:isActive() then return end
     local s = self.text
     local cPos = self.cursorPos
-    if self.model:isActive() then
-        local k = e.keycode
-        if k == keys.backspace then -- backspace
-            s = self.deleteChar(s, cPos)
-            self:moveCursor(-1)
-        elseif k == keys.delete then -- delete
-            local tempCPos = cPos + 1
-            if tempCPos > s:len() then tempCPos = s:len() end
-            s = self.deleteChar(s, tempCPos)
-        elseif k == keys.left then -- left arrow
-            self:moveCursor(-1)
-        elseif k == keys.right then -- right arrow
-            self:moveCursor(1)
-        elseif k == keys.escape then -- escape
-            self.model:setActive(false)        
-        elseif self.isPrintable(k) then -- normal printable charaters.
-            s = s:sub(1, cPos+1) .. self.toPrintable(k, false) .. s:sub(cPos+2)
-            self:setText(s) -- Need to apply text so cursor can move
-            self:moveCursor(1)
+    local k = e.keycode
+    if k == keys.backspace then
+        s = self.deleteChar(s, cPos)
+        self:moveCursor(-1)
+    elseif k == keys.delete then
+        local tempCPos = cPos + 1
+        if tempCPos > s:len() then tempCPos = s:len() end
+        s = self.deleteChar(s, tempCPos)
+    elseif k == keys.left then
+        self:moveCursor(-1)
+    elseif k == keys.right then
+        self:moveCursor(1)
+    elseif k == keys.home then
+        self.cursorPos = 0
+    elseif k == keys["end"] then
+        self.cursorPos = s:len()
+    elseif k == keys.escape or k == keys.enter then
+        self.model:setActive(false)
+        self:repaint()
+        for i, l in pairs(self.buttonListeners) do
+            l(guievent.GUIEvent.new("input_done"))
         end
+        return -- a listener may have changed the text
     end
     self:setText(s)
+end
+
+-- Insert typed text at the cursor.
+function GUIInput:charHandler(e)
+    if not self.model:isActive() then return end
+    local s = self.text
+    local cPos = self.cursorPos
+    s = s:sub(1, cPos) .. e.char .. s:sub(cPos + 1)
+    self:setText(s)
+    self:moveCursor(#e.char)
+    self:setText(s)
+end
+
+-- Listeners told when enter or escape leaves the input.
+function GUIInput:addDoneListener(l)
+    table.insert(self.buttonListeners, l)
+end
+
+function GUIInput:setActive(active)
+    self.model:setActive(active and true or false)
+    self:repaint()
+end
+
+function GUIInput:isActive()
+    return self.model:isActive()
 end
 
 -- Delete the char located at 'pos' in the string 's'.

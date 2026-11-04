@@ -19,5 +19,9 @@ from each child's preferred size, which is the size given to
 setPreferredBounds, and a container's own preferred size is what its layout
 needs (getPreferredSize), which is how a scroll pane learns how tall its
 content is. Components placed by a layout are given their bounds with
-setBounds, which does not change their preferred size. Every component is positioned with
+setBounds, which does not change their preferred size.
+
+Text typed on a computer reaches components as char events (addCharListener)
+alongside key events; GUIInput uses both. See programs/gui/examples for
+worked examples of every component. Every component is positioned with
 setPreferredBounds before being added to its parent.

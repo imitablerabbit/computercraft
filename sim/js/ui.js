@@ -87,7 +87,7 @@ export class UI {
     };
     const runOptions = {
       turtle: ['', 'turtleagent', 'inventorygui'],
-      computer: ['', 'turtlecontrol', 'registrylistener'],
+      computer: ['', 'turtlecontrol', 'registrylistener', 'form', 'files', 'todo', 'layout', 'button', 'input'],
     };
     const showAddForm = (tool) => {
       const kind = tool;

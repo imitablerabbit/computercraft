@@ -143,6 +143,27 @@ follows inventory changes as they happen.
 inventorygui
 ```
 
+## GUI examples
+
+`programs/gui/examples/` has small programs that show the GUI framework in
+`apis/gui/`, meant to run on a computer's own screen with the mouse:
+
+- `button` and `input`: the original counter and text field examples.
+- `form`: a settings form built with layouts (a vertical box of rows, each
+  a horizontal box of a fixed label and a flexible field) using a text
+  input, checkboxes, a dropdown and a row of buttons in a grid.
+- `files`: a file browser whose rows live in a scroll pane; Open enters a
+  directory, Up leaves it, and the list scrolls with the bar, paging and
+  the mouse wheel.
+- `todo`: a to do list with an input, Add, a checkbox per task, Remove and
+  Clear done, kept in `todo.dat`.
+- `layout`: a playground where buttons switch a container between
+  vertical, horizontal and grid layouts, change the gap, and make one box
+  fixed or flexible.
+
+Type the name at a computer's prompt, or pick it as what a computer runs
+when adding one in the browser simulator.
+
 ## Browser simulator
 
 `sim/` is a simulator for everything in this repo that runs in a web browser,

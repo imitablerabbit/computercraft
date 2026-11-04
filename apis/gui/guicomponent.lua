@@ -31,6 +31,7 @@ function GUIComponent.new(t)
         mouseClickListeners = {},
         mouseScrollListeners = {},
         keyPressListeners = {},
+        charListeners = {},
 
         -- Layout: a layout manager for the children (nil means the
         -- children keep the bounds they were given), the preferred size
@@ -92,6 +93,8 @@ end
 function GUIComponent:add(c)
     table.insert(self.children, c)
     c:treeInit(self)
+    -- A component added to a running tree is live straight away.
+    if self.started then c:setStarted(true) end
     if self.layout then self:doLayout() end
 end
 
@@ -276,6 +279,33 @@ function GUIComponent:setPreferredBounds(x, y, w, h)
     self.term.reposition(x, y, w, h)
     self:relocateChildren()
     self:repaint()
+end
+
+-- Typed characters.
+
+function GUIComponent:addCharListener(l)
+    table.insert(self.charListeners, l)
+end
+
+function GUIComponent:removeCharListener(l)
+    for i, l2 in pairs(self.charListeners) do
+        if l == l2 then
+            table.remove(self.charListeners, i)
+        end
+    end
+end
+
+function GUIComponent:triggerCharEvent(e)
+    if not e then error("missing GUIEvent") end
+    if e.type ~= "char" then error("incorrect event") end
+    for i, l in pairs(self.charListeners) do
+        l(e)
+    end
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:triggerCharEvent(e)
+        end
+    end
 end
 
 -- Mouse wheel (computers only; monitors have no wheel).

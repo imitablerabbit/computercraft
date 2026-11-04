@@ -6,8 +6,9 @@ clicking an option selects it and closes the list, clicking anywhere
 else just closes it. Long lists get scroll rows at the top and bottom.
 
 While the list is open the dropdown captures every click, so nothing
-underneath it is pressed by accident. Select listeners get an event
-with value and index.
+underneath it is pressed by accident. The list is drawn in a window
+on the top level component, so it can hang over other containers.
+Select listeners get an event with value and index.
 --]]
 
 GUIDropdown = {}
@@ -48,6 +49,19 @@ end
 function GUIDropdown:setPreferredBounds(x, y, w, h)
     self.closedH = h
     guicomponent.GUIComponent.setPreferredBounds(self, x, y, w, h)
+end
+
+function GUIDropdown:setBounds(x, y, w, h)
+    self.closedH = h
+    guicomponent.GUIComponent.setBounds(self, x, y, w, h)
+end
+
+-- The top level component (the root container), whose window the
+-- open list is drawn on.
+function GUIDropdown:top()
+    local c = self
+    while c.parent and c.parent.term do c = c.parent end
+    return c
 end
 
 function GUIDropdown:addSelectListener(l)
@@ -92,13 +106,16 @@ function GUIDropdown:setHighlightColor(c)
     self.highlightColor = c
 end
 
--- How many rows the open list gets and whether it opens upward.
+-- How many rows the open list gets and whether it opens upward,
+-- from the room on the screen below and above the box.
 function GUIDropdown:listLayout()
     local total = #self.options
     local wanted = math.min(total, GUIDropdown.MaxVisible)
-    local parentH = self.parent and self.parent.h or (self.y + self.closedH + wanted)
-    local below = parentH - (self.y + self.closedH - 1)
-    local above = self.y - 1
+    local top = self:top()
+    local topY = top.ay or 1
+    local screenH = top.h
+    local below = topY + screenH - 1 - (self.ay + self.closedH - 1)
+    local above = self.ay - topY
     if below >= wanted or below >= above then
         return math.max(1, math.min(wanted, below)), false
     end
@@ -134,11 +151,12 @@ function GUIDropdown:openList()
     self.visible = visible
     self.upward = upward
     self.scroll = math.max(0, math.min(self.selected - 2, self:maxScroll()))
+    -- The box plus the list, as a window on the top level component so
+    -- it is not clipped by the container the dropdown sits in.
+    local top = self:top()
     local h = self.closedH + visible
-    local y = upward and (self.y - visible) or self.y
-    self.term.reposition(self.x, y, self.w, h)
-    self.ay = self.parent.ay + y - 1
-    self.h = h
+    self.popupY = upward and (self.ay - visible) or self.ay
+    self.popup = window.create(top.term, self.ax - (top.ax or 1) + 1, self.popupY - (top.ay or 1) + 1, self.w, h)
     guicomponent.setCapture(self)
     self:repaint()
 end
@@ -146,12 +164,10 @@ end
 function GUIDropdown:closeList()
     if not self.open then return end
     self.open = false
-    self.term.reposition(self.x, self.y, self.w, self.closedH)
-    self.ay = self.parent.ay + self.y - 1
-    self.h = self.closedH
+    self.popup = nil
     guicomponent.setCapture(nil)
     -- whatever the list covered has to be drawn again
-    if self.parent and self.parent.repaint then self.parent:repaint() else self:repaint() end
+    self:top():repaint()
 end
 
 function GUIDropdown:select(index)
@@ -171,8 +187,8 @@ function GUIDropdown:clickHandler(e)
         end
         return
     end
-    local lx, ly = e.x - self.ax + 1, e.y - self.ay + 1
-    if lx < 1 or lx > self.w or ly < 1 or ly > self.h then
+    local lx, ly = e.x - self.ax + 1, e.y - self.popupY + 1
+    if lx < 1 or lx > self.w or ly < 1 or ly > self.closedH + self.visible then
         self:closeList()
         return
     end

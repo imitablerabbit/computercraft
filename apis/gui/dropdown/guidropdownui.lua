@@ -17,7 +17,7 @@ end
 function GUIDropdownUI:paint()
     local c = self.component
     if not c or not c.term then return end
-    local old = term.redirect(c.term)
+    local old = term.redirect((c.open and c.popup) or c.term)
     local w = c.w
     local function line(y, text, fg, bg)
         term.setCursorPos(1, y)

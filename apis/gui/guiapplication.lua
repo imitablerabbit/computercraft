@@ -79,6 +79,11 @@ function GUIApplication:update()
         if self.child then
           self.child:triggerMouseScrollEvent(e)
         end
+      elseif event[1] == "char" then
+        local e = guievent.GUICharEvent.new(event[2])
+        if self.child then
+          self.child:triggerCharEvent(e)
+        end
       elseif event[1] == "key" then
         local keycode = event[2]
         local e = guievent.GUIKeyPressEvent.new(keycode)

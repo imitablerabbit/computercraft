@@ -73,6 +73,10 @@ local files = {
     "programs/remotecommand.lua",
     "programs/remotelistener.lua",
     "programs/github.lua",
+    "programs/gui/examples/files.lua",
+    "programs/gui/examples/form.lua",
+    "programs/gui/examples/layout.lua",
+    "programs/gui/examples/todo.lua",
     "programs/turtlecontrol.lua",
 
     "programs/turtle/logger.lua",

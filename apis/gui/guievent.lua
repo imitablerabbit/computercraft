@@ -25,6 +25,18 @@ is clicked inside the normal terminal. If a monitor is used then you
 will also need to handle the GUIMonitorTouchEvent.    
 --]]
 
+-- A character was typed (the game sends these after the key event).
+GUICharEvent = {}
+GUICharEvent.__index = GUICharEvent
+setmetatable(GUICharEvent, {__index = GUIEvent})
+
+function GUICharEvent.new(char)
+    local object = GUIEvent.new("char")
+    object.char = char
+    setmetatable(object, GUICharEvent)
+    return object
+end
+
 -- The mouse wheel turned: direction is 1 (down) or -1 (up) at x, y.
 GUIMouseScrollEvent = {}
 GUIMouseScrollEvent.__index = GUIMouseScrollEvent
