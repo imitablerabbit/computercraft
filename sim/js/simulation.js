@@ -20,7 +20,7 @@ export class Simulation {
     this.maxLogs = 500;
     this.version = 0;
     this.onLog = null;
-    this.world.onLog = (e) => this.log({ computer: e.turtle, text: e.text });
+    this.world.onLog = (e) => this.log({ computer: e.turtle == null ? 'world' : e.turtle, text: e.text });
     this.world.onInventory = (id) => { const c = this.computers.get(id); if (c) c.pushEvent(['turtle_inventory']); };
   }
 
@@ -44,7 +44,7 @@ export class Simulation {
   // Build everything from a scenario definition.
   load(scenario) {
     this.world = new World();
-    this.world.onLog = (e) => this.log({ computer: e.turtle, text: e.text });
+    this.world.onLog = (e) => this.log({ computer: e.turtle == null ? 'world' : e.turtle, text: e.text });
     this.world.onInventory = (id) => { const c = this.computers.get(id); if (c) c.pushEvent(['turtle_inventory']); };
     this.computers = new Map();
     this.scheduled = [];
@@ -106,6 +106,7 @@ export class Simulation {
     }
     this.clock = target;
     this.world.now = this.clock;
+    this.world.grow();
   }
 
   // Run until the clock reaches t (for tests).

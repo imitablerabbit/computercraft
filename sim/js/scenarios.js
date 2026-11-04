@@ -1,3 +1,5 @@
+import { tree } from './world.js';
+
 // Ready made worlds. Each scenario builds the blocks and lists the
 // computers to boot, with what they should run first.
 
@@ -31,14 +33,6 @@ function hill(world, x0, x1, y0, y1, base, height) {
   }
 }
 
-function tree(world, x, y, base) {
-  for (let z = base; z < base + 4; z++) world.setBlock(x, y, z, 'log');
-  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) for (let dz = 2; dz <= 4; dz++) {
-    if (Math.abs(dx) + Math.abs(dy) + (dz - 2) <= 3 && !(dx === 0 && dy === 0 && dz < 4)) {
-      if (!world.getBlock(x + dx, y + dy, base + dz)) world.setBlock(x + dx, y + dy, base + dz, 'leaves');
-    }
-  }
-}
 
 // A 3x2 monitor standing on the ground facing south at (x, y), with the
 // computer beside it.

@@ -12,11 +12,11 @@ header h1 { font-size: 15px; margin: 0 8px 0 0; color: var(--accent); }
 button, select { background: #2a2e37; color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font: inherit; cursor: pointer; }
 button:hover { background: #343945; }
 main { display: flex; flex: 1; min-height: 0; }
-#world { flex: 1; position: relative; min-width: 300px; }
+#world { flex: 1 1 0; position: relative; min-width: 300px; overflow: hidden; }
 #view3d { position: absolute; inset: 0; }
-#view3d canvas { display: block; }
+#view3d canvas { display: block; width: 100% !important; height: 100% !important; }
 #world-overlay { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 14px; align-items: center; background: rgba(20, 22, 28, 0.75); padding: 4px 8px; border-radius: 4px; }
-aside { width: 560px; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); min-height: 0; }
+aside { flex: 0 0 560px; width: 560px; position: relative; z-index: 1; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--panel); min-height: 0; }
 .panel { border-bottom: 1px solid var(--border); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 #screens { flex: 0 0 auto; }
 #turtle { flex: 0 0 auto; }
@@ -29,7 +29,7 @@ aside { width: 560px; display: flex; flex-direction: column; border-left: 1px so
 #screen { display: block; outline: none; image-rendering: pixelated; }
 #screen:focus { box-shadow: 0 0 0 2px var(--accent); }
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.inventory { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.inventory { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
 .slot { border: 1px solid var(--border); border-radius: 3px; padding: 3px 4px; min-height: 40px; font-size: 11px; background: #23272f; position: relative; }
 .slot.selected { border-color: var(--accent); }
 .slot .n { color: var(--muted); font-size: 10px; }

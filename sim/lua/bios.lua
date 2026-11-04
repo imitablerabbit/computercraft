@@ -412,28 +412,12 @@ function os.queueEvent(name, ...)
   localQueue[#localQueue + 1] = table.pack(name, ...)
 end
 
+-- Every pull yields up to the boot loop at the bottom of this file,
+-- which hands out events from the host and from os.queueEvent. That
+-- way a queued event reaches every coroutine under parallel, as in
+-- the game, instead of being eaten by whichever one asked first.
 function os.pullEventRaw(filter)
-  while true do
-    local ev
-    if #localQueue > 0 then
-      ev = table.remove(localQueue, 1)
-    else
-      ev = table.pack(coroutine.yield(filter))
-    end
-    local accept = true
-    if ev[1] == "rednet_message" then
-      if not rednet.isOpen() then
-        accept = false
-      elseif ev[5] == serializedMark then
-        ev[3] = textutils.unserialize(ev[3])
-        ev[5] = nil
-        ev.n = 4
-      end
-    end
-    if accept and (filter == nil or ev[1] == filter or ev[1] == "terminate") then
-      return table.unpack(ev, 1, ev.n)
-    end
-  end
+  return coroutine.yield(filter)
 end
 
 function os.pullEvent(filter)
@@ -1073,27 +1057,64 @@ local function runStartup()
   if fs.exists("startup.lua") then shell.run("startup.lua")
   elseif fs.exists("startup") then shell.run("startup") end
 end
-local ok, err = pcall(runStartup)
-if not ok then printError(err) end
 
-local autorun = sim.autorun()
-if autorun and autorun ~= "" then
-  term.setTextColor(colors.yellow)
-  write("> ")
-  term.setTextColor(colors.white)
-  print(autorun)
-  shell.run(autorun)
+-- Everything a program can do runs inside the main coroutine below,
+-- startup and the scenario command included, so that queued events
+-- go through the event loop.
+local function shellLoop()
+  local ok, err = pcall(runStartup)
+  if not ok then printError(err) end
+
+  local autorun = sim.autorun()
+  if autorun and autorun ~= "" then
+    term.setTextColor(colors.yellow)
+    write("> ")
+    term.setTextColor(colors.white)
+    print(autorun)
+    shell.run(autorun)
+  end
+
+  while true do
+    term.setBackgroundColor(colors.black)
+    term.setTextColor(colors.yellow)
+    write(shell.dir() .. "> ")
+    term.setTextColor(colors.white)
+    local okRead, line = pcall(read)
+    if okRead and line and line:match("%S") then
+      shell.run(line)
+    elseif not okRead then
+      print()
+    end
+  end
 end
 
-while true do
-  term.setBackgroundColor(colors.black)
-  term.setTextColor(colors.yellow)
-  write(shell.dir() .. "> ")
-  term.setTextColor(colors.white)
-  local okRead, line = pcall(read)
-  if okRead and line and line:match("%S") then
-    shell.run(line)
-  elseif not okRead then
-    print()
+-- The main coroutine and the event loop that feeds it. Events come
+-- from the host (yielded for) or from os.queueEvent (the local
+-- queue), and only reach the program when they match its filter.
+local main = coroutine.create(shellLoop)
+local started, filter = coroutine.resume(main)
+if not started then error(filter, 0) end
+while coroutine.status(main) ~= "dead" do
+  local ev
+  if #localQueue > 0 then
+    ev = table.remove(localQueue, 1)
+  else
+    ev = table.pack(coroutine.yield(filter))
+  end
+  local accept = true
+  if ev[1] == "rednet_message" then
+    if not rednet.isOpen() then
+      accept = false
+    elseif ev[5] == serializedMark then
+      ev[3] = textutils.unserialize(ev[3])
+      ev[5] = nil
+      ev.n = 4
+    end
+  end
+  if accept and (filter == nil or ev[1] == filter or ev[1] == "terminate") then
+    local ok, result = coroutine.resume(main, table.unpack(ev, 1, ev.n))
+    if not ok then error(result, 0) end
+    filter = result
+    if coroutine.status(main) == "dead" then break end
   end
 end

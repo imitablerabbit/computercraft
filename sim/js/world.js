@@ -5,7 +5,7 @@
 // 3 west.
 
 export const BLOCKS = {
-  grass:        { color: '#5f9d3a', drops: 'minecraft:dirt' },
+  grass:        { color: '#5f9d3a', drops: 'minecraft:dirt', name: 'minecraft:grass_block' },
   dirt:         { color: '#8a5a32', drops: 'minecraft:dirt' },
   stone:        { color: '#8a8a8a', drops: 'minecraft:cobblestone' },
   cobblestone:  { color: '#777777', drops: 'minecraft:cobblestone' },
@@ -14,13 +14,14 @@ export const BLOCKS = {
   coal_ore:     { color: '#4a4a4a', drops: 'minecraft:coal' },
   iron_ore:     { color: '#b89a7a', drops: 'minecraft:raw_iron' },
   bedrock:      { color: '#2b2b2b', drops: null, unbreakable: true },
-  log:          { color: '#6b4f2a', drops: 'minecraft:oak_log' },
-  leaves:       { color: '#3d7a2a', drops: 'minecraft:oak_leaves' },
-  planks:       { color: '#b08d55', drops: 'minecraft:oak_planks' },
+  log:          { color: '#6b4f2a', drops: 'minecraft:oak_log', name: 'minecraft:oak_log' },
+  leaves:       { color: '#3d7a2a', drops: 'minecraft:oak_leaves', name: 'minecraft:oak_leaves' },
+  planks:       { color: '#b08d55', drops: 'minecraft:oak_planks', name: 'minecraft:oak_planks' },
   chest:        { color: '#a67c3b', drops: 'minecraft:chest', container: 27 },
   torch:        { color: '#ffd96b', drops: 'minecraft:torch', passable: true },
-  computer:     { color: '#c8c8c8', drops: 'computercraft:computer_advanced' },
-  monitor:      { color: '#2c2c3a', drops: 'computercraft:monitor_advanced' },
+  sapling:      { color: '#7fcc5a', drops: 'minecraft:oak_sapling', name: 'minecraft:oak_sapling', grows: true },
+  computer:     { color: '#c8c8c8', drops: 'computercraft:computer_advanced', name: 'computercraft:computer_advanced' },
+  monitor:      { color: '#2c2c3a', drops: 'computercraft:monitor_advanced', name: 'computercraft:monitor_advanced' },
   water:        { color: '#3b6fd6', drops: null, passable: true },
 };
 
@@ -37,7 +38,7 @@ export const ITEMS = {
   'minecraft:oak_log':       { displayName: 'Oak Log', block: 'log', fuel: 15, groups: ['Natural Blocks'], tags: ['minecraft:logs', 'minecraft:oak_logs'] },
   'minecraft:oak_leaves':    { displayName: 'Oak Leaves', block: 'leaves', groups: ['Natural Blocks'], tags: ['minecraft:leaves'] },
   'minecraft:oak_planks':    { displayName: 'Oak Planks', block: 'planks', fuel: 15, groups: ['Building Blocks'], tags: ['minecraft:planks'] },
-  'minecraft:oak_sapling':   { displayName: 'Oak Sapling', fuel: 5, groups: ['Natural Blocks'], tags: ['minecraft:saplings'] },
+  'minecraft:oak_sapling':   { displayName: 'Oak Sapling', block: 'sapling', fuel: 5, groups: ['Natural Blocks'], tags: ['minecraft:saplings'] },
   'minecraft:torch':         { displayName: 'Torch', block: 'torch', groups: ['Functional Blocks'] },
   'minecraft:chest':         { displayName: 'Chest', block: 'chest', groups: ['Functional Blocks'] },
   'minecraft:stone_pickaxe': { displayName: 'Stone Pickaxe', maxCount: 1, maxDamage: 131, groups: ['Tools & Utilities'] },
@@ -52,6 +53,19 @@ export const HEADING_NAMES = ['north', 'east', 'south', 'west'];
 
 const key = (x, y, z) => `${x},${y},${z}`;
 
+// Simulated seconds for a planted sapling to become a tree.
+export const GROW_TIME = 45;
+
+// A four block oak trunk with a blob of leaves; existing blocks stay.
+export function tree(world, x, y, base) {
+  for (let z = base; z < base + 4; z++) world.setBlock(x, y, z, 'log');
+  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) for (let dz = 2; dz <= 4; dz++) {
+    if (Math.abs(dx) + Math.abs(dy) + (dz - 2) <= 3 && !(dx === 0 && dy === 0 && dz < 4)) {
+      if (!world.getBlock(x + dx, y + dy, base + dz)) world.setBlock(x + dx, y + dy, base + dz, 'leaves');
+    }
+  }
+}
+
 function itemInfo(name) {
   return ITEMS[name] || { displayName: name.replace(/^[^:]+:/, '').replace(/_/g, ' ') };
 }
@@ -60,6 +74,7 @@ export class World {
   constructor() {
     this.blocks = new Map();
     this.containers = new Map();
+    this.planted = new Map(); // sapling key -> time planted
     this.turtles = new Map();
     this.version = 0;
     this.onLog = null;
@@ -81,9 +96,11 @@ export class World {
       if (BLOCKS[type] && BLOCKS[type].container && !this.containers.has(k)) {
         this.containers.set(k, new Array(BLOCKS[type].container).fill(null));
       }
+      if (BLOCKS[type] && BLOCKS[type].grows) this.planted.set(k, this.now); else this.planted.delete(k);
     } else {
       this.blocks.delete(k);
       this.containers.delete(k);
+      this.planted.delete(k);
     }
     this.version++;
   }
@@ -97,6 +114,19 @@ export class World {
   }
 
   getContainer(x, y, z) { return this.containers.get(key(x, y, z)) || null; }
+
+  // Saplings planted long enough ago become trees, if a turtle is not
+  // standing where the trunk goes.
+  grow() {
+    for (const [k, at] of this.planted) {
+      if (this.now - at < GROW_TIME) continue;
+      const [x, y, z] = k.split(',').map(Number);
+      if (this.turtleAt(x, y, z) || this.turtleAt(x, y, z + 1)) continue;
+      this.planted.delete(k);
+      tree(this, x, y, z);
+      this.log(null, `a sapling at ${k} grew into a tree`);
+    }
+  }
 
   turtleAt(x, y, z) {
     for (const t of this.turtles.values()) if (t.x === x && t.y === y && t.z === z) return t;
@@ -336,7 +366,7 @@ export class World {
         const [x, y, z] = this._facing(t, q === 'inspect' ? 'forward' : q === 'inspectUp' ? 'up' : 'down');
         const blk = this.getBlock(x, y, z);
         if (!blk) return [false, 'No block to inspect'];
-        return [true, { name: `minecraft:${blk}`, state: {}, tags: {} }];
+        return [true, { name: (BLOCKS[blk] || {}).name || `minecraft:${blk}`, state: {}, tags: {} }];
       }
       case 'getSelectedSlot': return t.selected;
       case 'select': {
