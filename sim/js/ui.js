@@ -79,17 +79,43 @@ export class UI {
     const hints = {
       select: 'drag to orbit, wheel to zoom, right drag to pan',
       place: 'click a block face to put the chosen block against it',
-      remove: 'click a block to take it away',
+      turtle: 'click a block face to put a turtle against it; it boots to a shell',
+      computer: 'click a block face to put a computer against it (it has a modem on top)',
+      monitor: 'click a block face to stand the monitor against it; reboot the computer if its program only looks for monitors at start',
+      remove: 'click a block, turtle, computer or monitor to take it away',
+    };
+    const runOptions = {
+      turtle: ['', 'turtleagent', 'inventorygui'],
+      computer: ['', 'turtlecontrol', 'registrylistener'],
+    };
+    const showAddForm = (tool) => {
+      const kind = tool;
+      this.$('add-form').style.display = ['turtle', 'computer', 'monitor'].includes(kind) ? '' : 'none';
+      this.$('add-label-wrap').style.display = kind === 'monitor' ? 'none' : '';
+      this.$('add-fuel-wrap').style.display = kind === 'turtle' ? '' : 'none';
+      this.$('add-run-wrap').style.display = kind === 'monitor' ? 'none' : '';
+      this.$('add-on-wrap').style.display = kind === 'monitor' ? '' : 'none';
+      this.$('add-size-wrap').style.display = kind === 'monitor' ? '' : 'none';
+      if (runOptions[kind]) {
+        const run = this.$('add-run');
+        run.innerHTML = '';
+        for (const r of runOptions[kind]) {
+          const o = document.createElement('option');
+          o.value = r; o.textContent = r || 'nothing (shell)';
+          run.appendChild(o);
+        }
+      }
+      if (kind === 'monitor') this.fillComputerSelect();
     };
     this.$('tool').addEventListener('change', (e) => {
       this.view.tool = e.target.value;
       this.$('world-hint').textContent = hints[e.target.value];
       this.$('block-picker').style.display = e.target.value === 'place' ? '' : 'none';
+      showAddForm(e.target.value);
     });
     this.$('block-picker').style.display = 'none';
-    this.view.onEdit = (x, y, z, type) => {
-      if (!this.sim.world.edit(x, y, z, type)) this.sim.log({ computer: 'world', text: `cannot place at ${x},${y},${z}: a turtle is there`, level: 'error' });
-    };
+    showAddForm('select');
+    this.view.onEdit = (edit) => this.edit(edit);
     this.$('log-clear').addEventListener('click', () => { this.sim.logs.length = 0; this.$('log-lines').innerHTML = ''; this.logCount = 0; });
     this.$('log-net').addEventListener('change', () => this.redrawLog());
     this.$('log-print').addEventListener('change', () => this.redrawLog());
@@ -128,6 +154,81 @@ export class UI {
     });
   }
 
+  // The list of computers a new monitor can be attached to.
+  fillComputerSelect() {
+    const sel = this.$('add-computer');
+    const previous = sel.value;
+    sel.innerHTML = '';
+    for (const c of this.sim.computers.values()) {
+      if (c.kind === 'turtle') continue;
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.label ? `${c.label} #${c.id}` : `computer #${c.id}`;
+      sel.appendChild(o);
+    }
+    if (previous && [...sel.options].some((o) => o.value === previous)) sel.value = previous;
+  }
+
+  // A click in the 3D view with a tool other than select.
+  edit(e) {
+    const world = this.sim.world;
+    const fail = (text) => this.sim.log({ computer: 'world', text, level: 'error' });
+    if (e.tool === 'remove') {
+      if (e.turtleId != null) { this.sim.removeComputer(e.turtleId); this.afterDevicesChanged(); return; }
+      const mon = this.sim.monitorAt(e.x, e.y, e.z);
+      if (mon) { this.sim.removeMonitor(mon.computer, mon.name); this.afterDevicesChanged(); return; }
+      const comp = this.sim.computerAt(e.x, e.y, e.z);
+      if (comp) { this.sim.removeComputer(comp.id); this.afterDevicesChanged(); return; }
+      world.edit(e.x, e.y, e.z, null);
+      return;
+    }
+    if (e.tool === 'place') {
+      if (!world.edit(e.x, e.y, e.z, this.view.placeType)) fail(`cannot place at ${e.x},${e.y},${e.z}: a turtle is there`);
+      return;
+    }
+    if (!world.isFree(e.x, e.y, e.z)) { fail(`${e.x},${e.y},${e.z} is not free`); return; }
+    const label = this.$('add-label').value.trim() || null;
+    const run = this.$('add-run').value;
+    if (e.tool === 'turtle') {
+      // face away from the block it was placed against
+      const headings = { '1,0': 1, '-1,0': 3, '0,1': 0, '0,-1': 2 };
+      const heading = headings[`${e.normal.x},${e.normal.y}`] || 0;
+      const c = this.sim.addComputer({
+        kind: 'turtle', label, advanced: true, pos: { x: e.x, y: e.y, z: e.z }, heading,
+        fuel: Math.max(0, parseInt(this.$('add-fuel').value, 10) || 0), slots: [],
+        peripherals: { left: { type: 'modem' } }, autorun: run,
+      });
+      this.afterDevicesChanged();
+      this.selectTurtle(c.id);
+    } else if (e.tool === 'computer') {
+      this.sim.addComputer({
+        kind: 'computer', label, advanced: true, pos: { x: e.x, y: e.y, z: e.z },
+        peripherals: { top: { type: 'modem' } }, autorun: run,
+      });
+      this.afterDevicesChanged();
+    } else if (e.tool === 'monitor') {
+      const computer = this.sim.computers.get(parseInt(this.$('add-computer').value, 10));
+      if (!computer) { fail('add a computer first, then a monitor for it'); return; }
+      const w = Math.max(1, Math.min(8, parseInt(this.$('add-mw').value, 10) || 1));
+      const h = Math.max(1, Math.min(6, parseInt(this.$('add-mh').value, 10) || 1));
+      // the array runs sideways along the wall it stands against, and up
+      const step = e.normal.x !== 0 ? { x: 0, y: 1 } : { x: 1, y: 0 };
+      const blocks = [];
+      for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) blocks.push({ x: e.x + i * step.x, y: e.y + i * step.y, z: e.z + j });
+      if (!blocks.every((b) => world.isFree(b.x, b.y, b.z))) { fail('not enough room for a ' + w + 'x' + h + ' monitor there'); return; }
+      this.sim.addMonitor(computer, blocks, w, h);
+      this.afterDevicesChanged();
+    }
+  }
+
+  // Tabs, turtle list and computer list after a device came or went.
+  afterDevicesChanged() {
+    const active = this.activeComputer ? { id: this.activeComputer.id, side: this.activeTerminal === this.activeComputer.terminal ? 'native' : [...this.activeComputer.terminals].find(([, t]) => t === this.activeTerminal)?.[0] } : null;
+    this.buildTabs(active);
+    this.fillComputerSelect();
+    const t = this.sim.world.turtles.get(this.selectedTurtle);
+    this.selectTurtle(t ? t.id : (this.sim.world.turtles.keys().next().value ?? null));
+  }
+
   loadScenario(key, run) {
     let scenario = this.scenarios[key];
     if (run) {
@@ -149,26 +250,27 @@ export class UI {
 
   // Screens
 
-  buildTabs() {
+  // keep is {id, side} of the tab to stay on, when it still exists.
+  buildTabs(keep) {
     const tabs = this.$('tabs');
     tabs.innerHTML = '';
-    let firstTerminal = null, firstComputer = null;
     for (const c of this.sim.computers.values()) {
       for (const [side, t] of c.terminals) {
         const b = document.createElement('button');
         const who = c.label ? `${c.label} #${c.id}` : `${c.kind} #${c.id}`;
-        b.textContent = side === 'native' ? who : `monitor (${who})`;
+        b.textContent = side === 'native' ? who : `${side} (${who})`;
         b.dataset.id = c.id; b.dataset.side = side;
         b.addEventListener('click', () => { this.showTerminal(c, t, b); this.canvas.focus(); });
         tabs.appendChild(b);
-        if (!firstTerminal) { firstTerminal = t; firstComputer = c; }
       }
     }
-    // prefer a monitor if there is one: that is what the user set up to watch
     let chosen = null;
-    for (const b of tabs.children) if (b.dataset.side !== 'native' && !chosen) chosen = b;
+    if (keep) chosen = [...tabs.children].find((b) => b.dataset.id === String(keep.id) && b.dataset.side === keep.side) || null;
+    // otherwise prefer a monitor: that is what the user set up to watch
+    if (!chosen) for (const b of tabs.children) if (b.dataset.side !== 'native' && !chosen) chosen = b;
     if (!chosen) chosen = tabs.firstElementChild;
     if (chosen) chosen.click();
+    else { this.activeComputer = null; this.activeTerminal = null; }
   }
 
   showTerminal(computer, terminal, button) {

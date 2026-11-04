@@ -50,9 +50,12 @@ export class View3D {
     this.blockMesh = null;
     this.blockKeys = [];
     this.blockVersion = -1;
-    this.tool = 'select';      // select | place | remove
+    this.tool = 'select';      // select | place | remove | turtle | computer | monitor
     this.placeType = 'stone';
-    this.onEdit = null;        // (x, y, z, type|null) => void
+    // onEdit({ tool, x, y, z, normal, turtleId }): x, y, z is the clicked
+    // block (remove) or the free cell in front of the clicked face (the
+    // others); normal is the face direction in world axes.
+    this.onEdit = null;
     this.turtleMeshes = new Map();
     this.selectedTurtle = null;
     this.follow = false;
@@ -149,28 +152,37 @@ export class View3D {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const p = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(p, this.camera);
-    if (this.tool === 'place' || this.tool === 'remove') {
-      if (!this.blockMesh) return;
-      const hit = this.raycaster.intersectObject(this.blockMesh)[0];
-      if (!hit || hit.instanceId === undefined) return;
-      const [x, y, z] = this.blockKeys[hit.instanceId].split(',').map(Number);
-      if (this.tool === 'remove') {
-        if (this.onEdit) this.onEdit(x, y, z, null);
-      } else {
-        // the clicked face's normal, back in world axes (scene y is up,
-        // scene z points south)
-        const n = hit.face.normal;
-        const nx = Math.round(n.x), ny = Math.round(-n.z), nz = Math.round(n.y);
-        if (this.onEdit) this.onEdit(x + nx, y + ny, z + nz, this.placeType);
+    const turtleHit = () => {
+      const hits = this.raycaster.intersectObjects([...this.turtleMeshes.values()], true);
+      for (const h of hits) {
+        let o = h.object;
+        while (o && o.userData.turtleId === undefined) o = o.parent;
+        if (o) return { id: o.userData.turtleId, distance: h.distance };
       }
+      return null;
+    };
+    if (this.tool === 'select') {
+      const t = turtleHit();
+      if (t) this.onSelectTurtle(t.id);
       return;
     }
-    const hits = this.raycaster.intersectObjects([...this.turtleMeshes.values()], true);
-    for (const h of hits) {
-      let o = h.object;
-      while (o && o.userData.turtleId === undefined) o = o.parent;
-      if (o) { this.onSelectTurtle(o.userData.turtleId); return; }
+    if (!this.blockMesh || !this.onEdit) return;
+    const hit = this.raycaster.intersectObject(this.blockMesh)[0];
+    const t = turtleHit();
+    if (this.tool === 'remove') {
+      if (t && (!hit || t.distance < hit.distance)) { this.onEdit({ tool: 'remove', turtleId: t.id }); return; }
+      if (!hit || hit.instanceId === undefined) return;
+      const [x, y, z] = this.blockKeys[hit.instanceId].split(',').map(Number);
+      this.onEdit({ tool: 'remove', x, y, z });
+      return;
     }
+    if (!hit || hit.instanceId === undefined) return;
+    const [x, y, z] = this.blockKeys[hit.instanceId].split(',').map(Number);
+    // the clicked face's normal, back in world axes (scene y is up,
+    // scene z points south)
+    const n = hit.face.normal;
+    const normal = { x: Math.round(n.x), y: Math.round(-n.z), z: Math.round(n.y) };
+    this.onEdit({ tool: this.tool, x: x + normal.x, y: y + normal.y, z: z + normal.z, normal });
   }
 
   setSelected(id) {
@@ -183,6 +195,9 @@ export class View3D {
   update() {
     const world = this.sim.world;
     if (world.version !== this.blockVersion) this.rebuildBlocks();
+    for (const [id, g] of this.turtleMeshes) {
+      if (!world.turtles.has(id)) { this.scene.remove(g); this.turtleMeshes.delete(id); }
+    }
     for (const t of world.turtles.values()) {
       const g = this.turtleMesh(t);
       const pose = world.turtlePose(t, this.sim.clock);

@@ -148,8 +148,13 @@ What it shows:
   placing puts blocks down. Drag to orbit, wheel to zoom, click a turtle to
   select it, and tick Follow to keep the camera on it. The Click control
   switches the mouse to placing blocks (pick the type, click a block face
-  to put one against it, chests and saplings included) or removing them,
-  for setting up a test world by hand.
+  to put one against it, chests and saplings included), adding a turtle
+  (label, fuel and what it runs), a computer (with a modem on top) or a
+  monitor of a chosen size for one of the computers, or removing any of
+  those, for setting up a test world by hand. Added devices boot at once
+  and get a screen tab like the scenario's own; a program that only looks
+  for monitors when it starts, such as `turtlecontrol`, needs a reboot
+  after a monitor is added.
 - **Screens**: a tab for every computer screen and every monitor, drawn like
   the game. Click a screen to focus it and type: keys arrive as `key` and
   `char` events, Ctrl+T terminates, Ctrl+R reboots, Ctrl+V pastes a line.

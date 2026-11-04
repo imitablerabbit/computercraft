@@ -41,6 +41,94 @@ export class Simulation {
     this.scheduled.splice(i, 0, { at, fn });
   }
 
+  // Ids for devices added while running.
+  nextId() {
+    let m = 0;
+    for (const c of this.computers.values()) m = Math.max(m, c.id);
+    return m + 1;
+  }
+
+  // Blocks a monitor peripheral occupies, from its definition.
+  _monitorBlocks(c) {
+    const blocks = [];
+    for (const p of c.peripherals) if (p.type === 'monitor' && p.def.blocks) blocks.push(...p.def.blocks);
+    return blocks;
+  }
+
+  // Add a computer or turtle from a definition like a scenario's. It
+  // boots at once. Returns the Computer.
+  addComputer(def) {
+    def = { ...def, id: def.id == null ? this.nextId() : def.id };
+    const c = new Computer(this, def, this.fengari);
+    this.computers.set(def.id, c);
+    if (def.kind === 'turtle') {
+      this.world.addTurtle({
+        id: def.id, label: def.label, x: def.pos.x, y: def.pos.y, z: def.pos.z, heading: def.heading || 0,
+        fuel: def.fuel == null ? 1000 : def.fuel, fuelLimit: def.fuelLimit || (def.advanced === false ? 20000 : 100000),
+        slots: def.slots || [], advanced: def.advanced !== false,
+      });
+    } else if (def.pos) {
+      this.world.setBlock(def.pos.x, def.pos.y, def.pos.z, 'computer');
+    }
+    for (const b of this._monitorBlocks(c)) this.world.setBlock(b.x, b.y, b.z, 'monitor');
+    c.boot();
+    this.log({ computer: def.id, text: `${def.kind} #${def.id} added` });
+    this.changed();
+    return c;
+  }
+
+  // Shut a computer down and take it, its block and its monitors away.
+  removeComputer(id) {
+    const c = this.computers.get(id);
+    if (!c) return false;
+    c.shutdown();
+    this.computers.delete(id);
+    if (c.kind === 'turtle') this.world.turtles.delete(id);
+    else if (c.def.pos) this.world.setBlock(c.def.pos.x, c.def.pos.y, c.def.pos.z, null);
+    for (const b of this._monitorBlocks(c)) this.world.setBlock(b.x, b.y, b.z, null);
+    this.world.version++;
+    this.log({ computer: id, text: `${c.kind} #${id} removed` });
+    this.changed();
+    return true;
+  }
+
+  // Attach a monitor made of the given blocks to a computer.
+  addMonitor(computer, blocks, blocksW, blocksH) {
+    let n = 0;
+    while (computer.peripherals.some((p) => p.name === `monitor_${n}`)) n++;
+    const name = `monitor_${n}`;
+    computer.addPeripheral(name, { type: 'monitor', advanced: true, blocksW, blocksH, blocks });
+    for (const b of blocks) this.world.setBlock(b.x, b.y, b.z, 'monitor');
+    this.log({ computer: computer.id, text: `monitor ${name} (${blocksW}x${blocksH}) attached` });
+    this.changed();
+    return name;
+  }
+
+  // The computer (and peripheral name) owning a monitor block, if any.
+  monitorAt(x, y, z) {
+    for (const c of this.computers.values()) {
+      for (const p of c.peripherals) {
+        if (p.type === 'monitor' && p.def.blocks && p.def.blocks.some((b) => b.x === x && b.y === y && b.z === z)) return { computer: c, name: p.name };
+      }
+    }
+    return null;
+  }
+
+  removeMonitor(computer, name) {
+    const entry = computer.removePeripheral(name);
+    if (!entry) return;
+    for (const b of entry.def.blocks || []) this.world.setBlock(b.x, b.y, b.z, null);
+    this.log({ computer: computer.id, text: `monitor ${name} removed` });
+    this.changed();
+  }
+
+  computerAt(x, y, z) {
+    for (const c of this.computers.values()) {
+      if (c.kind !== 'turtle' && c.def.pos && c.def.pos.x === x && c.def.pos.y === y && c.def.pos.z === z) return c;
+    }
+    return null;
+  }
+
   // Build everything from a scenario definition.
   load(scenario) {
     this.world = new World();
@@ -52,23 +140,7 @@ export class Simulation {
     this.logs = [];
     this.scenario = scenario;
     scenario.build(this.world);
-    for (const def of scenario.computers) {
-      const c = new Computer(this, def, this.fengari);
-      this.computers.set(def.id, c);
-      if (def.kind === 'turtle') {
-        this.world.addTurtle({
-          id: def.id, label: def.label, x: def.pos.x, y: def.pos.y, z: def.pos.z, heading: def.heading || 0,
-          fuel: def.fuel == null ? 1000 : def.fuel, fuelLimit: def.fuelLimit || (def.advanced === false ? 20000 : 100000),
-          slots: def.slots || [], advanced: def.advanced !== false,
-        });
-      } else if (def.pos) {
-        this.world.setBlock(def.pos.x, def.pos.y, def.pos.z, 'computer');
-      }
-      for (const [side, p] of Object.entries(def.peripherals || {})) {
-        if (p.type === 'monitor' && p.blocks) for (const b of p.blocks) this.world.setBlock(b.x, b.y, b.z, 'monitor');
-      }
-    }
-    for (const c of this.computers.values()) c.boot();
+    for (const def of scenario.computers) this.addComputer(def);
     this.changed();
   }
 

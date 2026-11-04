@@ -35,9 +35,19 @@
       <label>Click <select id="tool">
         <option value="select">selects a turtle</option>
         <option value="place">places a block</option>
-        <option value="remove">removes a block</option>
+        <option value="turtle">adds a turtle</option>
+        <option value="computer">adds a computer</option>
+        <option value="monitor">adds a monitor</option>
+        <option value="remove">removes a block or device</option>
       </select></label>
       <label id="block-picker">Block <select id="block-type"></select></label>
+      <span id="add-form">
+        <label id="add-label-wrap">Label <input id="add-label" type="text" size="8" placeholder="optional"></label>
+        <label id="add-fuel-wrap">Fuel <input id="add-fuel" type="number" value="1000" min="0"></label>
+        <label id="add-run-wrap">Run <select id="add-run"></select></label>
+        <label id="add-on-wrap">On <select id="add-computer"></select></label>
+        <label id="add-size-wrap">Size <input id="add-mw" type="number" value="3" min="1" max="8"> x <input id="add-mh" type="number" value="2" min="1" max="6"></label>
+      </span>
       <label><input type="checkbox" id="follow"> Follow selected turtle</label>
       <span class="muted" id="world-hint">drag to orbit, wheel to zoom, right drag to pan</span>
     </div>

@@ -44,19 +44,35 @@ export class Computer {
     this.terminal = new Terminal(`${this.kind} ${this.id}`, size[0], size[1], { color: this.advanced, kind: 'computer' });
     this.terminals = new Map([['native', this.terminal]]);
     this.peripherals = [];
-    for (const [side, p] of Object.entries(def.peripherals || {})) {
-      const entry = { name: side, type: p.type, def: p };
-      if (p.type === 'monitor') {
-        const { width, height } = monitorSize(p.blocksW || 1, p.blocksH || 1, 1);
-        const t = new Terminal(`monitor ${side} of ${this.id}`, width, height, {
-          color: p.advanced !== false, kind: 'monitor', blocksW: p.blocksW || 1, blocksH: p.blocksH || 1, scale: 1,
-        });
-        t.onResize = () => this.pushEvent(['monitor_resize', side]);
-        entry.terminal = t;
-        this.terminals.set(side, t);
-      }
-      this.peripherals.push(entry);
+    for (const [side, p] of Object.entries(def.peripherals || {})) this.addPeripheral(side, p);
+  }
+
+  // Attach a peripheral ({type: 'monitor', blocksW, blocksH, advanced,
+  // blocks} or {type: 'modem'}) on a side or network name. A running
+  // program gets a peripheral event, as in the game.
+  addPeripheral(side, p) {
+    const entry = { name: side, type: p.type, def: p };
+    if (p.type === 'monitor') {
+      const { width, height } = monitorSize(p.blocksW || 1, p.blocksH || 1, 1);
+      const t = new Terminal(`monitor ${side} of ${this.id}`, width, height, {
+        color: p.advanced !== false, kind: 'monitor', blocksW: p.blocksW || 1, blocksH: p.blocksH || 1, scale: 1,
+      });
+      t.onResize = () => this.pushEvent(['monitor_resize', side]);
+      entry.terminal = t;
+      this.terminals.set(side, t);
     }
+    this.peripherals.push(entry);
+    if (this.state === 'running') this.pushEvent(['peripheral', side]);
+    return entry;
+  }
+
+  removePeripheral(side) {
+    const i = this.peripherals.findIndex((p) => p.name === side);
+    if (i < 0) return null;
+    const [entry] = this.peripherals.splice(i, 1);
+    this.terminals.delete(side);
+    if (this.state === 'running') this.pushEvent(['peripheral_detach', side]);
+    return entry;
   }
 
   get turtle() { return this.kind === 'turtle' ? this.sim.world.turtles.get(this.id) : null; }
