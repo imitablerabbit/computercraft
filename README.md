@@ -16,8 +16,8 @@ Shell, Stop and Back. Mine line has a Return switch that walks the turtle back t
 once the line is done, so it can be run again from the same spot.
 
 Fuel lists the items the turtle never burns as fuel (`inventory.FuelBlacklist`,
-kept in a `fuel_blacklist` file on the turtle so it survives reboots), with a
-Remove button each, Add carried item to pick one of the items it is carrying
+kept in a `fuel_blacklist` file on the turtle so it survives reboots), in a
+scrolling list with a Remove button each, Add carried item to pick one of the items it is carrying
 through the same Discover list, and Add by name for the keyboard. There is no
 whitelist: anything the game accepts as fuel and is not listed may be burnt.
 The logger adds its sapling to the list when it starts.

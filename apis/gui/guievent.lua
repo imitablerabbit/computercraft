@@ -25,6 +25,20 @@ is clicked inside the normal terminal. If a monitor is used then you
 will also need to handle the GUIMonitorTouchEvent.    
 --]]
 
+-- The mouse wheel turned: direction is 1 (down) or -1 (up) at x, y.
+GUIMouseScrollEvent = {}
+GUIMouseScrollEvent.__index = GUIMouseScrollEvent
+setmetatable(GUIMouseScrollEvent, {__index = GUIEvent})
+
+function GUIMouseScrollEvent.new(direction, x, y)
+    local object = GUIEvent.new("mouse_scroll")
+    object.direction = direction
+    object.x = x
+    object.y = y
+    setmetatable(object, GUIMouseScrollEvent)
+    return object
+end
+
 GUIMouseClickEvent = {}
 GUIMouseClickEvent.__index = GUIMouseClickEvent
 setmetatable(GUIMouseClickEvent, {__index = GUIEvent})

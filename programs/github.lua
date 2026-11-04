@@ -53,6 +53,8 @@ local files = {
     "apis/gui/input/guiinput.lua",
     "apis/gui/input/guiinputmodel.lua",
     "apis/gui/input/guiinputui.lua",
+    "apis/gui/scrollpane/guiscrollpane.lua",
+    "apis/gui/scrollpane/guiscrollpaneui.lua",
     "apis/gui/turtleicon/guiturtleicon.lua",
     "apis/gui/turtleicon/guiturtleiconui.lua",
     "apis/gui/checkbox/guicheckbox.lua",
@@ -60,6 +62,7 @@ local files = {
     "apis/gui/dropdown/guidropdown.lua",
     "apis/gui/dropdown/guidropdownui.lua",
     "apis/gui/inventorygrid/guiinventorygrid.lua",
+    "apis/gui/layout/guilayout.lua",
     "apis/gui/inventorygrid/guiinventorygridui.lua",
     
     "programs/gui/examples/button.lua",

@@ -73,6 +73,12 @@ function GUIApplication:update()
         if self.child then
           self.child:triggerMonitorTouchEvent(e)
         end
+      elseif event[1] == "mouse_scroll" then
+        local direction, x, y = event[2], event[3], event[4]
+        local e = guievent.GUIMouseScrollEvent.new(direction, x, y)
+        if self.child then
+          self.child:triggerMouseScrollEvent(e)
+        end
       elseif event[1] == "key" then
         local keycode = event[2]
         local e = guievent.GUIKeyPressEvent.new(keycode)

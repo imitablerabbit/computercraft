@@ -29,7 +29,18 @@ function GUIComponent.new(t)
         -- Listeners
         monitorTouchListeners = {},
         mouseClickListeners = {},
+        mouseScrollListeners = {},
         keyPressListeners = {},
+
+        -- Layout: a layout manager for the children (nil means the
+        -- children keep the bounds they were given), the preferred size
+        -- a layout starts from, and how this component is laid out by
+        -- its parent: flex shares spare space along the main axis,
+        -- stretch fills the cross axis.
+        layout = nil,
+        prefW = width, prefH = height, prefSet = false,
+        flex = 0,
+        stretch = true,
 
         -- Position and size
         ax = 1, ay = 1, -- absolute position
@@ -81,6 +92,7 @@ end
 function GUIComponent:add(c)
     table.insert(self.children, c)
     c:treeInit(self)
+    if self.layout then self:doLayout() end
 end
 
 function GUIComponent:remove(c)
@@ -89,6 +101,70 @@ function GUIComponent:remove(c)
             table.remove(self.children, i)
         end
     end
+    if self.layout then self:doLayout() end
+end
+
+function GUIComponent:removeAll()
+    self.children = {}
+    if self.layout then self:doLayout() end
+end
+
+-- Layouts
+
+-- Give this container a layout manager (GUIBoxLayout, GUIGridLayout).
+-- It places the children whenever one is added or the container is
+-- resized.
+function GUIComponent:setLayout(layout)
+    self.layout = layout
+    self:doLayout()
+end
+
+function GUIComponent:doLayout()
+    if self.layout then self.layout:apply(self) end
+end
+
+-- Spare space share along a layout's main axis (0 = fixed size).
+function GUIComponent:setFlex(flex)
+    self.flex = flex or 0
+end
+
+-- Whether a layout stretches this component across its cross axis.
+function GUIComponent:setStretch(stretch)
+    self.stretch = stretch and true or false
+end
+
+-- Move and resize without touching the preferred size. Used by layouts
+-- and scroll panes; the children move along with it.
+function GUIComponent:setBounds(x, y, w, h)
+    self.x, self.y, self.w, self.h = x, y, math.max(1, w), math.max(1, h)
+    if self.parent and self.parent.ax then
+        self.ax = self.parent.ax + x - 1
+        self.ay = self.parent.ay + y - 1
+    end
+    if self.term and self.term.reposition then self.term.reposition(self.x, self.y, self.w, self.h) end
+    self:relocateChildren()
+    if self.layout then self:doLayout() end
+end
+
+-- Recompute the absolute positions of the children after this
+-- component moved.
+function GUIComponent:relocateChildren()
+    for i, c in pairs(self.children) do
+        c.ax = self.ax + c.x - 1
+        c.ay = self.ay + c.y - 1
+        if c.term and c.term.reposition then c.term.reposition(c.x, c.y, c.w, c.h) end
+        c:relocateChildren()
+    end
+end
+
+-- The size this component would like: the bounds it was given with
+-- setPreferredBounds, or, for a container that was never given any,
+-- what its layout needs.
+function GUIComponent:getPreferredSize()
+    if self.layout and self.layout.preferredSize and not self.prefSet then
+        return self.layout:preferredSize(self)
+    end
+    return self.prefW or self.w, self.prefH or self.h
 end
 
 -- treeInit is called whenever this component is added to
@@ -98,6 +174,11 @@ function GUIComponent:treeInit(p)
     self.ax = p.ax + self.x - 1
     self.ay = p.ay + self.y - 1
     self.term = window.create(p.term, self.x, self.y, self.w, self.h)
+    -- Children added before this component had a parent drew into a
+    -- placeholder window; hang them under the real one.
+    for i, c in pairs(self.children) do
+        c:treeInit(self)
+    end
 end
 
 -- Add the mouse listeners, propagate listeners down tree
@@ -185,12 +266,43 @@ function GUIComponent:setPreferredBounds(x, y, w, h)
     self.y = y
     self.w = w
     self.h = h
+    self.prefW = w
+    self.prefH = h
+    self.prefSet = true
     if self.parent then
-        self.ax = self.parent.ax
-        self.ay = self.parent.ay
+        self.ax = self.parent.ax + x - 1
+        self.ay = self.parent.ay + y - 1
     end
     self.term.reposition(x, y, w, h)
+    self:relocateChildren()
     self:repaint()
+end
+
+-- Mouse wheel (computers only; monitors have no wheel).
+
+function GUIComponent:addMouseScrollListener(l)
+    table.insert(self.mouseScrollListeners, l)
+end
+
+function GUIComponent:removeMouseScrollListener(l)
+    for i, l2 in pairs(self.mouseScrollListeners) do
+        if l == l2 then
+            table.remove(self.mouseScrollListeners, i)
+        end
+    end
+end
+
+function GUIComponent:triggerMouseScrollEvent(e)
+    if not e then error("missing GUIEvent") end
+    if e.type ~= "mouse_scroll" then error("incorrect event") end
+    for i, l in pairs(self.mouseScrollListeners) do
+        l(e)
+    end
+    if self.children then
+        for i, c in pairs(self.children) do
+            c:triggerMouseScrollEvent(e)
+        end
+    end
 end
 
 -- Set the UI that is going to paint this component. The UI

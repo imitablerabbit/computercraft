@@ -854,16 +854,31 @@ showFuelRules = function(id)
   elseif #list == 0 then
     root:add(newLabel("nothing, every fuel item may be burnt", 2, 4, w - 2, colors.lightGray))
   else
+    -- One row per item in a scroll pane, so long lists fit.
+    local rows = guicomponent.GUIComponent.new()
+    rows:setBackgroundColor(colors.black)
+    rows:setBorder(false)
+    rows:setLayout(guilayout.GUIBoxLayout.new("vertical", 0, 0))
     for i, name in ipairs(list) do
-      local y = 3 + i
-      if y > lastRow then break end
-      root:add(newLabel(tostring(name), 2, y, w - 10, colors.white))
-      root:add(newButton("Remove", w - 7, y, 8, 1, colors.red, function()
+      local row = guicomponent.GUIComponent.new()
+      row:setBackgroundColor(colors.black)
+      row:setBorder(false)
+      row:setPreferredBounds(1, 1, w, 1)
+      row:setLayout(guilayout.GUIBoxLayout.new("horizontal", 1, 0))
+      local label = newLabel(tostring(name), 1, 1, 1, colors.white)
+      label:setFlex(1)
+      row:add(label)
+      row:add(newButton("Remove", 1, 1, 8, 1, colors.red, function()
         turtlectl.sendFuelRules(id, "remove", name)
         t.fuelMessage = "removing " .. tostring(name) .. "..."
         screen.refresh()
       end))
+      rows:add(row)
     end
+    local pane = guiscrollpane.GUIScrollPane.new()
+    pane:setPreferredBounds(2, 4, w - 2, math.max(1, lastRow - 3))
+    pane:setContent(rows)
+    root:add(pane)
   end
 
   local bw = math.floor((w - 3) / 2)
