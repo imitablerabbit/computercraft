@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ComputerCraft simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/sim/sim.css">
+<script src="https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <h1>CC simulator</h1>
+  <label>Scenario <select id="scenario"></select></label>
+  <button id="reset" title="Rebuild the world and reboot every computer">Reset</button>
+  <button id="pause" title="Pause or resume simulated time">Pause</button>
+  <label>Speed <select id="speed">
+    <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option>
+    <option value="2">2x</option><option value="4">4x</option><option value="10">10x</option><option value="25">25x</option>
+  </select></label>
+  <span id="clock" class="muted">0.0 s</span>
+  <span id="status" class="muted"></span>
+  <span class="spacer"></span>
+  <span id="description" class="muted"></span>
+</header>
+<main>
+  <section id="world">
+    <div id="view3d"></div>
+    <div id="world-overlay">
+      <label><input type="checkbox" id="follow"> Follow selected turtle</label>
+      <span class="muted">drag to orbit, wheel to zoom, right drag to pan, click a turtle to select it</span>
+    </div>
+  </section>
+  <aside>
+    <div class="panel" id="screens">
+      <div class="tabs" id="tabs"></div>
+      <div class="screen-wrap">
+        <canvas id="screen" tabindex="0"></canvas>
+      </div>
+      <div class="toolbar">
+        <button id="terminate" title="Ctrl+T">Terminate</button>
+        <button id="reboot" title="Ctrl+R">Reboot</button>
+        <label>Zoom <select id="zoom"><option value="fit" selected>fit</option><option value="1">1x</option><option value="1.5">1.5x</option><option value="2">2x</option></select></label>
+        <span class="muted">click the screen, then type; click a monitor to touch it</span>
+      </div>
+    </div>
+    <div class="panel" id="turtle">
+      <div class="toolbar">
+        <label>Turtle <select id="turtle-select"></select></label>
+        <span id="turtle-info" class="muted"></span>
+      </div>
+      <div id="inventory" class="inventory"></div>
+      <div id="containers" class="containers"></div>
+    </div>
+    <div class="panel" id="log">
+      <div class="toolbar">
+        <strong>Log</strong>
+        <label><input type="checkbox" id="log-net" checked> rednet</label>
+        <label><input type="checkbox" id="log-print" checked> prints</label>
+        <button id="log-clear">Clear</button>
+      </div>
+      <div id="log-lines"></div>
+    </div>
+  </aside>
+</main>
+<script type="module" src="/sim/js/main.js"></script>
+</body>
+</html>

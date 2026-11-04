@@ -110,6 +110,62 @@ follows inventory changes as they happen.
 inventorygui
 ```
 
+## Browser simulator
+
+`sim/` is a simulator for everything in this repo that runs in a web browser,
+so programs can be tried without the game. The computers run the real Lua
+files (Lua in the page through Fengari) against a stand-in for CraftOS, in a
+small voxel world drawn in 3D. Start `serve.py` as for installing, then open
+
+```
+http://localhost:8080/sim
+```
+
+The page needs internet access once to fetch Fengari and three.js from a CDN.
+What it shows:
+
+- **World**: the blocks, chests and turtles in 3D. Turtles move and turn
+  with the game's timing, digging removes blocks, sand and gravel fall, and
+  placing puts blocks down. Drag to orbit, wheel to zoom, click a turtle to
+  select it, and tick Follow to keep the camera on it.
+- **Screens**: a tab for every computer screen and every monitor, drawn like
+  the game. Click a screen to focus it and type: keys arrive as `key` and
+  `char` events, Ctrl+T terminates, Ctrl+R reboots, Ctrl+V pastes a line.
+  Clicking a monitor tab sends `monitor_touch`, clicking a computer screen
+  sends `mouse_click`, so `turtlecontrol`'s buttons work.
+- **Turtle**: position, heading, fuel and the 16 slots of the selected
+  turtle (fuel items marked F), plus every chest's contents.
+- **Log**: every `print`, every rednet message and every turtle action.
+
+Scenarios in the top bar set up the world and what each computer runs at
+boot: turtle control (a computer with a 3x2 monitor running `turtlecontrol`
+and two turtles running `turtleagent`), quarry, flatten, strip mine, the
+inventory viewer and a blank turtle with a shell. Each computer boots
+`startup.lua` first, so all the APIs are loaded, then its scenario command,
+then drops to a shell where any program can be typed, for example
+`quarry 4 4 3`. Reset rebuilds the world; Speed runs time faster.
+`?scenario=quarry&run=quarry%203%203%202` on the URL picks the scenario and
+the command the first turtle runs.
+
+The same simulation runs headless under node for scripted checks:
+
+```
+cd sim && npm install
+node headless.mjs quarry "quarry 3 3 2" 90
+```
+
+That prints every screen, the turtles, the chests and the log after the
+given number of simulated seconds.
+
+What is simulated: `term`, `window`, `paintutils`, `colors`, `keys`, `os`
+events and timers, `fs` over the repo's files (writes stay in the page),
+`shell` with `ls`, `cd`, `cat`, `label`, `programs` and `refuel`,
+`peripheral` with monitors and modems, `rednet` between the computers,
+`parallel`, `textutils` and the `turtle` API with fuel, an inventory and
+chests. Not simulated: `http`, `gps`, redstone, crafting, mobs and liquids.
+Fuel values and the block guesses are the plain Minecraft ones, so modded
+items will differ from your world.
+
 ## Installing on a computer in game
 
 The game can only fetch files over HTTP with `wget`, so this repo ships a

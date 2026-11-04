@@ -30,6 +30,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 # Paths (relative to the repo root) that are never served or listed.
 EXCLUDED_DIRS = {".git", "__pycache__"}
 EXCLUDED_FILES = {"serve.py"}
+# Served to the browser but never installed in game.
+MANIFEST_EXCLUDED_DIRS = EXCLUDED_DIRS | {"sim"}
 # Only files with these extensions go into the installer manifest.
 MANIFEST_EXTENSIONS = {".lua"}
 
@@ -93,7 +95,7 @@ def manifest(root):
     """Return the sorted list of files to put in the installer."""
     found = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIRS and not d.startswith("."))
+        dirnames[:] = sorted(d for d in dirnames if d not in MANIFEST_EXCLUDED_DIRS and not d.startswith("."))
         for name in filenames:
             if name in EXCLUDED_FILES or name.startswith("."):
                 continue
@@ -111,6 +113,14 @@ def render_installer(root, base_url):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    # Browsers refuse module scripts and stylesheets with the wrong type,
+    # and the Windows registry sometimes maps .js to text/plain.
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css",
+        ".html": "text/html", ".lua": "text/plain; charset=utf-8", ".json": "application/json",
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=SERVE_ROOT, **kwargs)
 
@@ -134,6 +144,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_text(render_installer(SERVE_ROOT, self._base_url()))
         if path == "/files.txt":
             return self._send_text("\n".join(manifest(SERVE_ROOT)) + "\n")
+        if path in ("/sim", "/sim/"):
+            self.path = "/sim/index.html"
+            return super().do_GET()
         parts = path.strip("/").split("/")
         if any(p in EXCLUDED_DIRS or p in EXCLUDED_FILES or p.startswith(".") for p in parts):
             return self.send_error(404)
@@ -183,6 +196,7 @@ def main():
     print("In game, run one of:")
     for ip in local_ips() or ["<this machine's ip>"]:
         print("  wget run http://%s:%d/install.lua" % (ip, args.port))
+    print("Browser simulator: http://localhost:%d/sim" % args.port)
     print("Ctrl+C to stop.", flush=True)
     try:
         server.serve_forever()

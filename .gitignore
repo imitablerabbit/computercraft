@@ -42,3 +42,4 @@ luac.out
 
 # Python
 __pycache__/
+sim/node_modules/

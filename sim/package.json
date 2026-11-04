@@ -1,0 +1,9 @@
+{
+  "name": "computercraft-sim",
+  "private": true,
+  "type": "module",
+  "description": "Browser and headless simulator for the ComputerCraft scripts in this repo",
+  "dependencies": {
+    "fengari": "0.1.4"
+  }
+}
