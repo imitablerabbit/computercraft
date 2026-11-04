@@ -33,6 +33,7 @@ local files = {
     "apis/mine.lua",
     "apis/move.lua",
     "apis/registry.lua",
+    "apis/turtlectl.lua",
 
     "apis/gui/guiapplication.lua",
     "apis/gui/guicomponent.lua",
@@ -49,6 +50,8 @@ local files = {
     "apis/gui/input/guiinput.lua",
     "apis/gui/input/guiinputmodel.lua",
     "apis/gui/input/guiinputui.lua",
+    "apis/gui/turtleicon/guiturtleicon.lua",
+    "apis/gui/turtleicon/guiturtleiconui.lua",
     
     "programs/gui/examples/button.lua",
     "programs/gui/examples/input.lua",
@@ -58,11 +61,13 @@ local files = {
     "programs/remotecommand.lua",
     "programs/remotelistener.lua",
     "programs/github.lua",
+    "programs/turtlecontrol.lua",
 
     "programs/turtle/logger.lua",
     "programs/turtle/loggergui.lua",
     "programs/turtle/mineline.lua",
     "programs/turtle/stripmine.lua",
+    "programs/turtle/turtleagent.lua",
 
     "startup.lua",
 }

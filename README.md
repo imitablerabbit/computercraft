@@ -2,6 +2,36 @@
 
 Various APIs and commands for the computers and turtles in the Computercraft Minecraft mod.
 
+## Turtle control monitor
+
+`turtlecontrol` is a touch dashboard for mining turtles. It runs on a
+computer that has a wireless modem and an advanced monitor attached (touch
+only works on advanced monitors). The main screen shows an icon for every
+turtle it can hear, coloured by what the turtle is doing: green when idle,
+orange with a pickaxe while a job runs, red after a job fails and gray once
+the turtle has gone quiet. Touch an icon to open that turtle's screen, which
+shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
+(strip mine, mine line, logger, refuel) plus Stop and Back.
+
+Setup:
+
+1. On each turtle, attach a wireless modem and run `turtleagent`. It
+   broadcasts its status every 5 seconds, answers the monitor's requests and
+   runs the job it is told to. Label the turtle first (`label set Digger`)
+   so the dashboard shows a name instead of an ID.
+2. On the monitor computer, run `turtlecontrol`. Optional arguments are the
+   monitor side, the text scale (default 0.5) and a registry file from
+   `registrylistener`, whose turtles are shown as offline until heard from.
+
+```
+turtlecontrol [monitorSide] [textScale] [registryFile]
+turtleagent [heartbeatSeconds]
+```
+
+Stop aborts the running job on the turtle, which is left wherever it got to.
+The job buttons use the default arguments from the catalogue in
+`apis/turtlectl.lua`; edit that table to change them or add jobs.
+
 ## Installing on a computer in game
 
 The game can only fetch files over HTTP with `wget`, so this repo ships a

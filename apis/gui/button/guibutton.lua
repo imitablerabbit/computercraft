@@ -17,6 +17,7 @@ function GUIButton.new(text)
         object:mouseClickHandler(e)
     end
     object:addMouseClickListener(l)
+    object:addMonitorTouchListener(l) -- touches carry x, y like clicks
     return object
 end
 

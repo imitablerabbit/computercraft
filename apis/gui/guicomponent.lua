@@ -100,7 +100,7 @@ function GUIComponent:addMonitorTouchListener(l)
     table.insert(self.monitorTouchListeners, l)
 end
 
-function GUIComponent:removeMouseClickListeners(l)
+function GUIComponent:removeMonitorTouchListener(l)
     for i, l2 in pairs(self.monitorTouchListeners) do
         if l == l2 then
             table.remove(self.monitorTouchListeners, i)
