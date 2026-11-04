@@ -9,8 +9,8 @@ Screens:
   turtle  state and fuel, buttons for the jobs in turtlectl, Items,
           Move, Shell and Stop
   job     a form for the job's parameters (length, torches, chest side,
-          sapling ...) with a Start button; choices are dropdowns;
-          values are remembered per turtle
+          sapling ...) with a Start button; switches are checkboxes and
+          choices are dropdowns; values are remembered per turtle
   text    an on screen keyboard to edit one text value of a job form
   move    a pad of single steps and actions (forward, turn, dig, place ...)
   shell   an on screen keyboard to type a command line that runs on the
@@ -690,13 +690,13 @@ showJobForm = function(id, job)
       root:add(newButton("+" .. small, x + cellW * 3, y, cellW - 1, 1, colors.blue, function() adjust(small) end))
       root:add(newButton("+" .. big, x + cellW * 4, y, cellW - 1, 1, colors.blue, function() adjust(big) end))
     elseif param.type == "bool" then
-      local button
-      button = newButton(valueText(param), x, y, cellW * 2 - 1, 1, values[param.name] and colors.green or colors.red, function()
-        values[param.name] = not values[param.name]
-        button:setBackgroundColor(values[param.name] and colors.green or colors.red)
-        button:setText(valueText(param))
+      local box = guicheckbox.GUICheckbox.new(values[param.name] and "yes" or "no", values[param.name])
+      box:setPreferredBounds(x, y, cellW * 2 - 1, 1)
+      box:addChangeListener(function(e)
+        values[param.name] = e.checked
+        box:setText(e.checked and "yes" or "no")
       end)
-      root:add(button)
+      root:add(box)
     elseif param.type == "choice" or (param.type == "string" and param.options) then
       -- A dropdown. A text parameter with options also offers Other...
       -- which opens the keyboard, and shows a typed value at the top.

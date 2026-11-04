@@ -31,7 +31,7 @@ shown for items the turtle has already checked, because checking means
 selecting the slot.
 
 A job with parameters opens a form first: numbers have -10, -1, +1 and +10
-buttons, switches toggle on touch, choices such as the chest side are
+buttons, switches are checkboxes, choices such as the chest side are
 dropdowns that open a list on touch, and text values open an on screen
 keyboard. A text value with suggestions, such as the logger's sapling, is a
 dropdown too, listing the vanilla saplings with Discover... and Other...

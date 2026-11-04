@@ -55,6 +55,8 @@ local files = {
     "apis/gui/input/guiinputui.lua",
     "apis/gui/turtleicon/guiturtleicon.lua",
     "apis/gui/turtleicon/guiturtleiconui.lua",
+    "apis/gui/checkbox/guicheckbox.lua",
+    "apis/gui/checkbox/guicheckboxui.lua",
     "apis/gui/dropdown/guidropdown.lua",
     "apis/gui/dropdown/guidropdownui.lua",
     "apis/gui/inventorygrid/guiinventorygrid.lua",
