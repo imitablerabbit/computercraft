@@ -95,6 +95,10 @@ moves = {
 -- Most lines of output a single shell command may send back.
 MaxOutputLines = 200
 
+-- Actions the inventory screen can ask for on one slot. The agent
+-- only runs them while idle.
+slotActions = { select = true, refuel = true, drop = true }
+
 -- Find a job in the catalogue by id.
 function findJob(id)
   for i, job in ipairs(jobs) do
@@ -141,6 +145,20 @@ function newOutput(text)
   return { type = "output", text = text }
 end
 
+-- Ask a turtle for its inventory; it answers with an inventory message.
+function newInventoryRequest()
+  return { type = "inventory_request" }
+end
+
+-- items is slot -> item from turtleinv.scan, selected the selected slot.
+function newInventory(items, selected)
+  return { type = "inventory", items = items, selected = selected }
+end
+
+function newSlotAction(action, slot)
+  return { type = "slot", action = action, slot = slot }
+end
+
 function newStatus(state, jobId, message)
   local status = {
     type = "status",
@@ -169,6 +187,14 @@ end
 
 function sendMove(turtleId, action)
   return rednet.send(turtleId, newMove(action), PROTOCOL)
+end
+
+function requestInventory(turtleId)
+  return rednet.send(turtleId, newInventoryRequest(), PROTOCOL)
+end
+
+function sendSlotAction(turtleId, action, slot)
+  return rednet.send(turtleId, newSlotAction(action, slot), PROTOCOL)
 end
 
 -- Ask the turtle to run a command line. width is the number of columns

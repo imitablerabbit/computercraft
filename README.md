@@ -11,9 +11,17 @@ turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
-(strip mine, mine line, logger, refuel), plus Move, Shell, Stop and Back.
-Mine line has a Return switch that walks the turtle back to where it started
+(strip mine, mine line, logger, refuel), plus Items, Move, Shell, Stop and
+Back. Mine line has a Return switch that walks the turtle back to where it started
 once the line is done, so it can be run again from the same spot.
+
+Items shows the turtle's inventory as the same 4x4 grid as `inventorygui`
+below, with the fuel and block icons, and asks the turtle for a fresh copy
+every few seconds while it is open. Touching a slot opens its details with
+Select, Refuel (one item) and Drop buttons that act on the turtle; the agent
+refuses them while a job is running. During a job the fuel icon can only be
+shown for items the turtle has already checked, because checking means
+selecting the slot.
 
 A job with parameters opens a form first: numbers have -10, -1, +1 and +10
 buttons, switches toggle on touch, and text values open an on screen
@@ -50,6 +58,33 @@ turtleagent [heartbeatSeconds]
 ```
 
 Stop aborts the running job on the turtle, which is left wherever it got to.
+
+## Turtle inventory viewer
+
+`inventorygui` runs on a turtle and shows its 16 slots as a 4x4 grid on the
+turtle's own screen, with the fuel level in the title bar. A filled slot
+shows the item name and count, the selected slot is marked with a `*`, and
+two icons say what the item is good for: an orange `F` means the turtle can
+burn it as fuel, a green `B` means it looks like a block that can be placed.
+The fuel check asks the turtle itself (`turtle.refuel(0)`, which burns
+nothing). ComputerCraft does not say whether an item is placeable, so the
+block icon is a guess from the item's creative tab and tags when the game
+reports them (CC: Tweaked) and from its name otherwise; expect the odd miss
+on modded items. The reading and classifying lives in `apis/turtleinv.lua`
+and the grid in `apis/gui/inventorygrid/`, which `turtleagent` and
+`turtlecontrol` use to show the same view remotely.
+
+Press a slot (mouse on an advanced turtle, or arrow keys and Enter on a
+plain one) to open its details: name, display name, count and stack size,
+damage, the fuel and block verdicts and the item's tags. The buttons at the
+bottom act on that slot: Select makes it the turtle's selected slot, Refuel
+burns one item from it, Drop drops the stack in front of the turtle, and
+Back returns to the grid (Backspace does the same, Q quits). The grid
+follows inventory changes as they happen.
+
+```
+inventorygui
+```
 
 ## Installing on a computer in game
 

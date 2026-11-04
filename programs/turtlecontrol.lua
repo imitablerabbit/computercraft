@@ -5,14 +5,17 @@ turtleagent. It runs on a computer with a modem and an advanced monitor.
 Screens:
   main    an icon per turtle that changes with what the turtle is doing;
           touch one to open it
-  turtle  state and fuel, buttons for the jobs in turtlectl, Move, Shell
-          and Stop
+  turtle  state and fuel, buttons for the jobs in turtlectl, Items,
+          Move, Shell and Stop
   job     a form for the job's parameters (length, torches, ...) with a
           Start button; values are remembered per turtle
   text    an on screen keyboard to edit one text value of a job form
   move    a pad of single steps and actions (forward, turn, dig, place ...)
   shell   an on screen keyboard to type a command line that runs on the
           turtle, with its output streamed back
+  items   the turtle's inventory as a 4x4 grid with fuel (F) and block
+          (B) icons, refreshed from the turtle while open
+  item    details of one slot with Select, Refuel and Drop buttons
 
 Turtles are found by their status broadcasts. If a registry file from
 registrylistener exists its turtles are shown as offline until heard from.
@@ -29,6 +32,7 @@ local discoverEvery = 10 -- seconds between discover broadcasts
 local offlineAfter = 20  -- seconds without a status before a turtle is offline
 local animateEvery = 0.5 -- seconds between busy animation frames
 local maxOutput = 100    -- shell output lines kept per turtle
+local inventoryEvery = 3 -- seconds between inventory requests while on the items screen
 
 --[[
 Peripherals
@@ -57,7 +61,8 @@ monitor.setTextScale(textScale)
 
 --[[
 Turtle records: id -> { id, label, state, job, message, fuel, lastSeen,
-                        output = {}, command = "", lastMove }
+                        output = {}, command = "", lastMove,
+                        inventory = {}, selected, inventoryMessage }
 --]]
 
 local turtles = {}
@@ -105,6 +110,7 @@ local app = guiapplication.GUIApplication.new()
 local icons = {}   -- id -> GUITurtleIcon on the main screen
 local screen = nil -- the open screen: { id, refresh, tick, onAck, onOutput }
 local showMain, showTurtle, showMove, showShell, showJobForm, showTextInput
+local showInventory, showItemDetail
 
 local function setScreen(root, handlers)
   icons = {}
@@ -269,21 +275,22 @@ showTurtle = function(id)
       end
     end })
   end
+  table.insert(actions, { name = "Items", color = colors.orange, fn = function() showInventory(id) end })
   table.insert(actions, { name = "Move", color = colors.green, fn = function() showMove(id) end })
   table.insert(actions, { name = "Shell", color = colors.purple, fn = function() showShell(id) end })
   table.insert(actions, { name = "Stop", color = colors.red, fn = function() sendStop(t); screen.refresh() end })
   table.insert(actions, { name = "Back", color = colors.gray, fn = function() showMain() end })
 
-  local gap = 1
   local columns = (w >= 34) and 3 or 2
-  local bw = math.floor((w - gap * (columns + 1)) / columns)
   local rows = math.ceil(#actions / columns)
+  local gap = (h - top + 1 >= rows * 2 - 1) and 1 or 0 -- drop the gaps when rows are tight
+  local bw = math.floor((w - (columns + 1)) / columns)
   local bh = math.floor((h - top + 1 - (rows - 1) * gap) / rows)
   bh = math.max(1, math.min(3, bh))
   for i, action in ipairs(actions) do
     local col = (i - 1) % columns
     local row = math.floor((i - 1) / columns)
-    local x = gap + 1 + col * (bw + gap)
+    local x = 2 + col * (bw + 1)
     local y = top + row * (bh + gap)
     root:add(newButton(action.name, x, y, bw, bh, action.color, action.fn))
   end
@@ -369,6 +376,125 @@ showMove = function(id)
     onAck = function(msg)
       t.lastMove = msg.job .. ": " .. (msg.message or (msg.ok and "ok" or "failed"))
       screen.refresh()
+    end,
+  })
+end
+
+--[[
+Items screen: the turtle's inventory grid, polled while open.
+--]]
+
+showInventory = function(id)
+  local t = turtles[id]
+  if not t then return showMain() end
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, "Items " .. t.label, function() showTurtle(id) end)
+  local status = newLabel("", 1, 2, w, colors.lightGray)
+  root:add(status)
+  local grid = guiinventorygrid.GUIInventoryGrid.new(t.inventory, t.selected)
+  grid:setPreferredBounds(1, 3, w, h - 2)
+  grid:addSelectListener(function(e)
+    if e.item then showItemDetail(id, e.slot) end
+  end)
+  root:add(grid)
+
+  turtlectl.requestInventory(id)
+  t.inventoryMessage = t.inventory and "" or "asking the turtle..."
+  local ticks = 0
+  setScreen(root, {
+    id = id,
+    refresh = function()
+      local t = turtles[id]
+      grid:setItems(t.inventory, t.selected)
+      status:setText("Fuel " .. fuelText(t) .. "  " .. (t.inventoryMessage or ""))
+    end,
+    onInventory = function() screen.refresh() end,
+    tick = function()
+      ticks = ticks + 1
+      if ticks * animateEvery >= inventoryEvery then
+        ticks = 0
+        turtlectl.requestInventory(id)
+      end
+    end,
+  })
+end
+
+--[[
+Item screen: one slot's details with Select, Refuel and Drop.
+--]]
+
+showItemDetail = function(id, slot)
+  local t = turtles[id]
+  if not t then return showMain() end
+  local item = t.inventory and t.inventory[slot]
+  if not item then return showInventory(id) end
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, "Slot " .. slot .. " on " .. t.label, function() showInventory(id) end)
+
+  local bh = (h >= 16) and 3 or 1
+  local by = h - bh + 1
+  local status = newLabel("", 1, by - 1, w, colors.lightGray)
+  root:add(status)
+  local labelW = math.min(9, math.floor(w / 4))
+  local valueX = labelW + 2
+  local valueW = w - valueX
+  local y = 2
+  local function addRow(label, value, color)
+    if y >= by - 1 then return end
+    root:add(newLabel(label, 1, y, labelW, colors.lightGray))
+    root:add(newLabel(value, valueX, y, valueW, color))
+    y = y + 1
+  end
+  for i, row in ipairs(turtleinv.detailRows(item)) do
+    addRow(row.label, row.value, row.color)
+  end
+  local tags = turtleinv.tagText(item)
+  if tags then
+    for i, line in ipairs(turtleinv.wrap(tags, valueW)) do
+      addRow(i == 1 and "Tags" or "", line, colors.lightGray)
+    end
+  end
+
+  local bw = math.floor((w - 3) / 4)
+  local bx = 1 + math.floor((w - (bw * 4 + 3)) / 2)
+  local function act(action)
+    return function()
+      if t.state == "busy" then
+        t.inventoryMessage = "busy with " .. tostring(t.job) .. ", stop it first"
+      else
+        turtlectl.sendSlotAction(id, action, slot)
+        t.inventoryMessage = action .. "..."
+      end
+      screen.refresh()
+    end
+  end
+  root:add(newButton("Back", bx, by, bw, bh, colors.gray, function() showInventory(id) end))
+  root:add(newButton("Select", bx + bw + 1, by, bw, bh, colors.blue, act("select")))
+  root:add(newButton("Refuel", bx + (bw + 1) * 2, by, bw, bh, item.fuel and colors.orange or colors.gray, act("refuel")))
+  root:add(newButton("Drop", bx + (bw + 1) * 3, by, bw, bh, colors.red, act("drop")))
+
+  setScreen(root, {
+    id = id,
+    refresh = function()
+      local t = turtles[id]
+      status:setText("Fuel " .. fuelText(t) .. "  " .. (t.inventoryMessage or ""))
+    end,
+    onAck = function(msg)
+      if turtlectl.slotActions[msg.job] then
+        t.inventoryMessage = msg.job .. ": " .. (msg.message or (msg.ok and "ok" or "failed"))
+      end
+      screen.refresh()
+    end,
+    onInventory = function(before)
+      -- Rebuild when the slot changed, leave when it emptied.
+      local now = t.inventory[slot]
+      if not now then
+        showInventory(id)
+      elseif turtleinv.changed(before, now) then
+        showItemDetail(id, slot)
+      end
     end,
   })
 end
@@ -651,6 +777,23 @@ local function onOutput(sender, msg)
   if screen and screen.id == sender and screen.onOutput then screen.onOutput() end
 end
 
+local function onInventory(sender, msg)
+  local t = turtles[sender]
+  if not t or type(msg.items) ~= "table" then return end
+  local before = t.inventory or {}
+  local items = {}
+  for key, item in pairs(msg.items) do
+    local slot = tonumber(key)
+    if slot and type(item) == "table" then items[slot] = item end
+  end
+  t.inventory = items
+  t.selected = tonumber(msg.selected)
+  if t.inventoryMessage == "asking the turtle..." then t.inventoryMessage = "" end
+  if screen and screen.id == sender and screen.onInventory then
+    screen.onInventory(screen.slot and before[screen.slot] or nil)
+  end
+end
+
 local function markOffline()
   local now = os.clock()
   for id, t in pairs(turtles) do
@@ -676,6 +819,8 @@ app:addEventListener(function(event)
         onAck(sender, msg)
       elseif turtlectl.isMessage(msg, "output") then
         onOutput(sender, msg)
+      elseif turtlectl.isMessage(msg, "inventory") then
+        onInventory(sender, msg)
       end
     end
   elseif event[1] == "timer" then

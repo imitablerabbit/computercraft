@@ -2,7 +2,9 @@
 Turtle agent runs on a turtle and lets the turtlecontrol monitor
 application see and drive it. It answers discover requests, broadcasts
 its status every few seconds and runs jobs from the turtlectl catalogue
-when told to. A running job can be aborted with the stop command.
+when told to. A running job can be aborted with the stop command. It
+also reports its inventory and selects, refuels from or drops a slot
+on request so the controller can look through the turtle's items.
 
 Usage: turtleagent [heartbeatSeconds]
 --]]
@@ -84,7 +86,45 @@ local function doMove(sender, action)
   end
 end
 
--- Receive commands, moves and discover requests.
+-- Send the inventory to whoever asked. While a job runs the slots
+-- must not be selected for fuel checks, so only cached answers go out.
+local function sendInventory(to)
+  local items = turtleinv.scan(state ~= "busy")
+  rednet.send(to, turtlectl.newInventory(items, turtle.getSelectedSlot()), turtlectl.PROTOCOL)
+end
+
+-- Select, refuel from or drop one slot for the controller.
+local function doSlot(sender, action, slot)
+  slot = tonumber(slot)
+  if not turtlectl.slotActions[action] then
+    rednet.send(sender, turtlectl.newAck(false, tostring(action), "unknown slot action"), turtlectl.PROTOCOL)
+    return
+  elseif not slot or slot < turtleinv.MinSlot or slot > turtleinv.MaxSlot then
+    rednet.send(sender, turtlectl.newAck(false, action, "bad slot"), turtlectl.PROTOCOL)
+    return
+  elseif state == "busy" then
+    rednet.send(sender, turtlectl.newAck(false, action, "busy with " .. tostring(currentJob)), turtlectl.PROTOCOL)
+    return
+  end
+  local ok, reason = true, nil
+  if action == "select" then
+    ok = turtle.select(slot)
+  else
+    local selected = turtle.getSelectedSlot()
+    turtle.select(slot)
+    if action == "refuel" then
+      ok, reason = turtle.refuel(1)
+    else
+      ok, reason = turtle.drop()
+    end
+    turtle.select(selected)
+  end
+  rednet.send(sender, turtlectl.newAck(ok and true or false, action, ok and ("slot " .. slot) or tostring(reason)), turtlectl.PROTOCOL)
+  sendInventory(sender)
+  sendStatus(sender) -- fuel may have changed
+end
+
+-- Receive commands, moves, inventory requests and discover requests.
 local function listener()
   while true do
     local sender, msg = rednet.receive(turtlectl.PROTOCOL)
@@ -92,6 +132,10 @@ local function listener()
       sendStatus(sender)
     elseif turtlectl.isMessage(msg, "move") then
       doMove(sender, msg.action)
+    elseif turtlectl.isMessage(msg, "inventory_request") then
+      sendInventory(sender)
+    elseif turtlectl.isMessage(msg, "slot") then
+      doSlot(sender, msg.action, msg.slot)
     elseif turtlectl.isMessage(msg, "command") then
       if msg.job == "stop" then
         if state == "busy" then
