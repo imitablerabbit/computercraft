@@ -33,6 +33,8 @@ aside { flex: 0 0 560px; width: 560px; position: relative; z-index: 1; display: 
 .inventory { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
 .slot { border: 1px solid var(--border); border-radius: 3px; padding: 3px 4px; min-height: 40px; font-size: 11px; background: #23272f; position: relative; }
 .slot.selected { border-color: var(--accent); }
+.slot.target { background: #2f3a4a; box-shadow: inset 0 0 0 1px #7fb2f2; cursor: pointer; }
+.slot { cursor: pointer; }
 .slot .n { color: var(--muted); font-size: 10px; }
 .slot .count { position: absolute; right: 4px; bottom: 2px; font-weight: bold; }
 .slot .fuel { position: absolute; right: 4px; top: 2px; color: var(--accent); font-size: 10px; }

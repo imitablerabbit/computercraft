@@ -146,7 +146,10 @@ What it shows:
 - **World**: the blocks, chests and turtles in 3D. Turtles move and turn
   with the game's timing, digging removes blocks, sand and gravel fall, and
   placing puts blocks down. Drag to orbit, wheel to zoom, click a turtle to
-  select it, and tick Follow to keep the camera on it.
+  select it, and tick Follow to keep the camera on it. The Click control
+  switches the mouse to placing blocks (pick the type, click a block face
+  to put one against it, chests and saplings included) or removing them,
+  for setting up a test world by hand.
 - **Screens**: a tab for every computer screen and every monitor, drawn like
   the game. Click a screen to focus it and type: keys arrive as `key` and
   `char` events, Ctrl+T terminates, Ctrl+R reboots, Ctrl+V pastes a line.
@@ -155,7 +158,7 @@ What it shows:
 - **Turtle**: position, heading, fuel and the 16 slots of the selected
   turtle (fuel items marked F), plus every chest's contents. Give puts
   items into the turtle as a player would, which is how to answer a fuel
-  alert.
+  alert; click a slot first to put them in that slot.
 - **Log**: every `print`, every rednet message and every turtle action.
 
 Scenarios in the top bar set up the world and what each computer runs at

@@ -1,7 +1,7 @@
 // The side panels: screens with keyboard and mouse, the turtle inventory
 // and the log. Plus the top bar controls.
 
-import { itemDisplayName, HEADING_NAMES, ITEMS } from './world.js';
+import { itemDisplayName, HEADING_NAMES, ITEMS, BLOCKS } from './world.js';
 
 // KeyboardEvent.code -> ComputerCraft key code (GLFW numbering).
 const KEYS = {
@@ -24,6 +24,7 @@ export class UI {
     this.activeTerminal = null;
     this.activeComputer = null;
     this.selectedTurtle = null;
+    this.giveSlot = null; // inventory slot Give puts items in, or null for any
     this.zoom = 'fit';
     this.blinkOn = true;
     this.lastBlink = 0;
@@ -63,8 +64,32 @@ export class UI {
     this.$('give').addEventListener('click', () => {
       if (this.selectedTurtle == null) return;
       const count = Math.max(1, Math.min(64, parseInt(this.$('give-count').value, 10) || 1));
-      this.sim.world.give(this.selectedTurtle, giveItem.value, count);
+      this.sim.world.give(this.selectedTurtle, giveItem.value, count, this.giveSlot);
     });
+
+    // Block tool in the 3D view
+    const blockType = this.$('block-type');
+    for (const type of Object.keys(BLOCKS)) {
+      const o = document.createElement('option');
+      o.value = type; o.textContent = type.replace(/_/g, ' ');
+      blockType.appendChild(o);
+    }
+    blockType.value = 'stone';
+    blockType.addEventListener('change', () => { this.view.placeType = blockType.value; });
+    const hints = {
+      select: 'drag to orbit, wheel to zoom, right drag to pan',
+      place: 'click a block face to put the chosen block against it',
+      remove: 'click a block to take it away',
+    };
+    this.$('tool').addEventListener('change', (e) => {
+      this.view.tool = e.target.value;
+      this.$('world-hint').textContent = hints[e.target.value];
+      this.$('block-picker').style.display = e.target.value === 'place' ? '' : 'none';
+    });
+    this.$('block-picker').style.display = 'none';
+    this.view.onEdit = (x, y, z, type) => {
+      if (!this.sim.world.edit(x, y, z, type)) this.sim.log({ computer: 'world', text: `cannot place at ${x},${y},${z}: a turtle is there`, level: 'error' });
+    };
     this.$('log-clear').addEventListener('click', () => { this.sim.logs.length = 0; this.$('log-lines').innerHTML = ''; this.logCount = 0; });
     this.$('log-net').addEventListener('change', () => this.redrawLog());
     this.$('log-print').addEventListener('change', () => this.redrawLog());
@@ -194,6 +219,7 @@ export class UI {
   // Turtle panel
 
   selectTurtle(id) {
+    if (id !== this.selectedTurtle) this.setGiveSlot(null);
     this.selectedTurtle = id;
     this.view.setSelected(id);
     const sel = this.$('turtle-select');
@@ -204,6 +230,12 @@ export class UI {
       if (t.id === id) o.selected = true;
       sel.appendChild(o);
     }
+    this.inventoryVersion = -1;
+  }
+
+  setGiveSlot(slot) {
+    this.giveSlot = slot;
+    this.$('give-target').textContent = slot ? `into slot ${slot} (click it again for any slot)` : 'to any slot (click a slot to choose)';
     this.inventoryVersion = -1;
   }
 
@@ -221,7 +253,9 @@ export class UI {
       inv.innerHTML = '';
       t.slots.forEach((s, i) => {
         const d = document.createElement('div');
-        d.className = 'slot' + (i + 1 === t.selected ? ' selected' : '');
+        d.className = 'slot' + (i + 1 === t.selected ? ' selected' : '') + (i + 1 === this.giveSlot ? ' target' : '');
+        d.title = 'click to make this the slot Give fills';
+        d.addEventListener('click', () => this.setGiveSlot(this.giveSlot === i + 1 ? null : i + 1));
         let html = `<span class="n">${i + 1}</span>`;
         if (s) {
           const def = ITEMS[s.name] || {};

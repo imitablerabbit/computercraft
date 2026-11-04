@@ -32,8 +32,14 @@
   <section id="world">
     <div id="view3d"></div>
     <div id="world-overlay">
+      <label>Click <select id="tool">
+        <option value="select">selects a turtle</option>
+        <option value="place">places a block</option>
+        <option value="remove">removes a block</option>
+      </select></label>
+      <label id="block-picker">Block <select id="block-type"></select></label>
       <label><input type="checkbox" id="follow"> Follow selected turtle</label>
-      <span class="muted">drag to orbit, wheel to zoom, right drag to pan, click a turtle to select it</span>
+      <span class="muted" id="world-hint">drag to orbit, wheel to zoom, right drag to pan</span>
     </div>
   </section>
   <aside>
@@ -58,6 +64,7 @@
         <label>Give <select id="give-item"></select></label>
         <input id="give-count" type="number" value="8" min="1" max="64">
         <button id="give" title="Put items into the selected turtle's inventory, as a player would">Give</button>
+        <span id="give-target" class="muted">to any slot (click a slot to choose)</span>
       </div>
       <div id="inventory" class="inventory"></div>
       <div id="containers" class="containers"></div>

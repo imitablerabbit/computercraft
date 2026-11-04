@@ -436,14 +436,37 @@ export class World {
     }
   }
 
-  // Put items into a turtle from outside, like a player would. Returns
-  // how many fitted.
-  give(id, name, count) {
+  // Put items into a turtle from outside, like a player would. With a
+  // slot the items go into that slot only, if it is empty or holds the
+  // same item. Returns how many fitted.
+  give(id, name, count, slot) {
     const t = this.turtles.get(id);
     if (!t) return 0;
-    const left = this._addItems(t, name, count);
-    this.log(id, `was given ${count - left} ${name}`);
-    return count - left;
+    let fitted;
+    if (slot) {
+      const max = itemInfo(name).maxCount || 64;
+      const s = t.slots[slot - 1];
+      if (s && s.name !== name) { this.log(id, `slot ${slot} holds ${s.name}, nothing given`); return 0; }
+      fitted = Math.min(count, max - (s ? s.count : 0));
+      if (fitted <= 0) { this.log(id, `slot ${slot} is full, nothing given`); return 0; }
+      if (s) s.count += fitted; else t.slots[slot - 1] = { name, count: fitted };
+      this._inventoryChanged(t);
+    } else {
+      fitted = count - this._addItems(t, name, count);
+    }
+    this.log(id, `was given ${fitted} ${name}${slot ? ' in slot ' + slot : ''}`);
+    return fitted;
+  }
+
+  // Place or remove a block by hand. Returns false when a turtle is in
+  // the way.
+  edit(x, y, z, type) {
+    if (type && this.turtleAt(x, y, z)) return false;
+    if (type && !BLOCKS[type]) return false;
+    this.setBlock(x, y, z, type);
+    if (!type) this.settle(x, y, z);
+    this.log('world', type ? `${type} placed at ${x},${y},${z}` : `block removed at ${x},${y},${z}`);
+    return true;
   }
 
   // Interpolated position and heading for drawing.

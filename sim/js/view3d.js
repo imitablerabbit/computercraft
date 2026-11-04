@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { BLOCKS, HEADINGS } from './world.js';
+import { BLOCKS } from './world.js';
 
 const TURTLE_COLORS = ['#e8c547', '#5fb0e8', '#8ad15f', '#e87f5f', '#c08ae8', '#5fe0d0'];
 
@@ -48,7 +48,11 @@ export class View3D {
     fill.position.set(-20, 10, -30);
     this.scene.add(fill);
     this.blockMesh = null;
+    this.blockKeys = [];
     this.blockVersion = -1;
+    this.tool = 'select';      // select | place | remove
+    this.placeType = 'stone';
+    this.onEdit = null;        // (x, y, z, type|null) => void
     this.turtleMeshes = new Map();
     this.selectedTurtle = null;
     this.follow = false;
@@ -96,7 +100,9 @@ export class View3D {
     const m = new THREE.Matrix4();
     const color = new THREE.Color();
     let i = 0;
+    this.blockKeys = [];
     for (const [k, type] of world.blocks) {
+      this.blockKeys[i] = k;
       const [x, y, z] = k.split(',').map(Number);
       const def = BLOCKS[type] || { color: '#ff00ff' };
       if (type === 'torch') m.compose(this.toScene(x, y, z - 0.2), new THREE.Quaternion(), new THREE.Vector3(0.2, 0.6, 0.2));
@@ -143,6 +149,22 @@ export class View3D {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const p = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(p, this.camera);
+    if (this.tool === 'place' || this.tool === 'remove') {
+      if (!this.blockMesh) return;
+      const hit = this.raycaster.intersectObject(this.blockMesh)[0];
+      if (!hit || hit.instanceId === undefined) return;
+      const [x, y, z] = this.blockKeys[hit.instanceId].split(',').map(Number);
+      if (this.tool === 'remove') {
+        if (this.onEdit) this.onEdit(x, y, z, null);
+      } else {
+        // the clicked face's normal, back in world axes (scene y is up,
+        // scene z points south)
+        const n = hit.face.normal;
+        const nx = Math.round(n.x), ny = Math.round(-n.z), nz = Math.round(n.y);
+        if (this.onEdit) this.onEdit(x + nx, y + ny, z + nz, this.placeType);
+      }
+      return;
+    }
     const hits = this.raycaster.intersectObjects([...this.turtleMeshes.values()], true);
     for (const h of hits) {
       let o = h.object;
