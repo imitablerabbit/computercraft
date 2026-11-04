@@ -9,10 +9,14 @@ Controller -> turtle:
   { type = "command", job = "<job id>",   start a job from the catalog below
     args = { ... } }                      (args optional, defaults otherwise)
   { type = "command", job = "stop" }      abort the running job
+  { type = "command", job = "shell",      run a shell command line and send
+    command = "ls /", width = 39 }        its output back, wrapped at width
+  { type = "move", action = "forward" }   one step or action from moves below
 
 Turtle -> controller:
   { type = "status", id, label, state, job, message, fuel, fuelLimit }
   { type = "ack", ok = true|false, job, message }
+  { type = "output", text = "one line" }  a line printed by a shell command
 
 state is one of idle, busy, error.
 --]]
@@ -31,6 +35,19 @@ jobs = {
   { id = "logger", name = "Logger", program = "logger", args = {} },
   { id = "refuel", name = "Refuel", fn = function() inventory.refuelAll() end },
 }
+
+-- Actions the move screen can ask for, mapped to turtle functions. Each
+-- is a single step or action; the agent only runs them while idle.
+moves = {
+  forward = "forward", back = "back", up = "up", down = "down",
+  left = "turnLeft", right = "turnRight",
+  dig = "dig", digUp = "digUp", digDown = "digDown",
+  place = "place", placeUp = "placeUp", placeDown = "placeDown",
+  suck = "suck", drop = "drop",
+}
+
+-- Most lines of output a single shell command may send back.
+MaxOutputLines = 200
 
 -- Find a job in the catalogue by id.
 function findJob(id)
@@ -70,6 +87,14 @@ function newAck(ok, jobId, message)
   return { type = "ack", ok = ok, job = jobId, message = message }
 end
 
+function newMove(action)
+  return { type = "move", action = action }
+end
+
+function newOutput(text)
+  return { type = "output", text = text }
+end
+
 function newStatus(state, jobId, message)
   local status = {
     type = "status",
@@ -94,4 +119,64 @@ end
 
 function broadcastDiscover()
   rednet.broadcast(newDiscover(), PROTOCOL)
+end
+
+function sendMove(turtleId, action)
+  return rednet.send(turtleId, newMove(action), PROTOCOL)
+end
+
+-- Ask the turtle to run a command line. width is the number of columns
+-- the controller can show so output wraps to fit.
+function sendShell(turtleId, command, width)
+  local msg = newCommand("shell")
+  msg.command = command
+  msg.width = width
+  return rednet.send(turtleId, msg, PROTOCOL)
+end
+
+-- A terminal object that is one line high. Everything written to it is
+-- handed to onLine as soon as the line is finished (print scrolls it
+-- off), so output of a program redirected here streams line by line.
+function newCaptureTerm(width, onLine)
+  local line, cx = "", 1
+  local t = {}
+  local function flush()
+    onLine((line:gsub("%s+$", "")))
+    line, cx = "", 1
+  end
+  t.write = function(s)
+    s = tostring(s)
+    if #line < cx - 1 then line = line .. string.rep(" ", cx - 1 - #line) end
+    line = line:sub(1, cx - 1) .. s .. line:sub(cx + #s)
+    cx = cx + #s
+  end
+  t.blit = function(s) t.write(s) end
+  t.scroll = function(n)
+    for i = 1, math.max(1, n or 1) do flush() end
+  end
+  t.getSize = function() return width, 1 end
+  t.getCursorPos = function() return cx, 1 end
+  t.setCursorPos = function(x, y) cx = math.max(1, math.floor(x)) end
+  t.clear = function() line, cx = "", 1 end
+  t.clearLine = t.clear
+  t.setCursorBlink = function() end
+  t.isColor = function() return false end
+  t.isColour = t.isColor
+  t.setTextColor = function() end
+  t.setTextColour = t.setTextColor
+  t.setBackgroundColor = function() end
+  t.setBackgroundColour = t.setBackgroundColor
+  t.getTextColor = function() return colors.white end
+  t.getTextColour = t.getTextColor
+  t.getBackgroundColor = function() return colors.black end
+  t.getBackgroundColour = t.getBackgroundColor
+  t.getPaletteColor = function() return 0, 0, 0 end
+  t.getPaletteColour = t.getPaletteColor
+  t.setPaletteColor = function() end
+  t.setPaletteColour = t.setPaletteColor
+  -- Send whatever is left on the current line, if anything.
+  t.finish = function()
+    if line ~= "" then flush() end
+  end
+  return t
 end

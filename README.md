@@ -11,7 +11,19 @@ turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
-(strip mine, mine line, logger, refuel) plus Stop and Back.
+(strip mine, mine line, logger, refuel), plus Move, Shell, Stop and Back.
+
+Move is a pad of single steps and actions: forward, back, turn, up, down,
+dig, place, suck and drop, each one touch. The result of the last action and
+the fuel level are shown above the pad. Moves are refused while a job runs.
+
+Shell is a remote command line. Type with the on screen keyboard (Shift
+toggles upper case) and touch Run to run the line on the turtle through its
+shell, as if typed at its own terminal. The output streams back to the
+monitor, capped at 200 lines per command, and the turtle shows as working
+until the command finishes. Stop aborts it, which is also the way out of a
+command that waits for keyboard input, since there is no way to type into a
+running program.
 
 Setup:
 
