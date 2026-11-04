@@ -21,9 +21,9 @@ end
 if args[1] then
   length = tonumber(args[1])
 end
-if args[2] == "true" or args[2] == 1 then
+if args[2] == "true" then
   placeTorches = true
-elseif args[2] == "false" or args[2] == 0 then
+elseif args[2] == "false" then
   placeTorches = false
 end
 if args[3] then

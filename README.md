@@ -13,6 +13,13 @@ the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
 (strip mine, mine line, logger, refuel), plus Move, Shell, Stop and Back.
 
+A job with parameters opens a form first: numbers have -10, -1, +1 and +10
+buttons, switches toggle on touch, and text values open an on screen
+keyboard. Start sends the job with those values, which are remembered per
+turtle for next time. Each job's parameters, defaults and limits are the
+`params` table of its catalogue entry in `apis/turtlectl.lua`, one entry per
+program argument in order, so adding a program means adding one entry there.
+
 Move is a pad of single steps and actions: forward, back, turn, up, down,
 dig, place, suck and drop, each one touch. The result of the last action and
 the fuel level are shown above the pad. Moves are refused while a job runs.
@@ -41,8 +48,6 @@ turtleagent [heartbeatSeconds]
 ```
 
 Stop aborts the running job on the turtle, which is left wherever it got to.
-The job buttons use the default arguments from the catalogue in
-`apis/turtlectl.lua`; edit that table to change them or add jobs.
 
 ## Installing on a computer in game
 

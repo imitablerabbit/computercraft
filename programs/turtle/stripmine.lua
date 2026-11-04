@@ -29,13 +29,13 @@ end
 if args[3] then
   length = tonumber(args[3])
 end
-if args[4] == "true" or args[2] == 1 then
+if args[4] == "true" then
   placeTorches = true
-elseif args[4] == "false" or args[2] == 0 then
+elseif args[4] == "false" then
   placeTorches = false
 end
 if args[5] then
-  torchDistance = tonumber(args[3])
+  torchDistance = tonumber(args[5])
 end
 
 --[[

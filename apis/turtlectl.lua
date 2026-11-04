@@ -24,17 +24,62 @@ state is one of idle, busy, error.
 PROTOCOL = "turtlectl"
 
 -- Catalogue of jobs that the controller can offer and the agent will run.
--- The controller only sends the job id so a turtle never runs arbitrary
--- commands. program is run through the shell with args, or fn is called
--- directly for jobs that are not standalone programs.
+-- The controller only sends the job id and argument values so a turtle
+-- never runs arbitrary commands. program is run through the shell with
+-- one argument per entry of params, in order, or fn is called directly
+-- for jobs that are not standalone programs.
+--
+-- Each param has a name, a label for the form, a type (number, bool or
+-- string) and a default. Numbers may give min, max and step (the small
+-- and big step of the form's buttons, default 1 and 10).
 jobs = {
-  { id = "stripmine", name = "Strip mine", program = "stripmine",
-    args = { "5", "3", "64", "true", "10" } },
-  { id = "mineline", name = "Mine line", program = "mineline",
-    args = { "64", "true", "10" } },
-  { id = "logger", name = "Logger", program = "logger", args = {} },
+  { id = "stripmine", name = "Strip mine", program = "stripmine", params = {
+    { name = "mines", label = "Mines", type = "number", default = 5, min = 1 },
+    { name = "sep", label = "Gap", type = "number", default = 3, min = 1 },
+    { name = "length", label = "Length", type = "number", default = 64, min = 1 },
+    { name = "torches", label = "Torches", type = "bool", default = true },
+    { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
+  } },
+  { id = "mineline", name = "Mine line", program = "mineline", params = {
+    { name = "length", label = "Length", type = "number", default = 64, min = 1 },
+    { name = "torches", label = "Torches", type = "bool", default = true },
+    { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
+  } },
+  { id = "logger", name = "Logger", program = "logger", params = {
+    { name = "width", label = "Width", type = "number", default = 10, min = 1 },
+    { name = "height", label = "Height", type = "number", default = 7, min = 1 },
+    { name = "sapling", label = "Sapling", type = "string", default = "minecraft:sapling" },
+    { name = "sleep", label = "Sleep secs", type = "number", default = 60, min = 0, step = { 10, 60 } },
+    { name = "dump", label = "Dump items", type = "bool", default = true },
+  } },
   { id = "refuel", name = "Refuel", fn = function() inventory.refuelAll() end },
 }
+
+-- The default value of every param of a job, by param name.
+function jobDefaults(job)
+  local values = {}
+  for i, param in ipairs(job.params or {}) do
+    values[param.name] = param.default
+  end
+  return values
+end
+
+-- Turn a table of values by param name into the string arguments the
+-- program expects, in param order. Missing values use the defaults.
+function jobArgs(job, values)
+  values = values or {}
+  local args = {}
+  for i, param in ipairs(job.params or {}) do
+    local v = values[param.name]
+    if v == nil then v = param.default end
+    if param.type == "bool" then
+      args[i] = v and "true" or "false"
+    else
+      args[i] = tostring(v)
+    end
+  end
+  return args
+end
 
 -- Actions the move screen can ask for, mapped to turtle functions. Each
 -- is a single step or action; the agent only runs them while idle.

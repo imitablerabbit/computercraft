@@ -7,6 +7,9 @@ Screens:
           touch one to open it
   turtle  state and fuel, buttons for the jobs in turtlectl, Move, Shell
           and Stop
+  job     a form for the job's parameters (length, torches, ...) with a
+          Start button; values are remembered per turtle
+  text    an on screen keyboard to edit one text value of a job form
   move    a pad of single steps and actions (forward, turn, dig, place ...)
   shell   an on screen keyboard to type a command line that runs on the
           turtle, with its output streamed back
@@ -69,7 +72,7 @@ end
 local function getTurtle(id)
   local t = turtles[id]
   if not t then
-    t = { id = id, label = "Turtle " .. id, state = "offline", output = {}, command = "" }
+    t = { id = id, label = "Turtle " .. id, state = "offline", output = {}, command = "", forms = {} }
     turtles[id] = t
   end
   return t
@@ -101,7 +104,7 @@ Screen helpers
 local app = guiapplication.GUIApplication.new()
 local icons = {}   -- id -> GUITurtleIcon on the main screen
 local screen = nil -- the open screen: { id, refresh, tick, onAck, onOutput }
-local showMain, showTurtle, showMove, showShell
+local showMain, showTurtle, showMove, showShell, showJobForm, showTextInput
 
 local function setScreen(root, handlers)
   icons = {}
@@ -165,6 +168,14 @@ local function sendStop(t)
   t.message = "stop sent..."
 end
 
+-- Send a job with the values from the turtle's form (or the defaults).
+local function startJob(t, job)
+  turtlectl.sendCommand(t.id, job.id, turtlectl.jobArgs(job, t.forms[job.id]))
+  t.state = "busy"
+  t.job = job.id
+  t.message = "sent " .. job.id .. "..."
+end
+
 --[[
 Main screen: a grid of turtle icons.
 --]]
@@ -198,6 +209,7 @@ showMain = function()
     end
   end
   setScreen(root, {
+    isMain = true,
     tick = function() for id, icon in pairs(tiles) do icon:tick() end end,
   })
   icons = tiles
@@ -248,13 +260,13 @@ showTurtle = function(id)
     table.insert(actions, { name = job.name, color = colors.blue, fn = function()
       if t.state == "busy" then
         t.message = "Busy, stop it first"
+        screen.refresh()
+      elseif job.params and #job.params > 0 then
+        showJobForm(id, job)
       else
-        turtlectl.sendCommand(id, job.id)
-        t.state = "busy"
-        t.job = job.id
-        t.message = "sent " .. job.id .. "..."
+        startJob(t, job)
+        screen.refresh()
       end
-      screen.refresh()
     end })
   end
   table.insert(actions, { name = "Move", color = colors.green, fn = function() showMove(id) end })
@@ -370,35 +382,19 @@ Shell screen: output pane, command line and an on screen keyboard.
 local keyboard = {
   { "1234567890-=" },
   { "qwertyuiop/" },
-  { "asdfghjkl:" },
+  { "asdfghjkl:_" },
   { "zxcvbnm.," },
   { { name = "Shift", units = 2, key = "shift" }, { name = "Space", units = 5, key = " " },
     { name = "Bksp", units = 2, key = "bksp" }, { name = "Clear", units = 2, key = "clear" },
-    { name = "Run", units = 2, key = "run" } },
+    { name = "Run", units = 2, key = "enter" } },
 }
 local keyUnits = 13 -- widest row, in key units
 
-showShell = function(id)
-  local t = turtles[id]
-  if not t then return showMain() end
-  local root = newRoot(t.label)
-  local w, h = monitor.getSize()
-  addHeader(root, w, "Shell " .. t.label, function() showTurtle(id) end,
-    function() sendStop(t); addOutput(t, "[stop sent]"); screen.refresh() end)
-
+-- Add the keyboard to root with its top row at keyTop. onKey gets a
+-- character, or "bksp", "clear" or "enter". Shift is handled here.
+-- enterName renames the Run key.
+local function addKeyboard(root, w, keyTop, onKey, enterName)
   local keyW = math.max(1, math.floor(w / keyUnits))
-  local keyTop = h - #keyboard + 1
-  local cmdRow = keyTop - 1
-  local outRows = cmdRow - 2 -- rows 2 .. cmdRow-1 show output
-  local outLines = {}
-  for i = 1, outRows do
-    local label = newLabel("", 1, 1 + i, w)
-    root:add(label)
-    outLines[i] = label
-  end
-  local cmdLine = newLabel("", 1, cmdRow, w, colors.yellow)
-  root:add(cmdLine)
-
   local shift = false
   local letterKeys = {}
   local function press(key)
@@ -407,23 +403,11 @@ showShell = function(id)
       for i, k in ipairs(letterKeys) do
         k.button:setText(shift and k.char:upper() or k.char)
       end
-    elseif key == "bksp" then
-      t.command = t.command:sub(1, -2)
-    elseif key == "clear" then
-      t.command = ""
-    elseif key == "run" then
-      if t.command ~= "" then
-        addOutput(t, "> " .. t.command)
-        turtlectl.sendShell(id, t.command, w)
-        t.command = ""
-      end
-    else
-      if shift then key = key:upper() end
-      t.command = t.command .. key
+      return
     end
-    screen.refresh()
+    if #key == 1 and shift then key = key:upper() end
+    onKey(key)
   end
-
   for r, row in ipairs(keyboard) do
     local x = 1
     local y = keyTop + r - 1
@@ -438,12 +422,157 @@ showShell = function(id)
         end
       else
         local color = colors.lightGray
-        if entry.key == "run" then color = colors.green elseif entry.key == "clear" then color = colors.red end
-        root:add(newButton(entry.name, x, y, keyW * entry.units, 1, color, function() press(entry.key) end))
+        local name = entry.name
+        if entry.key == "enter" then
+          color = colors.green
+          name = enterName or name
+        elseif entry.key == "clear" then
+          color = colors.red
+        end
+        root:add(newButton(name, x, y, keyW * entry.units, 1, color, function() press(entry.key) end))
         x = x + keyW * entry.units
       end
     end
   end
+end
+
+--[[
+Job form: one row per parameter, then Start.
+--]]
+
+showJobForm = function(id, job)
+  local t = turtles[id]
+  if not t then return showMain() end
+  if not t.forms[job.id] then t.forms[job.id] = turtlectl.jobDefaults(job) end
+  local values = t.forms[job.id]
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, job.name .. " on " .. t.label, function() showTurtle(id) end)
+
+  local top = 3
+  local startH = (h - top >= #job.params * 2 + 3) and 3 or 1
+  local gap = (h - top - startH >= #job.params * 2) and 2 or 1
+  local labelW = math.min(12, math.floor(w / 3))
+  local cellW = math.max(3, math.floor((w - labelW - 1) / 5))
+  local valueButtons = {}
+
+  local function valueText(param)
+    local v = values[param.name]
+    if param.type == "bool" then return v and "true" or "false" end
+    return tostring(v)
+  end
+
+  for i, param in ipairs(job.params) do
+    local y = top + (i - 1) * gap
+    root:add(newLabel(param.label, 1, y, labelW, colors.lightGray))
+    local x = labelW + 2
+    if param.type == "number" then
+      local small = (param.step and param.step[1]) or 1
+      local big = (param.step and param.step[2]) or 10
+      local function adjust(delta)
+        local v = (tonumber(values[param.name]) or param.default) + delta
+        if param.min and v < param.min then v = param.min end
+        if param.max and v > param.max then v = param.max end
+        values[param.name] = v
+        valueButtons[i]:setText(valueText(param))
+      end
+      root:add(newButton("-" .. big, x, y, cellW - 1, 1, colors.blue, function() adjust(-big) end))
+      root:add(newButton("-" .. small, x + cellW, y, cellW - 1, 1, colors.blue, function() adjust(-small) end))
+      valueButtons[i] = newLabel(valueText(param), x + cellW * 2, y, cellW - 1, colors.yellow)
+      valueButtons[i]:setTextAlign("center")
+      root:add(valueButtons[i])
+      root:add(newButton("+" .. small, x + cellW * 3, y, cellW - 1, 1, colors.blue, function() adjust(small) end))
+      root:add(newButton("+" .. big, x + cellW * 4, y, cellW - 1, 1, colors.blue, function() adjust(big) end))
+    elseif param.type == "bool" then
+      local button
+      button = newButton(valueText(param), x, y, cellW * 2 - 1, 1, values[param.name] and colors.green or colors.red, function()
+        values[param.name] = not values[param.name]
+        button:setBackgroundColor(values[param.name] and colors.green or colors.red)
+        button:setText(valueText(param))
+      end)
+      root:add(button)
+    else
+      root:add(newButton(valueText(param), x, y, w - x, 1, colors.purple, function()
+        showTextInput(param.label, tostring(values[param.name] or ""), function(text)
+          values[param.name] = text
+          showJobForm(id, job)
+        end, function() showJobForm(id, job) end)
+      end))
+    end
+  end
+
+  local startY = math.min(h - startH + 1, top + #job.params * gap)
+  root:add(newButton("Start " .. job.name, 2, startY, w - 2, startH, colors.green, function()
+    startJob(t, job)
+    showTurtle(id)
+  end))
+
+  setScreen(root, { id = id })
+end
+
+--[[
+Text input: edit one value with the keyboard. onDone(text) or onCancel().
+--]]
+
+showTextInput = function(prompt, initial, onDone, onCancel)
+  local root = newRoot(prompt)
+  local w, h = monitor.getSize()
+  addHeader(root, w, prompt, onCancel)
+  local text = initial
+  local keyTop = h - #keyboard + 1
+  local line = newLabel("", 1, math.max(2, math.floor((keyTop + 1) / 2)), w, colors.yellow)
+  root:add(line)
+  local function refresh()
+    local shown = "> " .. text .. "_"
+    if #shown > w then shown = shown:sub(-w) end
+    line:setText(shown)
+  end
+  addKeyboard(root, w, keyTop, function(key)
+    if key == "bksp" then text = text:sub(1, -2)
+    elseif key == "clear" then text = ""
+    elseif key == "enter" then return onDone(text)
+    else text = text .. key end
+    refresh()
+  end, "Done")
+  setScreen(root, { refresh = refresh })
+end
+
+showShell = function(id)
+  local t = turtles[id]
+  if not t then return showMain() end
+  local root = newRoot(t.label)
+  local w, h = monitor.getSize()
+  addHeader(root, w, "Shell " .. t.label, function() showTurtle(id) end,
+    function() sendStop(t); addOutput(t, "[stop sent]"); screen.refresh() end)
+
+  local keyTop = h - #keyboard + 1
+  local cmdRow = keyTop - 1
+  local outRows = cmdRow - 2 -- rows 2 .. cmdRow-1 show output
+  local outLines = {}
+  for i = 1, outRows do
+    local label = newLabel("", 1, 1 + i, w)
+    root:add(label)
+    outLines[i] = label
+  end
+  local cmdLine = newLabel("", 1, cmdRow, w, colors.yellow)
+  root:add(cmdLine)
+
+  addKeyboard(root, w, keyTop, function(key)
+    if key == "bksp" then
+      t.command = t.command:sub(1, -2)
+    elseif key == "clear" then
+      t.command = ""
+    elseif key == "enter" then
+      if t.command ~= "" then
+        addOutput(t, "> " .. t.command)
+        turtlectl.sendShell(id, t.command, w)
+        t.command = ""
+      end
+    else
+      t.command = t.command .. key
+    end
+    screen.refresh()
+  end, "Run")
 
   t.lastStatusMessage = t.message -- only report status changes from now on
   setScreen(root, {
@@ -490,8 +619,8 @@ local function onStatus(msg)
   t.fuelLimit = msg.fuelLimit
   t.lastSeen = os.clock()
   if screen and screen.id == id then
-    if screen.onStatus then screen.onStatus(msg) else screen.refresh() end
-  elseif isNew and not screen.id then
+    if screen.onStatus then screen.onStatus(msg) elseif screen.refresh then screen.refresh() end
+  elseif isNew and screen and screen.isMain then
     showMain()
   elseif icons[id] then
     icons[id]:setInfo(t)
@@ -511,7 +640,7 @@ local function onAck(sender, msg)
     end
   end
   if screen and screen.id == sender then
-    if screen.onAck then screen.onAck(msg) else screen.refresh() end
+    if screen.onAck then screen.onAck(msg) elseif screen.refresh then screen.refresh() end
   end
 end
 

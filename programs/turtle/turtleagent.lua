@@ -59,7 +59,7 @@ local function runJob(job, jobArgs, task)
     if ok then return true end
     return false, tostring(err)
   end
-  jobArgs = jobArgs or job.args or {}
+  jobArgs = jobArgs or turtlectl.jobArgs(job)
   local ok, ran = pcall(shell.run, job.program, table.unpack(jobArgs))
   if ok and ran then return true end
   if ok then return false, job.program .. " failed" end
@@ -112,7 +112,16 @@ local function listener()
         elseif job.program and not shell.resolveProgram(job.program) then
           rednet.send(sender, turtlectl.newAck(false, msg.job, "program not installed"), turtlectl.PROTOCOL)
         else
-          pending = { job = job, args = msg.args, from = sender,
+          -- Only plain strings and numbers are passed on as arguments.
+          local jobArgs = nil
+          if type(msg.args) == "table" then
+            jobArgs = {}
+            for i, v in ipairs(msg.args) do
+              if type(v) ~= "string" and type(v) ~= "number" then v = tostring(v) end
+              jobArgs[i] = tostring(v)
+            end
+          end
+          pending = { job = job, args = jobArgs, from = sender,
                       command = msg.command, width = msg.width }
           state = "busy"
           currentJob = job.id
