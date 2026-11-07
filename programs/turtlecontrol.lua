@@ -1,6 +1,9 @@
 --[[
 Turtle control is a touch screen dashboard for the turtles running
-turtleagent. It runs on a computer with a modem and an advanced monitor.
+turtleagent. It runs on a computer with a modem and an advanced monitor,
+or on the computer's own screen when there is no monitor, which is how
+it runs on an advanced pocket computer with a wireless modem. Screens
+rearrange themselves for narrow displays.
 
 Screens:
   main    an icon per turtle that changes with what the turtle is doing
@@ -26,7 +29,10 @@ Screens:
 Turtles are found by their status broadcasts. If a registry file from
 registrylistener exists its turtles are shown as offline until heard from.
 
-Usage: turtlecontrol [monitorSide] [textScale] [registryFile]
+Usage: turtlecontrol [monitorSide|term] [textScale] [registryFile]
+  monitorSide  the monitor to use (default: the first one found, or
+               the computer's own screen when there is none); "term"
+               forces the computer's own screen
 --]]
 
 local args = {...}
@@ -41,29 +47,42 @@ local maxOutput = 100    -- shell output lines kept per turtle
 local inventoryEvery = 3 -- seconds between inventory requests while on the items screen
 
 --[[
-Peripherals
+Display and peripherals. The display is an advanced monitor when one
+is attached or named, otherwise the computer's own screen (a pocket
+computer, or any advanced computer with a mouse).
 --]]
 
-local monitor
-if monitorSide then
+local monitor, display
+if monitorSide == "term" or monitorSide == "screen" then
+  monitorSide = nil
+elseif monitorSide then
   monitor = peripheral.wrap(monitorSide)
+  if not monitor then
+    print("Error: no monitor on side " .. monitorSide)
+    return
+  end
 else
   monitor = peripheral.find("monitor")
   if monitor then monitorSide = peripheral.getName(monitor) end
 end
-if not monitor then
-  print("Error: no monitor attached")
-  return
-end
-if not monitor.isColor() then
-  print("Error: an advanced monitor is needed for touch")
-  return
+if monitor then
+  if not monitor.isColor() then
+    print("Error: an advanced monitor is needed for touch")
+    return
+  end
+  monitor.setTextScale(textScale)
+  display = monitor
+else
+  display = term.current()
+  if not display.isColor() then
+    print("Error: an advanced computer is needed for the mouse")
+    return
+  end
 end
 if not turtlectl.openModem() then
   print("Error: no modem attached")
   return
 end
-monitor.setTextScale(textScale)
 
 --[[
 Turtle records: id -> { id, label, state, job, message, fuel, lastSeen,
@@ -130,7 +149,7 @@ local function setScreen(root, handlers)
 end
 
 local function newRoot(title, decorations)
-  local root = guirootcontainer.GUIRootContainer.new(monitor, monitorSide)
+  local root = guirootcontainer.GUIRootContainer.new(display, monitorSide)
   root:setTitle(title)
   root:setBackgroundColor(colors.black)
   root:setBorderColor(colors.gray)
@@ -222,7 +241,7 @@ Main screen: a grid of turtle icons.
 
 showMain = function()
   local root = newRoot("Turtle Control", true)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   local tileW, tileH = guiturtleicon.GUITurtleIcon.MinWidth, guiturtleicon.GUITurtleIcon.MinHeight
   local gap = 1
   if w < tileW + 2 or h < tileH + 2 then
@@ -230,6 +249,15 @@ showMain = function()
   end
   local columns = math.max(1, math.floor((w - gap) / (tileW + gap)))
   local list = sortedTurtles()
+  local rows = math.max(1, math.floor((h - 1 - gap) / (tileH + gap)))
+  if columns < 2 or columns * rows < #list then
+    -- Narrow screens, or more turtles than big tiles fit: text tiles
+    -- two to a row, four rows tall.
+    gap = 1
+    tileW = math.max(8, math.floor((w - 3 * gap) / 2))
+    tileH = 4
+    columns = math.max(1, math.floor((w - gap) / (tileW + gap)))
+  end
   if #list == 0 then
     root:add(newLabel("Waiting for turtles...", 2, 3, w - 2, colors.lightGray))
     root:add(newLabel("Run turtleagent on each turtle", 2, 4, w - 2, colors.gray))
@@ -263,7 +291,7 @@ showTurtle = function(id)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   local iconW, iconH = guiturtleicon.GUITurtleIcon.MinWidth, guiturtleicon.GUITurtleIcon.MinHeight
 
   -- Header: the icon with status lines beside it, or three text lines
@@ -374,21 +402,40 @@ local movePad = {
   { name = "Drop",   action = "drop",      col = 7, row = 3 },
 }
 
+-- The same actions four to a row for narrow screens.
+local movePadNarrow = {
+  { name = "Fwd",    action = "forward",   col = 1, row = 1 },
+  { name = "Up",     action = "up",        col = 2, row = 1 },
+  { name = "DigUp",  action = "digUp",     col = 3, row = 1 },
+  { name = "PlcUp",  action = "placeUp",   col = 4, row = 1 },
+  { name = "TurnL",  action = "left",      col = 1, row = 2 },
+  { name = "Back",   action = "back",      col = 2, row = 2 },
+  { name = "TurnR",  action = "right",     col = 3, row = 2 },
+  { name = "Down",   action = "down",      col = 4, row = 2 },
+  { name = "Dig",    action = "dig",       col = 1, row = 3 },
+  { name = "Place",  action = "place",     col = 2, row = 3 },
+  { name = "Suck",   action = "suck",      col = 3, row = 3 },
+  { name = "Drop",   action = "drop",      col = 4, row = 3 },
+  { name = "DigDn",  action = "digDown",   col = 1, row = 4 },
+  { name = "PlcDn",  action = "placeDown", col = 2, row = 4 },
+}
+
 showMove = function(id)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, "Move " .. t.label, function() showTurtle(id) end)
   local status = newLabel("", 1, 2, w, colors.lightGray)
   root:add(status)
 
   local top, gap = 3, 1
-  local cols, rows = 7, 3
+  local pad, cols, rows = movePad, 7, 3
+  if w < 7 * 4 + 6 then pad, cols, rows = movePadNarrow, 4, 4 end
   local bw = math.floor((w - gap * (cols - 1)) / cols)
   local bh = math.floor((h - top + 1 - gap * (rows - 1)) / rows)
   bh = math.max(1, math.min(4, bh))
-  for i, key in ipairs(movePad) do
+  for i, key in ipairs(pad) do
     local x = 1 + (key.col - 1) * (bw + gap)
     local y = top + (key.row - 1) * (bh + gap)
     local color = colors.blue
@@ -426,7 +473,7 @@ showInventory = function(id)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, "Items " .. t.label, function() showTurtle(id) end)
   local status = newLabel("", 1, 2, w, colors.lightGray)
   root:add(status)
@@ -468,7 +515,7 @@ showItemDetail = function(id, slot)
   local item = t.inventory and t.inventory[slot]
   if not item then return showInventory(id) end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, "Slot " .. slot .. " on " .. t.label, function() showInventory(id) end)
 
   local bh = (h >= 16) and 3 or 1
@@ -596,6 +643,20 @@ local function newLineEditor(text)
   return ed
 end
 
+-- Let the computer's own keyboard drive an on screen keyboard's onKey:
+-- typed characters, enter, backspace and the arrows.
+local function hookKeys(root, onKey)
+  root:addCharListener(function(e) onKey(e.char) end)
+  root:addKeyPressListener(function(e)
+    local k = e.keycode
+    if k == keys.enter then onKey("enter")
+    elseif k == keys.backspace then onKey("bksp")
+    elseif k == keys.left then onKey("left")
+    elseif k == keys.right then onKey("right")
+    end
+  end)
+end
+
 -- Add the keyboard to root with its top row at keyTop. onKey gets a
 -- character, or "bksp", "clear", "left", "right" or "enter". Shift is
 -- handled here. enterName renames the Run key.
@@ -652,14 +713,18 @@ showJobForm = function(id, job)
   if not t.forms[job.id] then t.forms[job.id] = turtlectl.jobDefaults(job) end
   local values = t.forms[job.id]
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, job.name .. " on " .. t.label, function() showTurtle(id) end)
 
   local top = 3
-  local startH = (h - top >= #job.params * 2 + 3) and 3 or 1
-  local gap = (h - top - startH >= #job.params * 2) and 2 or 1
   local labelW = math.min(12, math.floor(w / 3))
-  local cellW = math.max(3, math.floor((w - labelW - 1) / 5))
+  -- When the five number buttons do not fit beside the label, each
+  -- parameter takes two rows: the label, then its controls.
+  local narrow = w - labelW - 1 < 20
+  local rowsPer = narrow and 2 or 1
+  local startH = (h - top >= #job.params * (rowsPer + 1) + 3) and 3 or 1
+  local gap = (h - top - startH >= #job.params * (rowsPer + 1)) and (rowsPer + 1) or rowsPer
+  local cellW = math.max(3, math.floor(((narrow and (w - 1)) or (w - labelW - 1)) / 5))
   local valueButtons = {}
 
   local function valueText(param)
@@ -670,8 +735,9 @@ showJobForm = function(id, job)
 
   for i, param in ipairs(job.params) do
     local y = top + (i - 1) * gap
-    root:add(newLabel(param.label, 1, y, labelW, colors.lightGray))
+    root:add(newLabel(param.label, 1, y, narrow and (w - 1) or labelW, colors.lightGray))
     local x = labelW + 2
+    if narrow then x, y = 2, y + 1 end
     if param.type == "number" then
       local small = (param.step and param.step[1]) or 1
       local big = (param.step and param.step[2]) or 10
@@ -783,7 +849,7 @@ showDiscover = function(id, param, onPick, onCancel, fresh)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, param.label .. " from " .. t.label, onCancel)
   local names, counts = carriedItems(t.inventory)
   local signature = {}
@@ -839,7 +905,7 @@ showFuelRules = function(id)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, "Fuel rules " .. t.label, function() showTurtle(id) end)
   local status = newLabel("", 1, 2, w, colors.lightGray)
   root:add(status)
@@ -882,14 +948,14 @@ showFuelRules = function(id)
   end
 
   local bw = math.floor((w - 3) / 2)
-  root:add(newButton("Add carried item", 2, by, bw, bh, colors.green, function()
+  root:add(newButton(w < 40 and "Carried..." or "Add carried item", 2, by, bw, bh, colors.green, function()
     showDiscover(id, { label = "Never burn" }, function(name)
       turtlectl.sendFuelRules(id, "add", name)
       t.fuelMessage = "adding " .. name .. "..."
       showFuelRules(id)
     end, function() showFuelRules(id) end)
   end))
-  root:add(newButton("Add by name", 3 + bw, by, bw, bh, colors.purple, function()
+  root:add(newButton(w < 40 and "By name..." or "Add by name", 3 + bw, by, bw, bh, colors.purple, function()
     showTextInput("Never burn", "", function(text)
       if text ~= "" then
         turtlectl.sendFuelRules(id, "add", text)
@@ -917,7 +983,7 @@ Text input: edit one value with the keyboard. onDone(text) or onCancel().
 
 showTextInput = function(prompt, initial, onDone, onCancel)
   local root = newRoot(prompt)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, prompt, onCancel)
   local editor = newLineEditor(initial)
   local keyTop = h - #keyboard + 1
@@ -926,10 +992,12 @@ showTextInput = function(prompt, initial, onDone, onCancel)
   local function refresh()
     line:setText(editor.render("> ", w))
   end
-  addKeyboard(root, w, keyTop, function(key)
+  local function onKey(key)
     if editor.key(key) then return onDone(editor.text) end
     refresh()
-  end, "Done")
+  end
+  addKeyboard(root, w, keyTop, onKey, "Done")
+  hookKeys(root, onKey)
   setScreen(root, { refresh = refresh })
 end
 
@@ -937,7 +1005,7 @@ showShell = function(id)
   local t = turtles[id]
   if not t then return showMain() end
   local root = newRoot(t.label)
-  local w, h = monitor.getSize()
+  local w, h = display.getSize()
   addHeader(root, w, "Shell " .. t.label, function() showTurtle(id) end,
     function() sendStop(t); addOutput(t, "[stop sent]"); screen.refresh() end)
 
@@ -955,7 +1023,7 @@ showShell = function(id)
 
   -- The half typed command line is kept per turtle between visits.
   if not t.editor then t.editor = newLineEditor(t.command) end
-  addKeyboard(root, w, keyTop, function(key)
+  local function onKey(key)
     if t.editor.key(key) then
       if t.editor.text ~= "" then
         addOutput(t, "> " .. t.editor.text)
@@ -965,7 +1033,9 @@ showShell = function(id)
     end
     t.command = t.editor.text
     screen.refresh()
-  end, "Run")
+  end
+  addKeyboard(root, w, keyTop, onKey, "Run")
+  hookKeys(root, onKey)
 
   t.lastStatusMessage = t.message -- only report status changes from now on
   setScreen(root, {
@@ -1138,9 +1208,13 @@ Start
 --]]
 
 loadRegistry(registryFile)
-print("Turtle control on monitor " .. monitorSide .. ", close with the x on the monitor")
+if monitor then
+  print("Turtle control on monitor " .. monitorSide .. ", close with the x on the monitor")
+end
 app:setUPS(20)
 showMain()
 app:start()
-monitor.setBackgroundColor(colors.black)
-monitor.clear()
+display.setBackgroundColor(colors.black)
+display.setTextColor(colors.white)
+display.clear()
+display.setCursorPos(1, 1)

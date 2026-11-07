@@ -161,6 +161,21 @@ export const SCENARIOS = {
     ],
   },
 
+  pocket: {
+    name: 'Pocket control',
+    description: 'An advanced pocket computer running turtlecontrol on its own 26x20 screen, with two agent turtles. Click its screen tab to drive them.',
+    build(world) {
+      ground(world, -8, 10, -6, 10, 0, 6);
+      world.setBlock(-1, 0, 1, 'chest');
+      world.setBlock(-1, 4, 1, 'chest');
+    },
+    computers: [
+      { id: 12, label: 'Pocket', kind: 'pocket', advanced: true, peripherals: { back: { type: 'modem' } }, autorun: 'turtlecontrol' },
+      { id: 7, label: 'Digger', kind: 'turtle', advanced: true, pos: { x: 0, y: 0, z: 1 }, heading: 0, fuel: 1200, slots: [coal(12), torches(32)], peripherals: { left: { type: 'modem' } }, autorun: 'turtleagent' },
+      { id: 8, label: 'Lumber', kind: 'turtle', advanced: true, pos: { x: 0, y: 4, z: 1 }, heading: 0, fuel: 400, slots: [coal(5), { name: 'minecraft:oak_sapling', count: 16 }], peripherals: { left: { type: 'modem' } }, autorun: 'turtleagent' },
+    ],
+  },
+
   blank: {
     name: 'Blank',
     description: 'One advanced turtle with a modem on flat ground and a shell prompt.',

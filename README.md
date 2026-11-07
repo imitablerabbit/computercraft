@@ -6,7 +6,12 @@ Various APIs and commands for the computers and turtles in the Computercraft Min
 
 `turtlecontrol` is a touch dashboard for mining turtles. It runs on a
 computer that has a wireless modem and an advanced monitor attached (touch
-only works on advanced monitors). The main screen shows an icon for every
+only works on advanced monitors), or, when there is no monitor, on the
+computer's own screen with the mouse, which makes it usable on an advanced
+pocket computer with a wireless modem (`turtlecontrol term` forces that).
+On a narrow screen the main grid uses small text tiles, the move pad has
+four columns, job parameters take two rows each, and the shell and text
+screens also accept the computer's keyboard. The main screen shows an icon for every
 turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
@@ -68,7 +73,7 @@ Setup:
    `registrylistener`, whose turtles are shown as offline until heard from.
 
 ```
-turtlecontrol [monitorSide] [textScale] [registryFile]
+turtlecontrol [monitorSide|term] [textScale] [registryFile]
 turtleagent [heartbeatSeconds]
 ```
 

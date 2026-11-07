@@ -67,7 +67,7 @@ export class Simulation {
         fuel: def.fuel == null ? 1000 : def.fuel, fuelLimit: def.fuelLimit || (def.advanced === false ? 20000 : 100000),
         slots: def.slots || [], advanced: def.advanced !== false,
       });
-    } else if (def.pos) {
+    } else if (def.pos && def.kind !== 'pocket') {
       this.world.setBlock(def.pos.x, def.pos.y, def.pos.z, 'computer');
     }
     for (const b of this._monitorBlocks(c)) this.world.setBlock(b.x, b.y, b.z, 'monitor');
