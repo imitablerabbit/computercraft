@@ -16,7 +16,7 @@ turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
 the turtle has gone quiet. Touch an icon to open that turtle's screen, which
 shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
-(strip mine, mine line, quarry, flatten, logger, refuel), plus Items, Move,
+(strip mine, mine line, quarry, flatten, logger, reconstruct, refuel), plus Items, Move,
 Shell, Stop and Back. Mine line has a Return switch that walks the turtle back to where it started
 once the line is done, so it can be run again from the same spot.
 
@@ -84,34 +84,43 @@ what it needs (NEEDS FUEL, NEEDS CHEST, ...), and its screen shows the
 message in red. The programs raise these through `apis/alert.lua`: running
 out of fuel (the turtle then waits, and carries on by itself once fuel is
 put in), no chest or a full chest to empty into, no torches left, no
-saplings left. `turtleagent` passes alerts to the controller and clears
+saplings left, and for `reconstruct` an empty input chest or a machine
+that stops working. `turtleagent` passes alerts to the controller and clears
 them when the job ends, so any program can call `alert.raise(kind,
 message)` and `alert.clear(kind)` to be shown the same way.
 
 ## Quarry and flatten
 
 `quarry` digs a box straight down and `flatten` clears one straight up; both
-bring what they dig back to a chest. Put the turtle in the bottom left
-corner of the area, looking along it, with a chest next to it:
+bring what they dig back to a chest. Put the turtle on the near edge of the
+area, looking along it, with a chest next to it:
 
 ```
-quarry [width] [length] [depth] [chest]     defaults 8 8 8 left
-flatten [width] [length] [height] [chest]   defaults 8 8 4 left
+quarry [width] [length] [depth] [chest] [start]     defaults 8 8 8 left left
+flatten [width] [length] [height] [chest] [start]   defaults 8 8 4 left left
 ```
 
+`start` says where on the near edge the turtle stands: `left` (width is
+all to its right), `right` (width is all to its left) or `middle` (width
+spread both ways; an even width puts the extra column on the right).
 `chest` says where the chest is relative to the turtle's starting block
 and heading: `left`, `right`, `behind`, `below` or `above`. A side that is
-inside the area to clear is refused (below for a quarry, right and above
-for flatten). The same argument ends `stripmine` (default left)
-and `logger` (default behind), and the turtle control forms have a Chest
-button that steps through the sides. The turning, dropping and turning
-back is `inventory.dumpTo(side, keepSlots)` in `apis/inventory.lua`, so
-any program that empties itself can take the same option.
+inside the area to clear is refused. A quarry is all below the turtle, so
+only `below` is out; flatten clears the turtle's own layer, so with a left
+start the chest cannot be on the right, with a right start not on the
+left, and from the middle it goes behind or below. The same
+chest argument ends `stripmine` (default left) and `logger` (default
+behind). In the turtle control forms Start and Chest are dropdowns, and
+the Chest list only offers the sides outside the box for the current
+start and width. The turning, dropping and turning back is
+`inventory.dumpTo(side, keepSlots)` in `apis/inventory.lua`, so any program
+that empties itself can take the same option.
 
-Width is to the turtle's right and length straight ahead. For a quarry the
-first layer is the one under the turtle, so it can stand on the ground; for
-flatten the first layer is the turtle's own, so it can stand beside the
-hill. Each layer is cleared in a snake pattern before moving to the next.
+Length is straight ahead. For a quarry the first layer is the one under
+the turtle, so it can stand on the ground; for flatten the first layer is
+the turtle's own, so it can stand beside the hill. Each layer is cleared
+in a snake pattern before moving to the next; from a middle start the
+turtle first works along the near edge to the closer corner.
 Whenever the inventory is full, and once the job is done, the turtle goes
 back to its starting block, turns to the chest and empties itself, then
 returns to where it left off. Without a chest on the left it keeps the
@@ -120,6 +129,44 @@ goes home and empties itself, and reports why. When fuel runs lower than
 the way home it burns fuel it has dug up (coal, logs, ...) rather than
 stopping. Both are jobs in the turtle control job list with forms for the
 three sizes; the engine is `apis/excavate.lua`.
+
+## Reconstruct
+
+`reconstruct` works a block-changing machine: it feeds blocks from a chest
+one at a time to something that changes the block in front of the turtle
+when it gets a redstone pulse, digs the result and drops it into another
+chest. The first use is an Actually Additions atomic reconstructor with a
+lens of the miner, which turns netherrack into nether quartz ore, nether
+gold ore and, rarely, ancient debris; anything that turns the block in
+front of the turtle into another block on a pulse works the same way, with
+whatever blocks it accepts.
+
+```
+      M .          M = the machine, aimed at the block space in front
+    = T C          of the turtle; = redstone from the turtle's left
+      I            face to the machine; I = input chest; C = output chest
+
+reconstruct [input] [output] [pulse] [stacks] [delay]   defaults behind right left 0 0.5
+```
+
+The turtle takes one stack from the input chest, then for every block in
+it places the block in front, pulses the redstone, waits `delay` seconds,
+checks that the block changed (pulsing again a couple of times if not) and
+digs it. When the stack is gone it empties itself into the output chest and
+takes the next one; `stacks` limits how many, 0 runs until stopped. The
+turtle never moves, so it needs no fuel. `input` and `output` are chest
+sides as above (`left`, `right`, `behind`, `below`, `above`) and `pulse` is
+the turtle side wired to the machine (`left`, `right`, `back`, `top`,
+`bottom`); the turtle faces front while it works, so all of them are
+relative to how it was placed. A side used twice is refused.
+
+When the input chest is empty, the output chest is missing or full, the
+item will not place, or the block stops changing (the machine out of power
+or aimed wrong), the turtle raises an alert, waits ten seconds and tries
+again, so fixing the setup lets it carry on. Unchanged blocks are dug back
+into the stack and fed again. The job is in the turtle control list with a
+form for the three sides and the stack count; the loop is
+`apis/reconstruct.lua`, whose `run` takes the same options as a table.
 
 ## Turtle inventory viewer
 
@@ -211,7 +258,9 @@ What it shows:
 
 Scenarios in the top bar set up the world and what each computer runs at
 boot: turtle control (a computer with a 3x2 monitor running `turtlecontrol`
-and three turtles running `turtleagent`, one almost out of fuel), quarry, flatten, strip mine, the
+and three turtles running `turtleagent`, one almost out of fuel), quarry, reconstruct (a chest of
+netherrack, redstone and an atomic reconstructor that picks nether quartz ore,
+nether gold ore or ancient debris by the mod's weights of 3000, 500 and 1), flatten, strip mine, the
 inventory viewer and a blank turtle with a shell. Each computer boots
 `startup.lua` first, so all the APIs are loaded, then its scenario command,
 then drops to a shell where any program can be typed, for example
@@ -233,8 +282,12 @@ What is simulated: `term`, `window`, `paintutils`, `colors`, `keys`, `os`
 events and timers, `fs` over the repo's files (writes stay in the page),
 `shell` with `ls`, `cd`, `cat`, `label`, `programs` and `refuel`,
 `peripheral` with monitors and modems, `rednet` between the computers,
-`parallel`, `textutils` and the `turtle` API with fuel, an inventory and
-chests. Not simulated: `http`, `gps`, redstone, crafting, mobs and liquids.
+`parallel`, `textutils`, the `turtle` API with fuel, an inventory and
+chests, and `redstone` outputs: a pulse from a turtle's side powers the
+block there and any redstone wire running from it, and fires every atomic
+reconstructor it reaches at the first block along its aim (the block
+picker's reconstructor aims at the block it is placed against). Not
+simulated: `http`, `gps`, redstone inputs, crafting, mobs and liquids.
 Fuel values and the block guesses are the plain Minecraft ones, so modded
 items will differ from your world.
 

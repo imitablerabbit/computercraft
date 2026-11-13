@@ -89,7 +89,7 @@ export const SCENARIOS = {
 
   quarry: {
     name: 'Quarry',
-    description: 'One turtle on the ground with a chest on its left. Type a command in its screen, for example: quarry 4 4 3',
+    description: 'One turtle on the ground with a chest on its left. Type a command in its screen, for example: quarry 4 4 3   (or from the middle of the edge with the chest behind: quarry 5 4 3 behind middle, after moving the chest)',
     build(world) {
       ground(world, -6, 10, -6, 10, 0, 9);
       world.setBlock(-1, 0, 1, 'chest');
@@ -98,6 +98,27 @@ export const SCENARIOS = {
       {
         id: 3, label: 'Miner', kind: 'turtle', advanced: true, pos: { x: 0, y: 0, z: 1 }, heading: 0, fuel: 800,
         slots: [coal(20)],
+        peripherals: { left: { type: 'modem' } },
+        autorun: '',
+      },
+    ],
+  },
+
+  reconstruct: {
+    name: 'Reconstruct',
+    description: 'A turtle with a chest of netherrack behind it, an empty chest on its right and redstone on its left leading to an atomic reconstructor aimed at the block in front of it. Try: reconstruct   (or reconstruct behind right left 2)',
+    build(world) {
+      ground(world, -6, 6, -6, 8, 0, 4, { ores: false, pockets: false });
+      world.setBlock(0, -1, 1, 'chest');
+      world.fillContainer(0, -1, 1, [{ name: 'minecraft:netherrack', count: 64 }, { name: 'minecraft:netherrack', count: 64 }, { name: 'minecraft:netherrack', count: 24 }]);
+      world.setBlock(1, 0, 1, 'chest');
+      world.setBlock(-1, 0, 1, 'redstone_wire');
+      world.setBlock(-1, 1, 1, 'reconstructor', { facing: 1 });
+    },
+    computers: [
+      {
+        id: 5, label: 'Smelter', kind: 'turtle', advanced: true, pos: { x: 0, y: 0, z: 1 }, heading: 0, fuel: 100,
+        slots: [],
         peripherals: { left: { type: 'modem' } },
         autorun: '',
       },

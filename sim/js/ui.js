@@ -79,7 +79,7 @@ export class UI {
     blockType.addEventListener('change', () => { this.view.placeType = blockType.value; });
     const hints = {
       select: 'drag to orbit, wheel to zoom, right drag to pan',
-      place: 'click a block face to put the chosen block against it',
+      place: 'click a block face to put the chosen block against it; a reconstructor aims at the block it is placed against',
       turtle: 'click a block face to put a turtle against it; it boots to a shell',
       computer: 'click a block face to put a computer against it (it has a modem on top)',
       monitor: 'click a block face to stand the monitor against it; touching a computer attaches it to that computer, otherwise it joins the one chosen in On',
@@ -184,7 +184,13 @@ export class UI {
       return;
     }
     if (e.tool === 'place') {
-      if (!world.edit(e.x, e.y, e.z, this.view.placeType)) fail(`cannot place at ${e.x},${e.y},${e.z}: a turtle is there`);
+      // a machine aims at the block it was placed against
+      let meta;
+      if (BLOCKS[this.view.placeType] && BLOCKS[this.view.placeType].machine) {
+        const facings = { '1,0': 3, '-1,0': 1, '0,1': 2, '0,-1': 0 };
+        meta = { facing: facings[`${e.normal.x},${e.normal.y}`] ?? 0 };
+      }
+      if (!world.edit(e.x, e.y, e.z, this.view.placeType, meta)) fail(`cannot place at ${e.x},${e.y},${e.z}: a turtle is there`);
       return;
     }
     if (!world.isFree(e.x, e.y, e.z)) { fail(`${e.x},${e.y},${e.z} is not free`); return; }

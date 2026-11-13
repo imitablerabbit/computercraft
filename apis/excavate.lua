@@ -4,12 +4,15 @@ turtle, one layer at a time, and brings everything it digs back to a
 chest. It is the engine behind the quarry (digging down) and flatten
 (clearing upward) programs.
 
-The turtle starts in the bottom left corner of the footprint, looking
-along the length: width is to its right, length is straight ahead.
-For "down" the first layer is the one directly below the turtle; for
-"up" it is the turtle's own layer. Whenever the inventory fills up,
-and when the job ends, the turtle goes back to where it started, turns
-to the chest on its left, empties itself into it and carries on.
+The turtle starts on the near edge of the footprint, looking along the
+length: length is straight ahead and width runs sideways. Where on the
+edge is the start: at the left end (width is all to the right), the
+right end (width is all to the left) or the middle (width spread both
+ways; an even width puts the extra column on the right). For "down"
+the first layer is the one directly below the turtle; for "up" it is
+the turtle's own layer. Whenever the inventory fills up, and when the
+job ends, the turtle goes back to where it started, turns to the chest
+beside it, empties itself into it and carries on.
 
 Position is tracked relative to the start: x to the right, y forward,
 z along the digging direction (so z grows while going down in a
@@ -20,23 +23,57 @@ quarry and while going up when flattening). Heading 0 faces forward,
 MaxAttempts = 30 -- tries to dig or attack through one blocked move
 FuelMargin = 10  -- fuel kept spare above the distance home
 
+-- Where the turtle stands on the near edge of the footprint.
+Starts = { "left", "middle", "right" }
+DefaultStart = "left"
+
 local pos, heading, direction, firstLayer, chest
+local xMin, xMax -- the footprint's columns, relative to the start
 local dug, dumps
 
--- Is the chest on that side inside the box that will be cleared?
-local function chestInside(width, length, height, dir, side)
+function isStart(start)
+  for i, s in ipairs(Starts) do
+    if s == start then return true end
+  end
+  return false
+end
+
+-- The leftmost and rightmost columns of a footprint, relative to a
+-- turtle standing at the start position on its near edge.
+function columns(width, start)
+  if start == "right" then return 1 - width, 0 end
+  if start == "middle" then
+    local left = math.floor((width - 1) / 2)
+    return -left, width - 1 - left
+  end
+  return 0, width - 1
+end
+
+-- Why a chest on that side cannot be used with this box: it is inside
+-- the area to clear. nil when it is fine.
+function chestConflict(width, length, height, dir, side, start)
   local offsets = { left = { -1, 0, 0 }, right = { 1, 0, 0 }, behind = { 0, -1, 0 }, below = { 0, 0, -1 }, above = { 0, 0, 1 } }
   local o = offsets[side]
   if not o then return nil end
   local x, y, z = o[1], o[2], o[3]
+  local x0, x1 = columns(width, start or DefaultStart)
   local first = (dir == "down") and -1 or 0
   local last = (dir == "down") and -height or (height - 1)
-  local inside = x >= 0 and x < width and y >= 0 and y < length
+  local inside = x >= x0 and x <= x1 and y >= 0 and y < length
     and ((dir == "down" and z <= first and z >= last) or (dir == "up" and z >= first and z <= last))
   if inside then
     return "the chest " .. side .. " is inside the area to clear"
   end
   return nil
+end
+
+-- The chest sides that work with this box.
+function chestSides(width, length, height, dir, start)
+  local sides = {}
+  for i, side in ipairs(inventory.ChestSides) do
+    if not chestConflict(width, length, height, dir, side, start) then table.insert(sides, side) end
+  end
+  return sides
 end
 
 --[[
@@ -193,10 +230,28 @@ Layers
 --]]
 
 -- Snake over every cell of the current layer starting from where the
--- turtle is, which is always one of the four corners.
+-- turtle is. That is one of the four corners, except on the first
+-- layer of a middle start, where it first works its way along the near
+-- edge to the closer corner.
 local function clearLayer(width, length)
-  local xStep = (pos.x == 0) and 1 or -1
-  local xEnd = (xStep == 1) and (width - 1) or 0
+  -- Getting onto this layer dug a block too, so there may be no room
+  -- for the first cell's.
+  if not inventory.anyFreeSpace() then
+    local ok, err = dumpTrip()
+    if not ok then return false, err end
+  end
+  if pos.x ~= xMin and pos.x ~= xMax then
+    local corner = (pos.x - xMin <= xMax - pos.x) and xMin or xMax
+    while pos.x ~= corner do
+      if not stepTo(corner, pos.y) then return false, "blocked on layer " .. pos.z end
+      if not inventory.anyFreeSpace() then
+        local ok, err = dumpTrip()
+        if not ok then return false, err end
+      end
+    end
+  end
+  local xStep = (pos.x == xMin) and 1 or -1
+  local xEnd = (xStep == 1) and xMax or xMin
   local x = pos.x
   while true do
     local yEnd = (pos.y == 0) and (length - 1) or 0
@@ -226,10 +281,11 @@ end
 
 -- Clear width x length x height blocks in the given direction ("down"
 -- or "up"). chestSide is one of inventory.ChestSides (default left) and
--- says where the chest is relative to the start. Returns true, or
--- false and a reason, after returning to the start and emptying into
--- the chest either way.
-function run(width, length, height, dir, chestSide)
+-- says where the chest is relative to the start; start is one of Starts
+-- (default left) and says where on the near edge the turtle stands.
+-- Returns true, or false and a reason, after returning to the start and
+-- emptying into the chest either way.
+function run(width, length, height, dir, chestSide, start)
   width, length, height = tonumber(width), tonumber(length), tonumber(height)
   if not width or not length or not height or width < 1 or length < 1 or height < 1 then
     return false, "width, length and height must be at least 1"
@@ -237,10 +293,13 @@ function run(width, length, height, dir, chestSide)
   if dir ~= "down" and dir ~= "up" then return false, "direction must be down or up" end
   chestSide = chestSide or inventory.DefaultChestSide
   if not inventory.isChestSide(chestSide) then return false, "unknown chest side " .. tostring(chestSide) end
-  local conflict = chestInside(width, length, height, dir, chestSide)
+  start = start or DefaultStart
+  if not isStart(start) then return false, "unknown start position " .. tostring(start) .. " (left, middle or right)" end
+  local conflict = chestConflict(width, length, height, dir, chestSide, start)
   if conflict then return false, conflict end
   direction = dir
   chest = chestSide
+  xMin, xMax = columns(width, start)
   firstLayer = (dir == "down") and 1 or 0
   pos = { x = 0, y = 0, z = 0 }
   heading = 0
@@ -248,7 +307,7 @@ function run(width, length, height, dir, chestSide)
 
   local fuel = turtle.getFuelLevel()
   local needed = estimateFuel(width, length, height)
-  print(string.format("clearing %dx%dx%d %s, about %d fuel needed, have %s", width, length, height, dir, needed, tostring(fuel)))
+  print(string.format("clearing %dx%dx%d %s from the %s, about %d fuel needed, have %s", width, length, height, dir, start, needed, tostring(fuel)))
   if fuel ~= "unlimited" and fuel < needed then
     print("warning: probably not enough fuel, will burn what it digs if it runs low")
   end

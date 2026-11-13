@@ -726,11 +726,31 @@ showJobForm = function(id, job)
   local gap = (h - top - startH >= #job.params * (rowsPer + 1)) and (rowsPer + 1) or rowsPer
   local cellW = math.max(3, math.floor(((narrow and (w - 1)) or (w - labelW - 1)) / 5))
   local valueButtons = {}
+  local dependents = {} -- dropdowns whose options follow other values
 
   local function valueText(param)
     local v = values[param.name]
     if param.type == "bool" then return v and "true" or "false" end
     return tostring(v)
+  end
+
+  -- After any value changes, dropdowns with optionsFor get their
+  -- options again; a value that is no longer offered becomes the first
+  -- one that is.
+  local function refreshDependents()
+    for _, d in ipairs(dependents) do
+      local options = turtlectl.paramOptions(d.param, values)
+      local current = values[d.param.name]
+      local known, index = false, 1
+      for i, o in ipairs(options) do
+        if o == current then known, index = true, i end
+      end
+      if not known then
+        current = options[1]
+        values[d.param.name] = current
+      end
+      d.dropdown:setOptions(options, index)
+    end
   end
 
   for i, param in ipairs(job.params) do
@@ -747,6 +767,7 @@ showJobForm = function(id, job)
         if param.max and v > param.max then v = param.max end
         values[param.name] = v
         valueButtons[i]:setText(valueText(param))
+        refreshDependents()
       end
       root:add(newButton("-" .. big, x, y, cellW - 1, 1, colors.blue, function() adjust(-big) end))
       root:add(newButton("-" .. small, x + cellW, y, cellW - 1, 1, colors.blue, function() adjust(-small) end))
@@ -761,15 +782,26 @@ showJobForm = function(id, job)
       box:addChangeListener(function(e)
         values[param.name] = e.checked
         box:setText(e.checked and "yes" or "no")
+        refreshDependents()
       end)
       root:add(box)
-    elseif param.type == "choice" or (param.type == "string" and param.options) then
+    elseif param.type == "choice" or (param.type == "string" and (param.options or param.optionsFor)) then
       -- A dropdown. A text parameter with options also offers Other...
       -- which opens the keyboard, and shows a typed value at the top.
       local options = {}
-      for i, o in ipairs(param.options or {}) do options[i] = tostring(o) end
+      for i, o in ipairs(turtlectl.paramOptions(param, values)) do options[i] = tostring(o) end
       local custom = param.type == "string"
       local current = values[param.name]
+      if param.optionsFor and param.type == "choice" then
+        local known = false
+        for _, o in ipairs(options) do
+          if o == current then known = true end
+        end
+        if not known then
+          current = options[1]
+          values[param.name] = current
+        end
+      end
       if custom then
         local known = false
         for _, o in ipairs(options) do
@@ -796,8 +828,10 @@ showJobForm = function(id, job)
           end, function() showJobForm(id, job) end)
         else
           values[param.name] = e.value
+          refreshDependents()
         end
       end)
+      if param.optionsFor then table.insert(dependents, { param = param, dropdown = dropdown }) end
       root:add(dropdown)
     else
       root:add(newButton(valueText(param), x, y, w - x, 1, colors.purple, function()

@@ -34,6 +34,7 @@ local files = {
     "apis/inventory.lua",
     "apis/mine.lua",
     "apis/move.lua",
+    "apis/reconstruct.lua",
     "apis/registry.lua",
     "apis/turtlectl.lua",
     "apis/turtleinv.lua",
@@ -85,6 +86,7 @@ local files = {
     "programs/turtle/loggergui.lua",
     "programs/turtle/mineline.lua",
     "programs/turtle/quarry.lua",
+    "programs/turtle/reconstruct.lua",
     "programs/turtle/stripmine.lua",
     "programs/turtle/turtleagent.lua",
 

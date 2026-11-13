@@ -172,6 +172,7 @@ end
 
 function GUIDropdown:select(index)
     self.selected = index
+    self:repaint() -- the list closed, and was drawn, before the choice changed
     local event = guievent.GUIEvent.new("dropdown_select")
     event.value = self.options[index]
     event.index = index

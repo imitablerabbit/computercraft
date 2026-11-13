@@ -209,22 +209,23 @@ function isChestSide(side)
 end
 
 -- Turn to face a chest side. Returns the detect and drop functions
--- for that side and a function that turns back the way we were.
+-- for that side, a function that turns back the way we were, and the
+-- suck function for taking items out of the chest.
 function faceChestSide(side)
   if side == "left" then
     turtle.turnLeft()
-    return turtle.detect, turtle.drop, turtle.turnRight
+    return turtle.detect, turtle.drop, turtle.turnRight, turtle.suck
   elseif side == "right" then
     turtle.turnRight()
-    return turtle.detect, turtle.drop, turtle.turnLeft
+    return turtle.detect, turtle.drop, turtle.turnLeft, turtle.suck
   elseif side == "behind" then
     turtle.turnLeft()
     turtle.turnLeft()
-    return turtle.detect, turtle.drop, function() turtle.turnRight(); turtle.turnRight() end
+    return turtle.detect, turtle.drop, function() turtle.turnRight(); turtle.turnRight() end, turtle.suck
   elseif side == "below" then
-    return turtle.detectDown, turtle.dropDown, function() end
+    return turtle.detectDown, turtle.dropDown, function() end, turtle.suckDown
   elseif side == "above" then
-    return turtle.detectUp, turtle.dropUp, function() end
+    return turtle.detectUp, turtle.dropUp, function() end, turtle.suckUp
   end
   error("unknown chest side " .. tostring(side))
 end

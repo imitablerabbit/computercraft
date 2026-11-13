@@ -864,6 +864,27 @@ if sim.isTurtle() then
   turtle.getEquippedRight = turtle.getEquippedLeft
 end
 
+--[[
+redstone: outputs reach the world (a turtle's pulse can fire a machine
+next to it); there are no inputs in the simulator.
+--]]
+
+redstone = {}
+local redstoneSides = { "top", "bottom", "left", "right", "front", "back" }
+function redstone.getSides() return redstoneSides end
+function redstone.setOutput(side, on) sim.redstoneSet(tostring(side), on and true or false) end
+function redstone.getOutput(side) return sim.redstoneGet(tostring(side)) end
+function redstone.getInput() return false end
+function redstone.getAnalogInput() return 0 end
+function redstone.getAnalogOutput(side) return redstone.getOutput(side) and 15 or 0 end
+function redstone.setAnalogOutput(side, value) redstone.setOutput(side, (tonumber(value) or 0) > 0) end
+redstone.getAnalogueInput, redstone.getAnalogueOutput, redstone.setAnalogueOutput = redstone.getAnalogInput, redstone.getAnalogOutput, redstone.setAnalogOutput
+function redstone.getBundledInput() return 0 end
+function redstone.getBundledOutput() return 0 end
+function redstone.setBundledOutput() end
+function redstone.testBundledInput() return false end
+rs = redstone
+
 http = {
   get = function() return nil, "http is not available in the simulator" end,
   post = function() return nil, "http is not available in the simulator" end,

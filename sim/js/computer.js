@@ -192,6 +192,16 @@ export class Computer {
       // peripherals and network
       peripherals: () => self.peripherals.map((p) => ({ name: p.name, type: p.type })),
       rednetSend: (L) => { self.sim.rednet(self.id, self._num(L, 1), self._str(L, 2), self._str(L, 3)); return null; },
+      // redstone: a rising edge on a turtle's side fires machines there
+      redstoneSet: (L) => {
+        const side = self._str(L, 1);
+        const on = !!self.value(L, 2);
+        const was = !!self.redstone[side];
+        self.redstone[side] = on;
+        if (on && !was && self.kind === 'turtle') self.sim.world.redstonePulse(self.id, side);
+        return null;
+      },
+      redstoneGet: (L) => !!self.redstone[self._str(L, 1)],
       // turtle
       turtleAction: (L) => {
         const ticket = ++self.ticket;
@@ -272,6 +282,7 @@ export class Computer {
 
   boot() {
     const { lua, lauxlib, lualib } = this.fengari;
+    this.redstone = {}; // side -> output on
     this.dirs = this.dirs || new Set();
     this.L = lauxlib.luaL_newstate();
     lualib.luaL_openlibs(this.L);

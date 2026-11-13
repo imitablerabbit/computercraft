@@ -29,12 +29,51 @@ PROTOCOL = "turtlectl"
 -- one argument per entry of params, in order, or fn is called directly
 -- for jobs that are not standalone programs.
 --
--- Each param has a name, a label for the form, a type (number, bool or
--- string) and a default. Numbers may give min, max and step (the small
--- and big step of the form's buttons, default 1 and 10).
+-- Each param has a name, a label for the form, a type (number, bool,
+-- string or choice) and a default. Numbers may give min, max and step
+-- (the small and big step of the form's buttons, default 1 and 10).
+-- Choices list their options, or give optionsFor(values), a function of
+-- the form's current values, when they depend on other params. Params
+-- become the program's arguments in order, unless arg says which
+-- argument a param is.
 -- Where the chest is, for jobs that empty the turtle (see
 -- inventory.ChestSides).
 local chestSides = { "left", "right", "behind", "below", "above" }
+-- Which turtle side is wired to a machine, for jobs that pulse redstone
+-- (see reconstruct.PulseSides).
+local pulseSides = { "left", "right", "back", "top", "bottom" }
+
+-- Where the turtle stands on the near edge of a quarry or flatten
+-- footprint (excavate.Starts).
+local starts = { "left", "middle", "right" }
+
+-- The chest sides outside a quarry or flatten box (the same test as
+-- excavate.chestConflict). A quarry is all below the turtle, so only
+-- below is out; flatten clears the turtle's own layer, so left and
+-- right depend on the width and where the turtle starts. The turtle
+-- refuses the others anyway; this keeps them out of the form.
+local function excavateChestSides(dir)
+  return function(values)
+    local width = tonumber(values.width) or 1
+    local x0, x1 = 0, width - 1
+    if values.start == "right" then x0, x1 = 1 - width, 0
+    elseif values.start == "middle" then
+      local left = math.floor((width - 1) / 2)
+      x0, x1 = -left, width - 1 - left
+    end
+    local sides = {}
+    for i, side in ipairs(chestSides) do
+      local inside
+      if dir == "down" then
+        inside = side == "below"
+      else
+        inside = side == "above" or (side == "left" and -1 >= x0) or (side == "right" and 1 <= x1)
+      end
+      if not inside then table.insert(sides, side) end
+    end
+    return sides
+  end
+end
 
 -- Saplings the logger form offers; any other name can still be typed.
 local saplings = {
@@ -63,13 +102,15 @@ jobs = {
     { name = "width", label = "Width", type = "number", default = 8, min = 1 },
     { name = "length", label = "Length", type = "number", default = 8, min = 1 },
     { name = "depth", label = "Depth", type = "number", default = 8, min = 1 },
-    { name = "chest", label = "Chest", type = "choice", options = { "left", "right", "behind", "above" }, default = "left" },
+    { name = "start", label = "Start", type = "choice", options = starts, default = "left", arg = 5 },
+    { name = "chest", label = "Chest", type = "choice", optionsFor = excavateChestSides("down"), default = "left", arg = 4 },
   } },
   { id = "flatten", name = "Flatten", program = "flatten", params = {
     { name = "width", label = "Width", type = "number", default = 8, min = 1 },
     { name = "length", label = "Length", type = "number", default = 8, min = 1 },
     { name = "height", label = "Height", type = "number", default = 4, min = 1 },
-    { name = "chest", label = "Chest", type = "choice", options = { "left", "behind", "below" }, default = "left" },
+    { name = "start", label = "Start", type = "choice", options = starts, default = "left", arg = 5 },
+    { name = "chest", label = "Chest", type = "choice", optionsFor = excavateChestSides("up"), default = "left", arg = 4 },
   } },
   { id = "logger", name = "Logger", program = "logger", params = {
     { name = "width", label = "Width", type = "number", default = 10, min = 1 },
@@ -78,6 +119,12 @@ jobs = {
     { name = "sleep", label = "Sleep secs", type = "number", default = 60, min = 0, step = { 10, 60 } },
     { name = "dump", label = "Dump items", type = "bool", default = true },
     { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },
+  } },
+  { id = "reconstruct", name = "Reconstruct", program = "reconstruct", params = {
+    { name = "input", label = "Input chest", type = "choice", options = chestSides, default = "behind" },
+    { name = "output", label = "Output chest", type = "choice", options = chestSides, default = "right" },
+    { name = "pulse", label = "Pulse side", type = "choice", options = pulseSides, default = "left" },
+    { name = "stacks", label = "Stacks", type = "number", default = 0, min = 0 },
   } },
   { id = "refuel", name = "Refuel", fn = function() inventory.refuelAll() end },
 }
@@ -92,20 +139,28 @@ function jobDefaults(job)
 end
 
 -- Turn a table of values by param name into the string arguments the
--- program expects, in param order. Missing values use the defaults.
+-- program expects, in param order (or each param's arg position).
+-- Missing values use the defaults.
 function jobArgs(job, values)
   values = values or {}
   local args = {}
   for i, param in ipairs(job.params or {}) do
     local v = values[param.name]
     if v == nil then v = param.default end
+    local n = param.arg or i
     if param.type == "bool" then
-      args[i] = v and "true" or "false"
+      args[n] = v and "true" or "false"
     else
-      args[i] = tostring(v)
+      args[n] = tostring(v)
     end
   end
   return args
+end
+
+-- The options a choice param offers right now, given the form's values.
+function paramOptions(param, values)
+  if param.optionsFor then return param.optionsFor(values or {}) end
+  return param.options or {}
 end
 
 -- Actions the move screen can ask for, mapped to turtle functions. Each

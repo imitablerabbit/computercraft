@@ -23,7 +23,21 @@ export const BLOCKS = {
   computer:     { color: '#c8c8c8', drops: 'computercraft:computer_advanced', name: 'computercraft:computer_advanced' },
   monitor:      { color: '#2c2c3a', drops: 'computercraft:monitor_advanced', name: 'computercraft:monitor_advanced' },
   water:        { color: '#3b6fd6', drops: null, passable: true },
+  // the nether, and the atomic reconstructor that turns netherrack into
+  // ores when a redstone pulse reaches it (reconstructs: weighted results)
+  netherrack:   { color: '#6e2c2c', drops: 'minecraft:netherrack', name: 'minecraft:netherrack',
+                  reconstructs: [['nether_quartz_ore', 3000], ['nether_gold_ore', 500], ['ancient_debris', 1]] },
+  nether_quartz_ore: { color: '#8f6b6b', drops: 'minecraft:quartz', name: 'minecraft:nether_quartz_ore' },
+  nether_gold_ore:   { color: '#a07a4a', drops: 'minecraft:gold_nugget', name: 'minecraft:nether_gold_ore' },
+  ancient_debris:    { color: '#4d3b36', drops: 'minecraft:ancient_debris', name: 'minecraft:ancient_debris' },
+  redstone_wire: { color: '#c0291a', drops: 'minecraft:redstone', name: 'minecraft:redstone_wire', passable: true, wire: true },
+  reconstructor: { color: '#3f8f9f', drops: 'actuallyadditions:atomic_reconstructor', name: 'actuallyadditions:atomic_reconstructor', machine: true },
 };
+
+// How far a reconstructor's laser reaches and how many wire blocks a
+// pulse travels through.
+export const LASER_RANGE = 10;
+export const WIRE_RANGE = 15;
 
 export const ITEMS = {
   'minecraft:dirt':          { displayName: 'Dirt', block: 'dirt', groups: ['Natural Blocks'], tags: ['minecraft:dirt'] },
@@ -44,6 +58,12 @@ export const ITEMS = {
   'minecraft:stone_pickaxe': { displayName: 'Stone Pickaxe', maxCount: 1, maxDamage: 131, groups: ['Tools & Utilities'] },
   'minecraft:bucket':        { displayName: 'Bucket', maxCount: 16, groups: ['Tools & Utilities'] },
   'minecraft:lava_bucket':   { displayName: 'Lava Bucket', maxCount: 1, fuel: 1000, groups: ['Tools & Utilities'] },
+  'minecraft:netherrack':    { displayName: 'Netherrack', block: 'netherrack', groups: ['Natural Blocks'] },
+  'minecraft:quartz':        { displayName: 'Nether Quartz', groups: ['Ingredients'] },
+  'minecraft:gold_nugget':   { displayName: 'Gold Nugget', groups: ['Ingredients'] },
+  'minecraft:ancient_debris': { displayName: 'Ancient Debris', block: 'ancient_debris', groups: ['Natural Blocks'] },
+  'minecraft:redstone':      { displayName: 'Redstone Dust', block: 'redstone_wire', groups: ['Redstone Blocks'] },
+  'actuallyadditions:atomic_reconstructor': { displayName: 'Atomic Reconstructor', block: 'reconstructor', groups: ['Actually Additions'] },
   'computercraft:computer_advanced': { displayName: 'Advanced Computer', block: 'computer' },
   'computercraft:monitor_advanced':  { displayName: 'Advanced Monitor', block: 'monitor' },
 };
@@ -75,6 +95,7 @@ export class World {
     this.blocks = new Map();
     this.containers = new Map();
     this.planted = new Map(); // sapling key -> time planted
+    this.meta = new Map();    // block key -> extra state, e.g. { facing } for a machine
     this.turtles = new Map();
     this.version = 0;
     this.onLog = null;
@@ -89,10 +110,11 @@ export class World {
 
   getBlock(x, y, z) { return this.blocks.get(key(x, y, z)) || null; }
 
-  setBlock(x, y, z, type) {
+  setBlock(x, y, z, type, meta) {
     const k = key(x, y, z);
     if (type) {
       this.blocks.set(k, type);
+      if (meta) this.meta.set(k, { ...meta }); else if (!BLOCKS[type] || !BLOCKS[type].machine) this.meta.delete(k);
       if (BLOCKS[type] && BLOCKS[type].container && !this.containers.has(k)) {
         this.containers.set(k, new Array(BLOCKS[type].container).fill(null));
       }
@@ -101,6 +123,7 @@ export class World {
       this.blocks.delete(k);
       this.containers.delete(k);
       this.planted.delete(k);
+      this.meta.delete(k);
     }
     this.version++;
   }
@@ -114,6 +137,66 @@ export class World {
   }
 
   getContainer(x, y, z) { return this.containers.get(key(x, y, z)) || null; }
+
+  getMeta(x, y, z) { return this.meta.get(key(x, y, z)) || null; }
+
+  // Redstone
+
+  // A turtle's output on one of its sides went on. The block against
+  // that side is powered, and so is anything a run of redstone wire
+  // from there touches. Every reconstructor among them fires.
+  redstonePulse(turtleId, side) {
+    const t = this.turtles.get(turtleId);
+    if (!t) return;
+    const [fx, fy] = HEADINGS[t.heading];
+    const offsets = {
+      front: [fx, fy, 0], back: [-fx, -fy, 0], top: [0, 0, 1], bottom: [0, 0, -1],
+      left: [...HEADINGS[(t.heading + 3) % 4], 0], right: [...HEADINGS[(t.heading + 1) % 4], 0],
+    };
+    const o = offsets[side];
+    if (!o) return;
+    const start = [t.x + o[0], t.y + o[1], t.z + o[2]];
+    const powered = new Map([[key(...start), start]]);
+    const wires = [];
+    if ((BLOCKS[this.getBlock(...start)] || {}).wire) wires.push(start);
+    const seen = new Set(wires.map((w) => key(...w)));
+    while (wires.length && seen.size <= WIRE_RANGE) {
+      const [x, y, z] = wires.shift();
+      for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+        const p = [x + dx, y + dy, z + dz];
+        const k = key(...p);
+        powered.set(k, p);
+        if ((BLOCKS[this.getBlock(...p)] || {}).wire && !seen.has(k)) { seen.add(k); wires.push(p); }
+      }
+    }
+    let fired = 0;
+    for (const p of powered.values()) {
+      if ((BLOCKS[this.getBlock(...p)] || {}).machine) { this.fireMachine(...p); fired++; }
+    }
+    if (!fired) this.log(turtleId, `pulsed redstone ${side}, nothing there to fire`);
+  }
+
+  // A reconstructor shoots along its facing and changes the first block
+  // it reaches, picking the result by weight.
+  fireMachine(x, y, z) {
+    const facing = (this.getMeta(x, y, z) || {}).facing ?? 0;
+    const [dx, dy] = HEADINGS[facing];
+    for (let i = 1; i <= LASER_RANGE; i++) {
+      const bx = x + dx * i, by = y + dy * i;
+      const b = this.getBlock(bx, by, z);
+      if (!b) continue;
+      const table = (BLOCKS[b] || {}).reconstructs;
+      if (!table) { this.log('world', `the reconstructor at ${x},${y},${z} hit ${b}, which it cannot change`); return; }
+      const total = table.reduce((n, [, w]) => n + w, 0);
+      let r = Math.random() * total;
+      let result = table[table.length - 1][0];
+      for (const [name, w] of table) { r -= w; if (r < 0) { result = name; break; } }
+      this.setBlock(bx, by, z, result);
+      this.log('world', `the reconstructor turned ${b} into ${result}`);
+      return;
+    }
+    this.log('world', `the reconstructor at ${x},${y},${z} fired at nothing`);
+  }
 
   // Saplings planted long enough ago become trees, if a turtle is not
   // standing where the trunk goes.
@@ -190,29 +273,23 @@ export class World {
     return [t.x + dx, t.y + dy, t.z];
   }
 
-  // Add items to the inventory, preferring the selected slot like the
-  // game does. Returns how many did not fit.
+  // Add items to the inventory like the game does: from the selected
+  // slot on, the first slot that is empty or holds the same item takes
+  // them, so an empty selected slot gets them even when a matching stack
+  // sits elsewhere. Returns how many did not fit.
   _addItems(t, name, count, damage) {
     const info = itemInfo(name);
     const max = info.maxCount || 64;
-    const order = [t.selected - 1];
-    for (let i = 0; i < 16; i++) if (i !== t.selected - 1) order.push(i);
-    for (const i of order) {
+    for (let n = 0; n < 16 && count > 0; n++) {
+      const i = (t.selected - 1 + n) % 16;
       const s = t.slots[i];
-      if (s && s.name === name && s.damage === damage && s.count < max) {
+      if (!s) {
+        const take = Math.min(max, count);
+        t.slots[i] = { name, count: take, damage };
+        count -= take;
+      } else if (s.name === name && s.damage === damage && s.count < max) {
         const take = Math.min(max - s.count, count);
         s.count += take; count -= take;
-        if (count === 0) break;
-      }
-    }
-    if (count > 0) {
-      for (const i of order) {
-        if (!t.slots[i]) {
-          const take = Math.min(max, count);
-          t.slots[i] = { name, count: take, damage };
-          count -= take;
-          if (count === 0) break;
-        }
       }
     }
     this._inventoryChanged(t);
@@ -460,12 +537,13 @@ export class World {
 
   // Place or remove a block by hand. Returns false when a turtle is in
   // the way.
-  edit(x, y, z, type) {
+  edit(x, y, z, type, meta) {
     if (type && this.turtleAt(x, y, z)) return false;
     if (type && !BLOCKS[type]) return false;
-    this.setBlock(x, y, z, type);
+    this.setBlock(x, y, z, type, meta);
     if (!type) this.settle(x, y, z);
-    this.log('world', type ? `${type} placed at ${x},${y},${z}` : `block removed at ${x},${y},${z}`);
+    const facing = meta && meta.facing != null ? ` facing ${HEADING_NAMES[meta.facing]}` : '';
+    this.log('world', type ? `${type} placed at ${x},${y},${z}${facing}` : `block removed at ${x},${y},${z}`);
     return true;
   }
 
