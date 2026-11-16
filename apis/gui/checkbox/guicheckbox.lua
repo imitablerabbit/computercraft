@@ -14,13 +14,13 @@ function GUICheckbox.new(text, checked)
     object.text = text or ""
     object.checked = checked and true or false
     object.changeListeners = {}
-    object.backgroundColor = colors.black
-    object.textColor = colors.white
-    object.checkedColor = colors.lime
-    object.uncheckedColor = colors.lightGray
     object:setBorder(false)
     object.ui = guicheckboxui.GUICheckboxUI.new(object)
     setmetatable(object, GUICheckbox)
+    object:themed("backgroundColor", "background")
+    object:themed("textColor", "text")
+    object:themed("checkedColor", "ok")
+    object:themed("uncheckedColor", "muted")
     local l = function(e)
         object:clickHandler(e)
     end

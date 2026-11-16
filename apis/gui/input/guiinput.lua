@@ -7,14 +7,16 @@ function GUIInput.new(text)
     object.buttonListeners = {}
     
     object.cursorPos = 0
-    object.cursorTextColor = colors.black
-    object.cursorBackgroundColor = colors.white
     
     object.model = guiinputmodel.GUIInputModel.new()
-    object.activeColor = colors.lightGray
     object:setBorder(true)
     object.ui = guiinputui.GUIInputUI.new(object, object.model)
     setmetatable(object, GUIInput)
+    object:themed("backgroundColor", "field", colors.white)
+    object:themed("textColor", "fieldText", colors.black)
+    object:themed("activeColor", "highlight", colors.lightGray)
+    object:themed("cursorTextColor", "background", colors.black)
+    object:themed("cursorBackgroundColor", "text", colors.white)
     local kl = function(e)
         object:keyPressHandler(e)
     end

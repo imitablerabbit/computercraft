@@ -1,0 +1,38 @@
+# GPS deploy, then a second turtle finds itself with gps locate. The
+# deployer (turtle 2) stands at Minecraft 0,1,0 facing north with
+# everything gpsdeploy needs; the finder (turtle 7) waits at 5,1,3 and
+# types gps locate at 90 s, once the hosts are up.
+name GPS deploy and locate
+description Turtle 2 has 4 computers, 4 wireless modems, a disk drive and a floppy: type gpsdeploy 0 1 0 north 20 in its shell.
+description Turtle 7 runs gps locate at 90 s and should be at 5,1,3 (Minecraft x, y, z; here x=5, y=-3 north, z=1).
+
+ground -10 -10 10 10 0 3 ores=false pockets=false
+
+turtle 2 label=Deployer
+  pos 0 0 1
+  heading north
+  fuel 2000
+  slots computercraft:computer_normal*4 computercraft:wireless_modem_normal*4 computercraft:disk_drive*1 computercraft:disk*1
+  peripheral left modem
+
+turtle 7 label=Finder
+  pos 5 -3 1
+  heading east
+  peripheral left modem
+
+at 90 type 7 gps locate
+
+check gps deploy then gps locate on another turtle
+  run gpsdeploy 0 1 0 north 20
+  seconds 95
+  expect screen 2 done: gps locate gives 0,1,0, which matches
+  expect screen 7 Position is 5,1,3
+  expect turtle 2 pos 0 0 1
+  expect turtle 2 heading north
+  expect turtle 2 item computercraft:disk_drive = 1
+  expect turtle 2 item computercraft:disk = 1
+  expect turtle 2 item computercraft:computer_normal = 0
+  expect block 0 4 19 computer_normal
+  expect block 0 3 19 wireless_modem
+  expect block -4 0 15 computer_normal
+  expect no-error

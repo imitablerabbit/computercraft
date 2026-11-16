@@ -24,12 +24,14 @@ function GUIRootContainer.new(t, side)
     object:setBorder(false)
     
     object.title = ""
-    object.textColor = colors.white
+    -- The title bar is drawn in the border colour.
+    object:themed("borderColor", "header", colors.gray)
+    object:themed("textColor", "headerText", colors.white)
     
     -- Create the close button
     local cb = guibutton.GUIButton.new("x")
-    cb:setBackgroundColor(colors.red)
-    cb:setTextColor(colors.white)
+    cb:themed("backgroundColor", "danger", colors.red)
+    cb:themed("textColor", "dangerText", colors.white)
     cb:setPreferredBounds(object.w, 1, 1, 1)
     local close = function(event)
         object.parent:stop()
@@ -58,6 +60,26 @@ function GUIRootContainer:triggerMouseClickEvent(e)
     local captured = guicomponent.getCapture()
     if captured then return captured:triggerMouseClickEvent(e) end
     guicomponent.GUIComponent.triggerMouseClickEvent(self, e)
+end
+
+-- Keys, typed characters and the mouse wheel go only to a captured
+-- component that asks for them (a dialog), otherwise to everything.
+function GUIRootContainer:triggerKeyPressEvent(e)
+    local captured = guicomponent.getCapture()
+    if captured and captured.capturesKeys then return captured:triggerKeyPressEvent(e) end
+    guicomponent.GUIComponent.triggerKeyPressEvent(self, e)
+end
+
+function GUIRootContainer:triggerCharEvent(e)
+    local captured = guicomponent.getCapture()
+    if captured and captured.capturesKeys then return captured:triggerCharEvent(e) end
+    guicomponent.GUIComponent.triggerCharEvent(self, e)
+end
+
+function GUIRootContainer:triggerMouseScrollEvent(e)
+    local captured = guicomponent.getCapture()
+    if captured and captured.capturesKeys then return captured:triggerMouseScrollEvent(e) end
+    guicomponent.GUIComponent.triggerMouseScrollEvent(self, e)
 end
 
 function GUIRootContainer:setDecorations(d)

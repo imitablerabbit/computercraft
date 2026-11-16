@@ -155,9 +155,12 @@ end
 -- Dont use saplings as fuel (this is remembered on the turtle)
 inventory.addFuelBlacklist(saplingName)
 
+local pass, felled = 0, 0
 while true do
   print("Starting...")
+  pass = pass + 1
   for x = 1, w do
+    progress.report(x - 1, w, "pass " .. pass .. ", " .. felled .. " trees felled")
     if turtle.detect() then
       if not isSapling() then
         print("Tree detected")
@@ -165,6 +168,7 @@ while true do
           print("Unable to fell tree")
           return
         end
+        felled = felled + 1
         if not plantSapling() then -- replant sapling after cutting tree
           print("Unable to plant sapling")
         end
@@ -177,6 +181,7 @@ while true do
     turtle.suck()
     moveRight()
   end
+  progress.report(w, w, "pass " .. pass .. ", walking back")
   for x = 1, w do
     turtle.suck()
     moveLeft()
@@ -190,6 +195,7 @@ while true do
   end
     
   print("Sleeping...")
+  progress.report(nil, nil, "pass " .. pass .. " done, " .. felled .. " trees felled, sleeping")
   os.sleep(sleepTime)
 end
   

@@ -40,3 +40,25 @@ end
 function GUIComponentUI:setModel(m)
     self.model = m
 end
+
+-- The blit character for a colour ("0" to "f").
+function blitColor(c)
+    if colors.toBlit then return colors.toBlit(c) end
+    return string.format("%x", math.floor(math.log(c) / math.log(2) + 0.5))
+end
+
+-- text cut or padded to exactly width characters, placed left, center
+-- or right.
+function fitText(text, width, align)
+    text = tostring(text or "")
+    if width <= 0 then return "" end
+    if #text >= width then return text:sub(1, width) end
+    local spare = width - #text
+    if align == "center" then
+        local left = math.floor(spare / 2)
+        return string.rep(" ", left) .. text .. string.rep(" ", spare - left)
+    elseif align == "right" then
+        return string.rep(" ", spare) .. text
+    end
+    return text .. string.rep(" ", spare)
+end

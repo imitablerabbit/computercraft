@@ -7,7 +7,9 @@ near edge: left (the default), right (width is to its left) or middle
 (width spread both ways). When its inventory fills up, and when it
 finishes, it comes back to the start and empties itself into a chest
 next to where it started: left (the default), right, behind or above
-(below would be dug up); a side inside the hole is refused.
+(below would be dug up); a side inside the hole is refused. With
+"depot" it empties at a depot's nearest dump chest instead, straight
+from where it is (see apis/depot.lua; needs gps).
 
 Usage: quarry [width] [length] [depth] [chest] [start]
 --]]

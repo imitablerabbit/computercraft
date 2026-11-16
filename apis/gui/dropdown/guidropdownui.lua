@@ -42,7 +42,7 @@ function GUIDropdownUI:paint()
                 line(y, string.rep(" ", math.floor((w - 1) / 2)) .. "\31", c.textColor, c.listColor)
             else
                 local chosen = r.index == c.selected
-                line(y, " " .. c.options[r.index], chosen and colors.black or c.textColor, chosen and c.highlightColor or c.listColor)
+                line(y, " " .. c.options[r.index], chosen and (c.highlightTextColor or colors.black) or c.textColor, chosen and c.highlightColor or c.listColor)
             end
         end
     end

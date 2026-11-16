@@ -1,0 +1,19 @@
+[
+  "quarry-file.scn",
+  "base-storage.scn",
+  "base-doors.scn",
+  "pager.scn",
+  "gpsdeploy-locate.scn",
+  "base-machines.scn",
+  "build.scn",
+  "scan.scn",
+  "maze.scn",
+  "tunnel.scn",
+  "rail.scn",
+  "bridge.scn",
+  "farm-job.scn",
+  "lavafuel.scn",
+  "base-lift.scn",
+  "fleet.scn",
+  "depot.scn"
+]

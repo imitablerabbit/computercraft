@@ -1,0 +1,63 @@
+# The storage program on a small network of chests. Six storage chests
+# of assorted items (minecraft:chest_0 to chest_5), an input chest with
+# things to put away (chest_6) and an empty output chest (chest_7), all
+# on one wired network with the computer, which has a 3x2 monitor on
+# its right. The timeline types commands at the computer's prompt.
+name Storage panel
+description A storage computer with a wired modem, six chests of assorted items, an input chest (minecraft:chest_6) holding things to put away and an output chest (minecraft:chest_7).
+description The panel is on the monitor; type commands at the computer: get coal 20, deposit, find oak, help.
+description The timeline deposits the input chest at 6 s, asks for 20 coal and a stack of torches at 10 s and 14 s, and the Builder turtle asks for 8 cobblestone over the bus at 16 s (storage request cobblestone 8).
+
+ground -8 -8 8 8 0 3 ores=false pockets=false
+
+block -3 -3 1 chest network=storage
+items -3 -3 1 cobblestone*64 cobblestone*40 dirt*33 gravel*12
+block -2 -3 1 chest network=storage
+items -2 -3 1 coal*50 charcoal*9 oak_log*24 oak_planks*64
+block -1 -3 1 chest network=storage
+items -1 -3 1 iron_ingot*17 raw_iron*30 gold_nugget*8 quartz*21
+block 0 -3 1 chest network=storage
+items 0 -3 1 torch*64 torch*12 sand*40 glass*16
+block 1 -3 1 chest network=storage
+items 1 -3 1 wheat_seeds*20 wheat*15 carrot*7 potato*11
+block 2 -3 1 chest network=storage
+items 2 -3 1 redstone*30 rail*16 coal*10 bucket*3
+
+# input (chest_6) and output (chest_7)
+block -2 2 1 chest network=storage
+items -2 2 1 coal*20 cobblestone*30 diamond*3 oak_log*8
+block 2 2 1 chest network=storage
+
+fill 0 -1 1 0 -2 1 cable
+fill -3 -2 1 2 -2 1 cable
+
+computer 1 Storage
+  pos 0 0 1
+  heading north
+  peripheral back modem wired=true network=storage
+  peripheral right monitor size=3x2 at=1,0,1
+  autorun storage right minecraft:chest_6 minecraft:chest_7
+
+# A builder turtle on the same network that restocks itself over the bus.
+turtle 5 Builder
+  pos 3 0 1
+  heading north
+  peripheral left modem wired=true network=storage
+
+at 6 type 1 deposit
+at 10 type 1 get coal 20
+at 14 type 1 get torch stack
+at 16 type 5 storage request cobblestone 8
+
+check deposit, get coal and torches, and a turtle's request
+  seconds 22
+  expect chest -2 2 1 items = 0
+  expect chest 2 2 1 item coal = 20
+  expect chest 2 2 1 item torch = 64
+  expect chest -2 -3 1 item coal >= 50
+  expect log Deposited 61 items
+  expect log Sent 20 Coal
+  expect turtle 5 item cobblestone = 8
+  expect screen 5 Got 8
+  expect screen 1 Used
+  expect no-error

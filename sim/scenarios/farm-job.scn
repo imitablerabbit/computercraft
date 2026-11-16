@@ -1,0 +1,67 @@
+# A small field for the farm program: ripe and young crops of each
+# kind, empty farmland to sow, a block of dirt nobody tilled and a
+# water block, with a chest behind the turtle's corner.
+name Farm job
+description A 5x4 field of mixed crops with empty farmland, untilled dirt and water; a turtle over the near left corner with seeds, carrots, potatoes and coal, and a chest behind it.
+description Type in its screen, for example: farm 5 4 wheat 30 2
+
+ground -4 -4 8 8 0 3 ores=false pockets=false
+fill 0 0 0 4 3 0 farmland
+# column 0: ripe wheat, then young wheat
+block 0 0 1 wheat age=7
+block 0 1 1 wheat age=7
+block 0 2 1 wheat age=2
+block 0 3 1 wheat age=0
+# column 1: ripe carrots and potatoes
+block 1 0 1 carrots age=7
+block 1 1 1 carrots age=7
+block 1 2 1 potatoes age=7
+block 1 3 1 potatoes age=3
+# column 2: water in the middle, untilled dirt
+block 2 1 0 water
+block 2 2 0 dirt
+# columns 3 and 4 are bare farmland to sow
+block 0 -1 2 chest
+
+turtle 3 label=Farmer
+  pos 0 0 2
+  heading north
+  fuel 200
+  slots wheat_seeds*12 carrot*2 potato*2 coal*4
+  peripheral left modem
+
+check one pass harvests, replants and sows
+  run farm 5 4 wheat 0 1
+  seconds 120
+  until done:
+  expect turtle 3 pos 0 0 2
+  expect turtle 3 heading north
+  expect blocks 0 0 1 4 3 1 air = 2
+  expect block 2 1 1 air
+  expect block 2 2 1 air
+  expect block 0 0 1 wheat
+  expect block 1 0 1 carrots
+  expect block 1 2 1 potatoes
+  expect blocks 3 0 1 4 3 1 wheat = 8
+  expect chest 0 -1 2 item wheat = 2
+  expect chest 0 -1 2 item carrot >= 1
+  expect turtle 3 item potato >= 2
+  expect turtle 3 item wheat_seeds >= 1
+  expect turtle 3 item coal = 4
+  expect screen 3 pass 1: harvested 5, planted 15, 2 not farmland
+  expect no-error
+
+check out of seeds it raises an alert and leaves the farmland bare
+  run farm 5 4 beetroots 0 1
+  seconds 120
+  until done:
+  expect blocks 3 0 1 4 3 1 air = 8
+  expect block 0 0 1 wheat
+  expect screen 3 out of beetroot_seeds to plant
+  expect no-error
+
+check a chest on the field side is refused
+  run farm 5 4 wheat 0 1 right
+  seconds 5
+  expect turtle 3 fuel = 200
+  expect screen 3 the chest right would be over the field

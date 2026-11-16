@@ -588,6 +588,7 @@ function fs.list(path)
 end
 function fs.getSize(path) local s = sim.fsRead(normalize(path)); return s and #s or 0 end
 function fs.getFreeSpace() return 1000000 end
+function fs.getDrive(path) return sim.fsDrive(normalize(path)) end
 function fs.makeDir(path) sim.fsMakeDir(normalize(path)) end
 function fs.delete(path) sim.fsDelete(normalize(path)) end
 function fs.move(from, to) sim.fsMove(normalize(from), normalize(to)) end
@@ -683,82 +684,155 @@ end
 peripheral, rednet
 --]]
 
+-- The host lists every peripheral the computer can reach (sides first,
+-- then what a wired modem on that side reaches) with all their types,
+-- and runs their methods. Wrapped peripherals carry their name and
+-- types in a metatable, like the game's.
 peripheral = {}
-local wrapped = {}
-function peripheral.getNames()
-  local names = {}
-  for _, p in ipairs(sim.peripherals()) do names[#names + 1] = p.name end
-  return names
-end
-function peripheral.isPresent(name) return peripheral.getType(name) ~= nil end
-function peripheral.getType(name)
-  for _, p in ipairs(sim.peripherals()) do if p.name == name then return p.type end end
+local function nativeList() return sim.periList() end
+local function nativeFind(name)
+  for _, p in ipairs(sim.periList()) do if p.name == name then return p end end
   return nil
 end
-function peripheral.wrap(name)
-  local ptype = peripheral.getType(name)
-  if not ptype then return nil end
-  if wrapped[name] then return wrapped[name] end
-  local obj
-  if ptype == "monitor" then
-    obj = makeTerm(name)
-    obj.setTextScale = function(s) sim.termSetTextScale(name, tonumber(s) or 1) end
-    obj.getTextScale = function() return sim.termGetTextScale(name) end
-  elseif ptype == "modem" then
-    local open = {}
-    obj = {
-      open = function(ch) open[ch] = true end,
-      close = function(ch) if ch then open[ch] = nil else open = {} end end,
-      isOpen = function(ch) return open[ch] == true end,
-      isWireless = function() return true end,
-      transmit = function() end,
-      getNamesRemote = function() return {} end,
-    }
-  else
-    obj = {}
+local function peripheralName(p, level)
+  if type(p) == "table" then
+    local mt = getmetatable(p)
+    if not mt or mt.__name ~= "peripheral" or type(mt.name) ~= "string" then
+      error("bad argument #1 (table is not a peripheral)", level + 1)
+    end
+    return mt.name, mt
   end
-  obj.__name = name
-  wrapped[name] = obj
-  return obj
+  if type(p) ~= "string" then error("bad argument #1 (string or table expected, got " .. type(p) .. ")", level + 1) end
+  return p
+end
+function peripheral.getNames()
+  local names = {}
+  for _, p in ipairs(nativeList()) do names[#names + 1] = p.name end
+  return names
+end
+function peripheral.isPresent(name)
+  if type(name) ~= "string" then error("bad argument #1 (string expected, got " .. type(name) .. ")", 2) end
+  return nativeFind(name) ~= nil
+end
+function peripheral.getType(p)
+  local name, mt = peripheralName(p, 2)
+  if mt then return table.unpack(mt.types) end
+  local e = nativeFind(name)
+  if not e then return nil end
+  return table.unpack(e.types)
+end
+function peripheral.hasType(p, ty)
+  if type(ty) ~= "string" then error("bad argument #2 (string expected, got " .. type(ty) .. ")", 2) end
+  local name, mt = peripheralName(p, 2)
+  local types
+  if mt then types = mt.types else local e = nativeFind(name); if not e then return nil end; types = e.types end
+  for _, t in ipairs(types) do if t == ty then return true end end
+  return false
 end
 function peripheral.getMethods(name)
-  local obj = peripheral.wrap(name)
-  if not obj then return nil end
-  local methods = {}
-  for k, v in pairs(obj) do if type(v) == "function" then methods[#methods + 1] = k end end
-  table.sort(methods)
-  return methods
+  if type(name) ~= "string" then error("bad argument #1 (string expected, got " .. type(name) .. ")", 2) end
+  return sim.periMethods(name)
+end
+function peripheral.getName(p)
+  if type(p) ~= "table" then error("bad argument #1 (table expected, got " .. type(p) .. ")", 2) end
+  return (peripheralName(p, 2))
+end
+
+-- Methods that need work on this side: a monitor is a terminal, and
+-- modem messages are serialised so tables survive the trip.
+local function monitorMethods(name)
+  local obj = makeTerm(name)
+  obj.setTextScale = function(s) sim.termSetTextScale(name, tonumber(s) or 1) end
+  obj.getTextScale = function() return sim.termGetTextScale(name) end
+  return obj
 end
 function peripheral.call(name, method, ...)
-  local obj = peripheral.wrap(name)
-  if not obj or not obj[method] then error("No such method " .. tostring(method), 2) end
-  return obj[method](...)
+  if type(name) ~= "string" then error("bad argument #1 (string expected, got " .. type(name) .. ")", 2) end
+  if type(method) ~= "string" then error("bad argument #2 (string expected, got " .. type(method) .. ")", 2) end
+  local e = nativeFind(name)
+  if not e then error("No peripheral attached to '" .. name .. "'", 2) end
+  if e.types[1] == "monitor" then
+    local fn = monitorMethods(name)[method]
+    if not fn then error("No such method " .. method, 2) end
+    return fn(...)
+  end
+  local r
+  if method == "transmit" then
+    local ch, reply, msg = ...
+    r = table.pack(sim.periCall(name, method, ch, reply, textutils.serialize(msg)))
+  else
+    r = table.pack(sim.periCall(name, method, ...))
+  end
+  if not r[1] then error(r[2], 2) end
+  return table.unpack(r, 2, r.n)
+end
+function peripheral.wrap(name)
+  if type(name) ~= "string" then error("bad argument #1 (string expected, got " .. type(name) .. ")", 2) end
+  local e = nativeFind(name)
+  if not e then return nil end
+  local obj
+  if e.types[1] == "monitor" then
+    obj = monitorMethods(name)
+  else
+    obj = {}
+    for _, method in ipairs(sim.periMethods(name) or {}) do
+      if method == "transmit" then
+        obj[method] = function(ch, reply, msg)
+          local r = table.pack(sim.periCall(name, method, ch, reply, textutils.serialize(msg)))
+          if not r[1] then error(r[2], 2) end
+        end
+      else
+        obj[method] = function(...)
+          local r = table.pack(sim.periCall(name, method, ...))
+          if not r[1] then error(r[2], 2) end
+          return table.unpack(r, 2, r.n)
+        end
+      end
+    end
+  end
+  return setmetatable(obj, { __name = "peripheral", name = name, type = e.types[1], types = e.types })
 end
 function peripheral.find(ptype, filter)
+  if type(ptype) ~= "string" then error("bad argument #1 (string expected, got " .. type(ptype) .. ")", 2) end
   local found = {}
-  for _, p in ipairs(sim.peripherals()) do
-    if p.type == ptype then
-      local obj = peripheral.wrap(p.name)
-      if not filter or filter(p.name, obj) then found[#found + 1] = obj end
+  for _, name in ipairs(peripheral.getNames()) do
+    if peripheral.hasType(name, ptype) then
+      local obj = peripheral.wrap(name)
+      if not filter or filter(name, obj) then found[#found + 1] = obj end
     end
   end
   return table.unpack(found)
 end
-function peripheral.getName(obj)
-  if type(obj) ~= "table" then error("bad argument #1 (table expected, got " .. type(obj) .. ")", 2) end
-  return obj.__name
-end
 
+-- rednet opens the computer's id and the broadcast channel on a modem,
+-- as in the game; messages themselves are delivered by the host.
 rednet = {}
-local openModems = {}
-function rednet.open(side)
-  if peripheral.getType(side) ~= "modem" then error("No such modem: " .. tostring(side), 2) end
-  openModems[side] = true
+rednet.CHANNEL_BROADCAST, rednet.CHANNEL_REPEAT = 65535, 65533
+local function isModem(name) return peripheral.hasType(name, "modem") == true end
+function rednet.open(modem)
+  if type(modem) ~= "string" then error("bad argument #1 (string expected, got " .. type(modem) .. ")", 2) end
+  if not isModem(modem) then error("No such modem: " .. modem, 2) end
+  peripheral.call(modem, "open", os.getComputerID())
+  peripheral.call(modem, "open", rednet.CHANNEL_BROADCAST)
 end
-function rednet.close(side) if side then openModems[side] = nil else openModems = {} end end
-function rednet.isOpen(side)
-  if side then return openModems[side] == true end
-  return next(openModems) ~= nil
+function rednet.close(modem)
+  if modem then
+    if not isModem(modem) then error("No such modem: " .. tostring(modem), 2) end
+    peripheral.call(modem, "close", os.getComputerID())
+    peripheral.call(modem, "close", rednet.CHANNEL_BROADCAST)
+  else
+    for _, name in ipairs(peripheral.getNames()) do if isModem(name) then rednet.close(name) end end
+  end
+end
+function rednet.isOpen(modem)
+  if modem then
+    if isModem(modem) then
+      return peripheral.call(modem, "isOpen", os.getComputerID()) and peripheral.call(modem, "isOpen", rednet.CHANNEL_BROADCAST)
+    end
+    return false
+  end
+  for _, name in ipairs(peripheral.getNames()) do if rednet.isOpen(name) then return true end end
+  return false
 end
 function rednet.send(id, message, protocol)
   if not rednet.isOpen() then return false end
@@ -781,7 +855,170 @@ end
 function rednet.host() end
 function rednet.unhost() end
 function rednet.lookup() return nil end
-rednet.CHANNEL_BROADCAST, rednet.CHANNEL_REPEAT = 65535, 65533
+
+--[[
+disk: drives attached to the computer, the floppy mounted at disk/
+--]]
+
+disk = {}
+local function isDrive(name)
+  if type(name) ~= "string" then error("bad argument #1 (string expected, got " .. type(name) .. ")", 3) end
+  return peripheral.getType(name) == "drive"
+end
+function disk.isPresent(name) if isDrive(name) then return peripheral.call(name, "isDiskPresent") end return false end
+function disk.getLabel(name) if isDrive(name) then return peripheral.call(name, "getDiskLabel") end return nil end
+function disk.setLabel(name, label) if isDrive(name) then peripheral.call(name, "setDiskLabel", label) end end
+function disk.hasData(name) if isDrive(name) then return peripheral.call(name, "hasData") end return false end
+function disk.getMountPath(name) if isDrive(name) then return peripheral.call(name, "getMountPath") end return nil end
+function disk.hasAudio(name) if isDrive(name) then return peripheral.call(name, "hasAudio") end return false end
+function disk.getAudioTitle(name) if isDrive(name) then return peripheral.call(name, "getAudioTitle") end return nil end
+function disk.playAudio(name) if isDrive(name) then peripheral.call(name, "playAudio") end end
+function disk.stopAudio(name) if isDrive(name) then peripheral.call(name, "stopAudio") end end
+function disk.eject(name) if isDrive(name) then peripheral.call(name, "ejectDisk") end end
+function disk.getID(name) if isDrive(name) then return peripheral.call(name, "getDiskID") end return nil end
+
+--[[
+vector, as in CraftOS
+--]]
+
+vector = {}
+local vmeta = {}
+local vmethods = {
+  add = function(self, o) return vector.new(self.x + o.x, self.y + o.y, self.z + o.z) end,
+  sub = function(self, o) return vector.new(self.x - o.x, self.y - o.y, self.z - o.z) end,
+  mul = function(self, m) return vector.new(self.x * m, self.y * m, self.z * m) end,
+  div = function(self, m) return vector.new(self.x / m, self.y / m, self.z / m) end,
+  unm = function(self) return vector.new(-self.x, -self.y, -self.z) end,
+  dot = function(self, o) return self.x * o.x + self.y * o.y + self.z * o.z end,
+  cross = function(self, o)
+    return vector.new(self.y * o.z - self.z * o.y, self.z * o.x - self.x * o.z, self.x * o.y - self.y * o.x)
+  end,
+  length = function(self) return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z) end,
+  normalize = function(self) return self:mul(1 / self:length()) end,
+  round = function(self, tolerance)
+    tolerance = tolerance or 1.0
+    return vector.new(
+      math.floor((self.x + tolerance * 0.5) / tolerance) * tolerance,
+      math.floor((self.y + tolerance * 0.5) / tolerance) * tolerance,
+      math.floor((self.z + tolerance * 0.5) / tolerance) * tolerance)
+  end,
+  tostring = function(self) return tostring(self.x) .. "," .. tostring(self.y) .. "," .. tostring(self.z) end,
+  equals = function(self, o) return self.x == o.x and self.y == o.y and self.z == o.z end,
+}
+vmeta.__index = vmethods
+vmeta.__add, vmeta.__sub, vmeta.__mul, vmeta.__div = vmethods.add, vmethods.sub, vmethods.mul, vmethods.div
+vmeta.__unm, vmeta.__tostring, vmeta.__eq = vmethods.unm, vmethods.tostring, vmethods.equals
+function vector.new(x, y, z)
+  return setmetatable({ x = tonumber(x) or 0, y = tonumber(y) or 0, z = tonumber(z) or 0 }, vmeta)
+end
+
+--[[
+gps: CraftOS's trilateration over modem messages on channel 65534.
+Positions are Minecraft coordinates (x east, y up, z south).
+--]]
+
+gps = { CHANNEL_GPS = 65534 }
+local function trilaterate(A, B, C)
+  local a2b = B.vPosition - A.vPosition
+  local a2c = C.vPosition - A.vPosition
+  if math.abs(a2b:normalize():dot(a2c:normalize())) > 0.999 then return nil end
+  local d = a2b:length()
+  local ex = a2b:normalize()
+  local i = ex:dot(a2c)
+  local ey = (a2c - ex * i):normalize()
+  local j = ey:dot(a2c)
+  local ez = ex:cross(ey)
+  local r1, r2, r3 = A.nDistance, B.nDistance, C.nDistance
+  local x = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+  local y = (r1 * r1 - r3 * r3 - x * x + (x - i) * (x - i) + j * j) / (2 * j)
+  local result = A.vPosition + ex * x + ey * y
+  local zSquared = r1 * r1 - x * x - y * y
+  if zSquared > 0 then
+    local z = math.sqrt(zSquared)
+    local result1 = result + ez * z
+    local result2 = result - ez * z
+    local rounded1, rounded2 = result1:round(0.01), result2:round(0.01)
+    if rounded1.x ~= rounded2.x or rounded1.y ~= rounded2.y or rounded1.z ~= rounded2.z then
+      return rounded1, rounded2
+    else
+      return rounded1
+    end
+  end
+  return result:round(0.01)
+end
+local function narrow(p1, p2, fix)
+  local dist1 = math.abs((p1 - fix.vPosition):length() - fix.nDistance)
+  local dist2 = math.abs((p2 - fix.vPosition):length() - fix.nDistance)
+  if math.abs(dist1 - dist2) < 0.01 then return p1, p2
+  elseif dist1 < dist2 then return p1:round(0.01)
+  else return p2:round(0.01) end
+end
+-- Whole numbers come back as integers so they print and compare cleanly.
+local function whole(v)
+  local r = math.floor(v + 0.5)
+  if math.abs(v - r) < 1e-6 then return math.tointeger(r) end
+  return v
+end
+function gps.locate(timeout, debug)
+  local modemSide
+  for _, side in ipairs(rs.getSides()) do
+    if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then modemSide = side; break end
+  end
+  if modemSide == nil then
+    if debug then print("No wireless modem attached") end
+    return nil
+  end
+  if debug then print("Finding position...") end
+  local modem = peripheral.wrap(modemSide)
+  local closeChannel = false
+  if not modem.isOpen(gps.CHANNEL_GPS) then modem.open(gps.CHANNEL_GPS); closeChannel = true end
+  modem.transmit(gps.CHANNEL_GPS, gps.CHANNEL_GPS, "PING")
+  local fixes = {}
+  local pos1, pos2
+  local timer = os.startTimer(timeout or 2)
+  while true do
+    local e, p1, p2, p3, p4, p5 = os.pullEvent()
+    if e == "modem_message" then
+      local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+      if side == modemSide and channel == gps.CHANNEL_GPS and replyChannel == gps.CHANNEL_GPS and distance then
+        if type(message) == "table" and #message == 3 and tonumber(message[1]) and tonumber(message[2]) and tonumber(message[3]) then
+          local fix = { vPosition = vector.new(message[1], message[2], message[3]), nDistance = distance }
+          if debug then print(tostring(fix.nDistance) .. " metres from " .. tostring(fix.vPosition)) end
+          if fix.nDistance == 0 then
+            pos1, pos2 = fix.vPosition, nil
+          else
+            local index = math.min(3, #fixes + 1)
+            for n, older in pairs(fixes) do
+              if (older.vPosition - fix.vPosition):length() < 5 then index = n; break end
+            end
+            fixes[index] = fix
+            if #fixes >= 3 then
+              if not pos1 then pos1, pos2 = trilaterate(fixes[1], fixes[2], fixes[3])
+              else pos1, pos2 = narrow(pos1, pos2, fixes[3]) end
+            end
+          end
+          if pos1 and not pos2 then break end
+        end
+      end
+    elseif e == "timer" and p1 == timer then
+      break
+    end
+  end
+  if closeChannel then modem.close(gps.CHANNEL_GPS) end
+  if pos1 and pos2 then
+    if debug then
+      print("Ambiguous position")
+      print("Could be " .. tostring(pos1) .. " or " .. tostring(pos2))
+    end
+    return nil
+  elseif pos1 then
+    if debug then print("Position is " .. tostring(pos1)) end
+    return whole(pos1.x), whole(pos1.y), whole(pos1.z)
+  else
+    if debug then print("Could not determine position") end
+    return nil
+  end
+end
 
 --[[
 parallel
@@ -858,31 +1095,66 @@ if sim.isTurtle() then
     return true
   end
   turtle.craft = function() return false, "No crafting table" end
-  turtle.equipLeft = function() return false, "Nothing to equip" end
-  turtle.equipRight = turtle.equipLeft
-  turtle.getEquippedLeft = function() return nil end
-  turtle.getEquippedRight = turtle.getEquippedLeft
+  for _, name in ipairs({ "equipLeft", "equipRight", "getEquippedLeft", "getEquippedRight" }) do
+    turtle[name] = query(name)
+  end
 end
 
 --[[
-redstone: outputs reach the world (a turtle's pulse can fire a machine
-next to it); there are no inputs in the simulator.
+pocket (only on pocket computers): upgrades cannot be swapped here
+--]]
+
+if sim.isPocket() then
+  pocket = {
+    equipBack = function() return false, "Cannot find a valid upgrade" end,
+    unequipBack = function() return false, "Nothing to unequip" end,
+  }
+end
+
+--[[
+redstone: outputs power the block on that side (lamps, doors, wire,
+reconstructors); inputs come from levers, buttons, plates, wire and
+other computers next to this one. Bundled outputs travel along bundled
+cable to the computers it touches.
 --]]
 
 redstone = {}
 local redstoneSides = { "top", "bottom", "left", "right", "front", "back" }
-function redstone.getSides() return redstoneSides end
-function redstone.setOutput(side, on) sim.redstoneSet(tostring(side), on and true or false) end
-function redstone.getOutput(side) return sim.redstoneGet(tostring(side)) end
-function redstone.getInput() return false end
-function redstone.getAnalogInput() return 0 end
-function redstone.getAnalogOutput(side) return redstone.getOutput(side) and 15 or 0 end
-function redstone.setAnalogOutput(side, value) redstone.setOutput(side, (tonumber(value) or 0) > 0) end
+local function checkSide(side)
+  if type(side) ~= "string" then error("bad argument #1 (string expected, got " .. type(side) .. ")", 3) end
+  side = side:lower()
+  for _, s in ipairs(redstoneSides) do if s == side then return side end end
+  error("Invalid side.", 3)
+end
+local function checkNumber(v, n)
+  if type(v) ~= "number" then error("bad argument #" .. n .. " (number expected, got " .. type(v) .. ")", 3) end
+  return v
+end
+function redstone.getSides() return { table.unpack(redstoneSides) } end
+function redstone.setOutput(side, on)
+  side = checkSide(side)
+  if type(on) ~= "boolean" then error("bad argument #2 (boolean expected, got " .. type(on) .. ")", 2) end
+  sim.redstoneSet(side, on and 15 or 0)
+end
+function redstone.getOutput(side) return sim.redstoneGet(checkSide(side)) > 0 end
+function redstone.getInput(side) return sim.redstoneInput(checkSide(side)) > 0 end
+function redstone.setAnalogOutput(side, value)
+  side = checkSide(side)
+  value = checkNumber(value, 2)
+  if value < 0 or value > 15 then error("Expected number in range 0-15", 2) end
+  sim.redstoneSet(side, math.floor(value))
+end
+function redstone.getAnalogOutput(side) return sim.redstoneGet(checkSide(side)) end
+function redstone.getAnalogInput(side) return sim.redstoneInput(checkSide(side)) end
 redstone.getAnalogueInput, redstone.getAnalogueOutput, redstone.setAnalogueOutput = redstone.getAnalogInput, redstone.getAnalogOutput, redstone.setAnalogOutput
-function redstone.getBundledInput() return 0 end
-function redstone.getBundledOutput() return 0 end
-function redstone.setBundledOutput() end
-function redstone.testBundledInput() return false end
+function redstone.setBundledOutput(side, colours) sim.bundledSet(checkSide(side), checkNumber(colours, 2)) end
+function redstone.getBundledOutput(side) return sim.bundledGet(checkSide(side)) end
+function redstone.getBundledInput(side) return sim.bundledInput(checkSide(side)) end
+function redstone.testBundledInput(side, mask)
+  side = checkSide(side)
+  mask = checkNumber(mask, 2)
+  return sim.bundledInput(side) & mask == mask
+end
 rs = redstone
 
 http = {
@@ -1049,6 +1321,57 @@ builtins.help = function()
   print("Ctrl+T stops a program, Ctrl+R reboots.")
 end
 builtins.time = function() print("The time is " .. textutils.formatTime(os.time(), false)) end
+-- CraftOS's gps program: gps host [x y z] answers locate requests on a
+-- wireless modem until stopped; gps locate prints this computer's position.
+builtins.gps = function(cmd, ...)
+  local args = { ... }
+  local function usage()
+    print("Usages:")
+    print("gps host")
+    print("gps host <x> <y> <z>")
+    print("gps locate")
+  end
+  if cmd == "locate" then
+    gps.locate(2, true)
+  elseif cmd == "host" then
+    if pocket then print("GPS Hosts must be stationary"); return end
+    local modemSide
+    for _, side in ipairs(rs.getSides()) do
+      if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then modemSide = side; break end
+    end
+    if modemSide == nil then print("No wireless modems found. 1 required."); return end
+    local x, y, z
+    if #args >= 3 then
+      x, y, z = tonumber(args[1]), tonumber(args[2]), tonumber(args[3])
+      if x == nil or y == nil or z == nil then usage(); return end
+      print("Position is " .. x .. "," .. y .. "," .. z)
+    else
+      x, y, z = gps.locate(2, true)
+      if x == nil then
+        print("Run \"gps host <x> <y> <z>\" to set position manually")
+        return
+      end
+    end
+    local modem = peripheral.wrap(modemSide)
+    print("Opening channel on modem " .. modemSide)
+    modem.open(gps.CHANNEL_GPS)
+    local served = 0
+    while true do
+      local _, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
+      if side == modemSide and channel == gps.CHANNEL_GPS and message == "PING" and distance then
+        modem.transmit(replyChannel, gps.CHANNEL_GPS, { x, y, z })
+        served = served + 1
+        if served > 1 then
+          local _, cy = term.getCursorPos()
+          term.setCursorPos(1, cy - 1)
+        end
+        print(served .. " GPS requests served")
+      end
+    end
+  else
+    usage()
+  end
+end
 builtins.refuel = function(n)
   if not turtle then printError("Requires a turtle"); return end
   local count = tonumber(n) or 64
@@ -1074,9 +1397,26 @@ term.setCursorPos(1, 1)
 print(os.version())
 term.setTextColor(colors.white)
 
+-- Like CraftOS: startup.lua (or startup) in the root, else the first
+-- floppy in a drive that has one.
+local function findStartup(dir)
+  for _, name in ipairs({ "startup.lua", "startup" }) do
+    local path = fs.combine(dir, name)
+    if fs.exists(path) and not fs.isDir(path) then return path end
+  end
+  return nil
+end
 local function runStartup()
-  if fs.exists("startup.lua") then shell.run("startup.lua")
-  elseif fs.exists("startup") then shell.run("startup") end
+  local path = findStartup("")
+  if not path then
+    for _, name in ipairs(peripheral.getNames()) do
+      if disk.isPresent(name) and disk.hasData(name) then
+        path = findStartup(disk.getMountPath(name))
+        if path then break end
+      end
+    end
+  end
+  if path then shell.run(path) end
 end
 
 -- Everything a program can do runs inside the main coroutine below,
@@ -1131,6 +1471,10 @@ while coroutine.status(main) ~= "dead" do
       ev[5] = nil
       ev.n = 4
     end
+  elseif ev[1] == "modem_message" and ev[7] == serializedMark then
+    ev[5] = textutils.unserialize(ev[5])
+    ev[7] = nil
+    ev.n = 6
   end
   if accept and (filter == nil or ev[1] == filter or ev[1] == "terminate") then
     local ok, result = coroutine.resume(main, table.unpack(ev, 1, ev.n))

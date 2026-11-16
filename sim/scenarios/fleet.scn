@@ -1,0 +1,112 @@
+# The fleet: a dispatcher, a depot and three turtles, with the GPS
+# demo's four hosts (moved out to the corners) so everything works in
+# Minecraft coordinates. Our (x, y, z) is Minecraft (x, z, -y): the
+# turtles park in a row at Minecraft z = 8 facing north and calibrate
+# with gps when their agents start.
+#
+# The depot (computer 41) has a fuel chest (minecraft:chest_0) and a
+# dump chest (minecraft:chest_1) on its wired network; the timeline
+# types their places into it and starts it. The base computer (42)
+# sends turtle 3, which has too little fuel for any job, to refuel at
+# the depot, then queues two quarries with sites that empty at the
+# depot, and lists the queue at the end. The dispatcher (40) hands the
+# quarries to the turtles; the pocket computer (10) runs turtle control,
+# whose Map shows the turtles, the chests and the sites.
+name Fleet
+description A dispatcher (40), a depot (41) with a fuel and a dump chest, a base computer (42), a pocket computer running turtle control (10) and three turtles running turtleagent, with four gps hosts.
+description The timeline sets up the depot, sends the Spare turtle to refuel there, and queues two quarries with sites (fleet add quarry ... chest=depot at=x,y,z,heading) that the dispatcher hands out.
+description Watch the dispatcher's screen, or open Map on the pocket computer.
+
+ground -13 -13 13 13 0 4 ores=false pockets=false
+
+# gps hosts on pillars in the corners
+fill -11 -11 1 -11 -11 5 stone_bricks
+fill 11 -11 1 11 -11 9 stone_bricks
+fill -11 11 1 -11 11 13 stone_bricks
+fill 11 11 1 11 11 2 stone_bricks
+computer 20 label="GPS 1" pos=-11,-11,6 advanced=false
+  peripheral top modem
+  autorun gps host -11 6 11
+computer 21 label="GPS 2" pos=11,-11,10 advanced=false
+  peripheral top modem
+  autorun gps host 11 10 11
+computer 22 label="GPS 3" pos=-11,11,14 advanced=false
+  peripheral top modem
+  autorun gps host -11 14 -11
+computer 23 label="GPS 4" pos=11,11,3 advanced=false
+  peripheral top modem
+  autorun gps host 11 3 -11
+
+# The depot's chests: fuel at Minecraft 8 1 6, dump at 8 1 3; turtles
+# reach both from the west.
+block 8 -6 1 chest network=depot
+items 8 -6 1 coal*64 coal*64
+block 8 -3 1 chest network=depot
+fill 7 -10 1 7 -7 1 cable
+fill 8 -5 1 8 -4 1 cable
+
+computer 40 label=Dispatcher
+  pos -6 -10 1
+  peripheral top modem
+  autorun dispatcher
+
+computer 41 label=Depot
+  pos 6 -10 1
+  peripheral top modem
+  peripheral right modem wired=true network=depot
+
+computer 42 label=Base
+  pos -9 -10 1
+  peripheral top modem
+
+pocket 10 label=Pocket
+  peripheral back modem
+  autorun turtlecontrol
+
+turtle 1 label=Alpha
+  pos -2 -8 1
+  heading north
+  fuel 2000
+  peripheral left modem
+  autorun turtleagent
+
+turtle 2 label=Bravo
+  pos 0 -8 1
+  heading north
+  fuel 2000
+  peripheral left modem
+  autorun turtleagent
+
+turtle 3 label=Spare
+  pos 2 -8 1
+  heading north
+  fuel 60
+  peripheral left modem
+  autorun turtleagent
+
+at 2 type 41 depot add Fuel fuel 8 1 6 west minecraft:chest_0
+at 3 type 41 depot add Dump dump 8 1 3 west minecraft:chest_1
+at 4 type 41 depot
+at 8 type 42 turtlejob 3 depot refuel 1500
+# typed lines with name=value words are quoted, or they become fields of the at line
+at 14 type 42 "fleet add quarry width=2 length=2 depth=2 chest=depot at=-6,1,-4,north"
+at 20 type 42 "fleet add quarry width=3 length=2 depth=1 chest=depot at=5,1,-6,east"
+at 170 type 42 fleet list
+
+# Both quarries are dug where they were queued, everything they dug is
+# in the depot's dump chest, the turtles are back in their row, the
+# spare one refuelled, and the queue says done.
+check two quarries with sites through the dispatcher, emptied at the depot
+  seconds 175
+  expect blocks -6 4 0 -5 5 -1 air
+  expect blocks 5 4 0 6 6 0 air
+  expect chest 8 -3 1 items >= 14
+  expect turtle 1 pos -2 -8 1
+  expect turtle 2 pos 0 -8 1
+  expect turtle 3 pos 2 -8 1
+  expect turtle 3 fuel >= 1500
+  expect screen 42 "queued #1 quarry"
+  expect screen 42 "queued #2 quarry"
+  expect screen 42 "#1 Quarry -6,1,-4 N done"
+  expect screen 42 "#2 Quarry 5,1,-6 E done"
+  expect no-error

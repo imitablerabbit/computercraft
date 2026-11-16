@@ -14,11 +14,30 @@ four columns, job parameters take two rows each, and the shell and text
 screens also accept the computer's keyboard. The main screen shows an icon for every
 turtle it can hear, coloured by what the turtle is doing: green when idle,
 orange with a pickaxe while a job runs, red after a job fails and gray once
-the turtle has gone quiet. Touch an icon to open that turtle's screen, which
-shows its state and fuel and has buttons for the jobs in `apis/turtlectl.lua`
-(strip mine, mine line, quarry, flatten, logger, reconstruct, refuel), plus Items, Move,
-Shell, Stop and Back. Mine line has a Return switch that walks the turtle back to where it started
-once the line is done, so it can be run again from the same spot.
+the turtle has gone quiet. Map (top right) shows the fleet from above,
+see [Fleet map](docs/fleet.md#fleet-map).
+
+Touch an icon to open that turtle's screen. At the top it shows the
+turtle's state and job, a fuel bar and the last message. The fuel bar
+counts 2000 fuel as full, so the bar is useful whatever the fuel limit,
+and the real numbers are written over it. Below 200 fuel it turns red.
+While a job reports how far along it is (see Job progress below), a
+second bar shows that, for example `17/512 layer 1 of 8`. On wide screens
+a small chart beside the icon shows the fuel level from recent status
+messages, with the highest and lowest values at its left. Under that are
+buttons for the jobs in `apis/turtlectl.lua` (strip mine, mine line,
+quarry, flatten, logger, reconstruct, tunnel, rail, bridge, farm, lava
+fuel, build, go to, GPS deploy, depot, refuel) and Stop.
+
+On a wide screen (a monitor, or an advanced computer's own screen) the
+turtle's other screens are tabs along the top: Jobs, Items, Move, Shell
+and Fuel, with Back at the right end of the tab row. On a compact screen
+(under 40 columns or 16 rows, such as a pocket computer or a small
+monitor) the tab row would not fit, so the turtle screen keeps Items,
+Fuel, Move, Shell, Stop and Back as buttons that each open a screen of
+their own, as before. Mine line has a Return switch that walks the
+turtle back to where it started once the line is done, so it can be run
+again from the same spot.
 
 Fuel lists the items the turtle never burns as fuel (`inventory.FuelBlacklist`,
 kept in a `fuel_blacklist` file on the turtle so it survives reboots), in a
@@ -62,6 +81,13 @@ until the command finishes. Stop aborts it, which is also the way out of a
 command that waits for keyboard input, since there is no way to type into a
 running program.
 
+Stop, Drop on an item's screen and Remove on the fuel rules ask first, in
+a box in the middle of the screen with Cancel and the action in red.
+Nothing underneath can be touched until one of them is pressed. On a
+pocket computer, Enter presses the action and Escape cancels. Stop only
+asks while a job is running. When the turtle is idle there is nothing to
+stop, and the turtle answers "nothing running" as before.
+
 Setup:
 
 1. On each turtle, attach a wireless modem and run `turtleagent`. It
@@ -69,7 +95,9 @@ Setup:
    runs the job it is told to. Label the turtle first (`label set Digger`)
    so the dashboard shows a name instead of an ID.
 2. On the monitor computer, run `turtlecontrol`. Optional arguments are the
-   monitor side, the text scale (default 0.5) and a registry file from
+   monitor side, the text scale (by default the largest that still gives at
+   least 50x20 characters, which is 0.5 on monitors up to 4 blocks wide) and
+   a registry file from
    `registrylistener`, whose turtles are shown as offline until heard from.
 
 ```
@@ -88,6 +116,59 @@ saplings left, and for `reconstruct` an empty input chest or a machine
 that stops working. `turtleagent` passes alerts to the controller and clears
 them when the job ends, so any program can call `alert.raise(kind,
 message)` and `alert.clear(kind)` to be shown the same way.
+
+When the turtle has nav state (see [Navigation](docs/navigation.md)),
+`turtleagent` also sends its position with every status. When it starts
+on a turtle with a wireless modem and four gps hosts in range, it
+calibrates nav once by moving one block and back to learn its heading,
+and asks gps again after every job. Without gps it never moves by itself.
+It also publishes its status and alerts on the event bus, so the pocket
+`pager` sees them (see [Pager, alerts, event bus and
+GPS](docs/network.md)).
+
+### Job progress
+
+Long jobs say how far along they are through `apis/progress.lua`, the
+same way alerts work. `progress.report(done, total, text)` queues a
+`turtle_progress` event. `turtleagent` keeps the latest one and sends it
+to the controller with its status, as a `progress = { done, total, text
+}` field (at most every 2 seconds, plus the 5 second heartbeat). The
+turtle screen shows it as a progress bar. `progress.clear()` takes it
+away, and the agent clears it when the job ends. Without the agent the
+calls do nothing and print nothing, so a program can report every block.
+`total` may be nil when the end is not known, and the bar then only shows
+the text. Controllers from before this change ignore the field.
+
+## More programs
+
+Each of these has its own page under `docs/`:
+
+- [Turtle jobs](docs/turtle-jobs.md): `tunnel` bores a lit, walkable
+  tunnel; `rail` lays a railway; `bridge` builds a floor across a gap;
+  `farm` harvests and replants a field of crops; `lavafuel` refuels from
+  a lava lake or fills buckets for a fuel chest.
+- [Navigation and building](docs/navigation.md): the `nav` API tracks a
+  turtle's position, calibrates with gps and finds paths with A*;
+  `goto` and `where` use it from the shell; `build` builds a structure
+  from a blueprint file and `scan` records one into a blueprint.
+- [Fleet](docs/fleet.md): `dispatcher` keeps a queue of jobs and hands
+  them to idle turtles, sending each to its job site first; `depot`
+  tells turtles where the nearest fuel and dump chests are, so
+  quarries can empty themselves wherever they are; and the map in
+  turtle control.
+- [Pager, alerts, event bus and GPS](docs/network.md): `pager` lists
+  every alert in the base on a pocket computer; the `bus` API is a
+  publish and subscribe layer over rednet; `alert` and `turtlejob` raise
+  alerts and start jobs from the shell; `gpsdeploy` builds a gps
+  constellation from one turtle.
+- [Base automation](docs/base-automation.md): `storage` runs a chest
+  network with search, withdraw and deposit; `doors` drives lights and
+  doors on schedules and sensors; `machines` watches energy, tanks and
+  inventories and switches generators; `lift` dispatches an elevator or
+  train between stops.
+- [Testing](docs/testing.md): the `test` program and `testing` API for
+  unit tests that run in game and in the simulator, the scenario file
+  format, and scenario checks.
 
 ## Quarry and flatten
 
@@ -129,6 +210,11 @@ goes home and empties itself, and reports why. When fuel runs lower than
 the way home it burns fuel it has dug up (coal, logs, ...) rather than
 stopping. Both are jobs in the turtle control job list with forms for the
 three sizes; the engine is `apis/excavate.lua`.
+
+The chest can also be `depot`, for quarry, flatten and strip mine. The
+turtle then empties at the nearest dump chest a depot computer knows
+about, straight from wherever it fills up, and comes back to carry on.
+That needs gps and a running `depot`; see [Depot](docs/fleet.md#depot).
 
 ## Reconstruct
 
@@ -212,6 +298,21 @@ inventorygui
 - `layout`: a playground where buttons switch a container between
   vertical, horizontal and grid layouts, change the gap, and make one box
   fixed or flexible.
+- `widgets`: the newer components together, built with `guibuild`. A
+  Meters tab has a job progress bar, a fuel bar that turns red below 20%,
+  an energy gauge, a tank gauge and a sparkline fed by a timer. An Items
+  tab has a table: touch a column title to sort by it, touch it again to
+  reverse, and touch a row to select it. Remove asks before taking the
+  selected row out, Alert shows a message box, Quit asks first, and Theme
+  switches between the dark and light themes.
+
+The framework itself is described in `apis/gui/readme.md`. Besides the
+original components it has a progress bar, a gauge, a sparkline, tabs, a
+modal dialog with `confirm` and `alert` helpers, and a sortable,
+scrolling table. It also has dark and light themes (`guitheme`), a helper
+that picks a monitor text scale and says whether a screen is compact
+(`guitheme.fit`), and `guibuild`, which builds a whole screen from one
+nested table; `form` is now written that way.
 
 Type the name at a computer's prompt, or pick it as what a computer runs
 when adding one in the browser simulator.
@@ -221,7 +322,8 @@ when adding one in the browser simulator.
 `sim/` is a simulator for everything in this repo that runs in a web browser,
 so programs can be tried without the game. The computers run the real Lua
 files (Lua in the page through Fengari) against a stand-in for CraftOS, in a
-small voxel world drawn in 3D. Start `serve.py` as for installing, then open
+small voxel world drawn in 3D. Start `serve.py` as described under
+"Installing from your own machine" below, then open
 
 ```
 http://localhost:8080/sim
@@ -261,7 +363,12 @@ boot: turtle control (a computer with a 3x2 monitor running `turtlecontrol`
 and three turtles running `turtleagent`, one almost out of fuel), quarry, reconstruct (a chest of
 netherrack, redstone and an atomic reconstructor that picks nether quartz ore,
 nether gold ore or ancient debris by the mod's weights of 3000, 500 and 1), flatten, strip mine, the
-inventory viewer and a blank turtle with a shell. Each computer boots
+inventory viewer, a blank turtle with a shell, and worlds for storage
+networks, redstone, farming, lava, gps, gps deploy and machines (see
+[Simulator](docs/simulator.md)). Text-file scenarios add one for each
+new program: tunnel, rail, bridge, farm, lava fuel, build, scan, maze
+(goto), pager, gps deploy, the four base programs, fleet and depot.
+Each computer boots
 `startup.lua` first, so all the APIs are loaded, then its scenario command,
 then drops to a shell where any program can be typed, for example
 `quarry 4 4 3`. Reset rebuilds the world; Speed runs time faster.
@@ -279,25 +386,56 @@ That prints every screen, the turtles, the chests and the log after the
 given number of simulated seconds.
 
 What is simulated: `term`, `window`, `paintutils`, `colors`, `keys`, `os`
-events and timers, `fs` over the repo's files (writes stay in the page),
-`shell` with `ls`, `cd`, `cat`, `label`, `programs` and `refuel`,
-`peripheral` with monitors and modems, `rednet` between the computers,
-`parallel`, `textutils`, the `turtle` API with fuel, an inventory and
-chests, and `redstone` outputs: a pulse from a turtle's side powers the
-block there and any redstone wire running from it, and fires every atomic
-reconstructor it reaches at the first block along its aim (the block
-picker's reconstructor aims at the block it is placed against). Not
-simulated: `http`, `gps`, redstone inputs, crafting, mobs and liquids.
-Fuel values and the block guesses are the plain Minecraft ones, so modded
-items will differ from your world.
+events and timers, `fs` over the repo's files (writes stay in the page,
+and floppies mount at `disk/`), `shell` with `ls`, `cd`, `cat`, `label`,
+`programs`, `refuel` and `gps`, `peripheral` with monitors, modems
+(wireless and wired, with channels), chests and other inventories, disk
+drives, computers, energy cells and tanks, `rednet` between the
+computers, `gps`, `vector`, `disk`, `parallel`, `textutils`, the
+`turtle` API with fuel, an inventory, chests, equipping tools and modems,
+crops, buckets and placing computers, and `redstone` both ways, analog
+levels and bundled cable included. Not simulated: `http`, crafting, mobs
+and players (only the timeline and the Use tool press plates; turtles do
+not, as in the game), liquids flowing (a lava or water block stays where
+it is put), wireless modem range, power carried through solid blocks,
+repeaters and comparators, fluid transfers between tanks, audio discs,
+printers and speakers, and items dropped on the ground (they are lost,
+as is a chest's contents when it is dug and a floppy ejected from a
+drive). Turtles still pass through torches and redstone wire, which the
+game does not allow. Fuel values and the block guesses are the plain
+Minecraft ones, so modded items will differ from your world.
+
+Scenarios can also be written as text files in `sim/scenarios/`, listed
+in `sim/scenarios/index.json`, and can carry checks of the world after a
+run. `cd sim && node test.mjs` runs every unit test and scenario check;
+see [Testing](docs/testing.md). Chests and other blocks as peripherals,
+wired networks, redstone inputs, crops, lava, gps and turtles placing
+computers are described in [Simulator](docs/simulator.md), with the
+scenarios that show them.
 
 ## Installing on a computer in game
 
-The game can only fetch files over HTTP with `wget`, so this repo ships a
-tiny server that hosts it from your own machine. It needs nothing beyond
-Python 3.
+One command installs everything on a fresh computer or turtle. Type it
+at the shell, or paste it with Ctrl+V:
 
-On your machine, from this folder:
+```
+wget run https://raw.githubusercontent.com/imitablerabbit/computercraft/master/programs/github.lua
+```
+
+It asks GitHub for the list of files on `master`, downloads every `.lua`
+file to the same path on the computer (the browser simulator under `sim/`
+is skipped) and asks you to `reboot`, after which `startup.lua` loads the
+APIs and puts the `programs` folders on the path. From then on `github`
+pulls the latest copies again, and `github <branch>` installs a branch
+instead. Files deleted from the repo are not removed from the computer.
+This needs the `http` API, which CC: Tweaked enables by default along with
+access to GitHub's hosts.
+
+### Installing from your own machine
+
+To try changes before they are pushed, `serve.py` hosts this folder over
+plain HTTP so computers in game can `wget` it. It needs nothing beyond
+Python 3. On your machine, from this folder:
 
 ```bash
 python3 serve.py

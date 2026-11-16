@@ -1,112 +1,68 @@
 --[[
-A settings form built with layouts: a vertical box of rows, each row a
-horizontal box with a fixed label and a flexible field. Shows GUIText,
-GUIInput, GUICheckbox, GUIDropdown and GUIButton, and how the layout
-redoes itself when the screen changes.
+A settings form described as a table and built with guibuild: a
+vertical box of rows, each row a horizontal box with a fixed label and
+a flexible field. Shows GUIText, GUIInput, GUICheckbox, GUIDropdown and
+GUIButton, how ids give back the components that need code, and how
+the layout redoes itself when the screen changes.
 
 Click a field to edit it, Save to show the values at the bottom.
 --]]
 
 local app = guiapplication.GUIApplication.new()
-local w, h = term.getSize()
+local root, ids
 
-local root = guirootcontainer.GUIRootContainer.new()
-root:setTitle("Settings form")
-root:setBackgroundColor(colors.black)
-root:setTextColor(colors.white)
-app:setRootContainer(root)
-
--- The page under the title bar: rows stacked top to bottom with a gap.
-local page = guicomponent.GUIComponent.new()
-page:setBackgroundColor(colors.black)
-page:setBorder(false)
-page:setPreferredBounds(1, 2, w, h - 1)
-page:setLayout(guilayout.GUIBoxLayout.new("vertical", 0, 0))
-root:add(page)
-
--- A row: a label of fixed width, then a field that takes the rest.
+-- A row: a label of fixed width, then the field taking the rest.
 local function row(labelText, field, height)
-  local r = guicomponent.GUIComponent.new()
-  r:setBackgroundColor(colors.black)
-  r:setBorder(false)
-  r:setPreferredBounds(1, 1, w, height or 1)
-  r:setLayout(guilayout.GUIBoxLayout.new("horizontal", 1, 0))
-  local label = guitext.GUIText.new(" " .. labelText)
-  label:setPreferredBounds(1, 1, 12, 1)
-  label:setBorder(false)
-  label:setBackgroundColor(colors.black)
-  label:setTextColor(colors.lightGray)
-  label:setTextAlign("left")
-  r:add(label)
-  field:setFlex(1)
-  r:add(field)
-  page:add(r)
-  return r
+  field.flex = 1
+  return {
+    type = "box", dir = "horizontal", gap = 1, h = height or 1, bg = colors.black,
+    children = {
+      { type = "text", text = " " .. labelText, w = 12, h = 1, bg = colors.black, fg = colors.lightGray },
+      field,
+    },
+  }
 end
 
-local name = guiinput.GUIInput.new("Digger")
-name:setPreferredBounds(1, 1, 20, 3)
-name:setBorder(true)
-row("Label", name, 3)
-
-local fuel = guiinput.GUIInput.new("1000")
-fuel:setPreferredBounds(1, 1, 20, 3)
-fuel:setBorder(true)
-row("Fuel", fuel, 3)
-
-local torches = guicheckbox.GUICheckbox.new("place torches", true)
-torches:setPreferredBounds(1, 1, 20, 1)
-row("Torches", torches)
-
-local returnHome = guicheckbox.GUICheckbox.new("come back when done", false)
-returnHome:setPreferredBounds(1, 1, 20, 1)
-row("Return", returnHome)
-
-local chest = guidropdown.GUIDropdown.new({ "left", "right", "behind", "below", "above" }, 1)
-chest:setPreferredBounds(1, 1, 12, 1)
-chest:setStretch(false)
-row("Chest", chest)
-
--- Buttons side by side in a grid, then a status line that fills the rest.
-local buttons = guicomponent.GUIComponent.new()
-buttons:setBackgroundColor(colors.black)
-buttons:setBorder(false)
-buttons:setPreferredBounds(1, 1, w, 3)
-buttons:setLayout(guilayout.GUIGridLayout.new(1, 3, 1, 0))
-page:add(buttons)
-
-local status = guitext.GUIText.new("Fill in the form and press Save.")
-status:setBorder(false)
-status:setBackgroundColor(colors.gray)
-status:setTextColor(colors.white)
-status:setTextAlign("left")
-status:setFlex(1)
-page:add(status)
-
-local function button(text, color, fn)
-  local b = guibutton.GUIButton.new(text)
-  b:setPreferredBounds(1, 1, 10, 3)
-  b:setBackgroundColor(color)
-  b:setTextColor(colors.white)
-  b:addButtonListener(fn)
-  buttons:add(b)
-  return b
+local function button(text, color, onPress)
+  return { type = "button", text = text, w = 10, h = 3, border = true, bg = color, fg = colors.white, onPress = onPress }
 end
 
-button("Save", colors.green, function()
-  status:setTextColor(colors.white)
-  status:setText(string.format("%s fuel=%s torches=%s return=%s chest=%s",
-    name:getText(), fuel:getText(), tostring(torches:isChecked()), tostring(returnHome:isChecked()), tostring(chest:getValue())))
-end)
-button("Reset", colors.orange, function()
-  name:setText("Digger")
-  fuel:setText("1000")
-  torches:setChecked(true)
-  returnHome:setChecked(false)
-  chest:setValue("left")
-  status:setText("Reset to the defaults.")
-end)
-button("Quit", colors.red, function() app:stop() end)
+local function save()
+  ids.status:setText(string.format("%s fuel=%s torches=%s return=%s chest=%s",
+    ids.name:getText(), ids.fuel:getText(), tostring(ids.torches:isChecked()),
+    tostring(ids.returnHome:isChecked()), tostring(ids.chest:getValue())))
+end
 
+local function reset()
+  ids.name:setText("Digger")
+  ids.fuel:setText("1000")
+  ids.torches:setChecked(true)
+  ids.returnHome:setChecked(false)
+  ids.chest:setValue("left")
+  ids.status:setText("Reset to the defaults.")
+end
+
+root, ids = guibuild.build({
+  type = "root", title = "Settings form", bg = colors.black, fg = colors.white,
+  dir = "vertical", gap = 0,
+  children = {
+    row("Label", { type = "input", id = "name", text = "Digger", h = 3, border = true }, 3),
+    row("Fuel", { type = "input", id = "fuel", text = "1000", h = 3, border = true }, 3),
+    row("Torches", { type = "checkbox", id = "torches", text = "place torches", checked = true }),
+    row("Return", { type = "checkbox", id = "returnHome", text = "come back when done" }),
+    row("Chest", { type = "dropdown", id = "chest", options = { "left", "right", "behind", "below", "above" },
+                   w = 12, stretch = false }),
+    -- Buttons side by side in a grid, then a status line that fills the rest.
+    { type = "grid", rows = 1, columns = 3, gap = 1, h = 3, bg = colors.black, children = {
+      button("Save", colors.green, save),
+      button("Reset", colors.orange, reset),
+      button("Quit", colors.red, function() app:stop() end),
+    } },
+    { type = "text", id = "status", text = "Fill in the form and press Save.", flex = 1,
+      bg = colors.gray, fg = colors.white },
+  },
+})
+
+app:setRootContainer(root)
 app:setUPS(20)
 app:start()

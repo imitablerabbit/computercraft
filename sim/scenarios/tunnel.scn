@@ -1,0 +1,69 @@
+# A stone hillside for the tunnel program: gravel over the ceiling, a
+# hole in the floor, lava behind the left wall, water over the ceiling
+# and a lava pocket inside the tunnel's own space.
+name Tunnel
+description A stone hill north of a turtle with a chest behind it, torches, cobblestone and coal.
+description Type in its screen, for example: tunnel 12 3 3 4
+
+ground -6 -4 6 20 0 4 ores=false pockets=false
+fill -5 1 1 5 18 6 stone
+block 0 -1 1 chest
+
+# gravel hanging over the middle of slice 3, and over the right column of slice 6
+block 0 3 4 gravel
+block 0 3 5 gravel
+block 1 6 4 gravel
+# a two deep hole in the floor of slice 5
+clear 1 5 0 1 5 -1
+# liquids: lava beside the left wall, water over the right ceiling,
+# lava in the middle of slice 10
+block -2 7 2 lava
+block 1 9 4 water
+block 0 10 2 lava
+
+turtle 3 label=Borer
+  pos 0 0 1
+  heading north
+  fuel 300
+  slots coal*16 torch*16 cobblestone*8
+  peripheral left modem
+
+check a 3x3 tunnel 12 long with torches, a filled floor and plugged liquids
+  run tunnel 12 3 3 4
+  seconds 400
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 heading north
+  expect blocks 0 1 1 1 12 3 air
+  expect blocks -1 1 2 -1 12 3 air
+  expect blocks -1 1 1 -1 12 1 torch = 3
+  expect block -1 4 1 torch
+  expect block 1 5 0 cobblestone
+  expect block 0 3 4 air
+  expect block 0 3 6 stone
+  expect block -2 7 2 cobblestone
+  expect block 1 9 4 cobblestone
+  expect blocks -1 13 1 1 13 3 stone
+  expect blocks -2 1 1 -2 12 3 stone >= 33
+  expect chest 0 -1 1 item cobblestone >= 40
+  expect turtle 3 item cobblestone >= 1
+  expect turtle 3 item torch = 13
+  expect screen 3 done: 12 slices
+  expect no-error
+
+check a one wide, two high tunnel without coming back
+  run tunnel 6 1 2 3 behind false
+  seconds 120
+  until done:
+  expect turtle 3 pos 0 6 1
+  expect blocks 0 1 1 0 6 1 air
+  expect block 0 3 2 torch
+  expect block 0 6 2 torch
+  expect blocks -1 1 1 -1 6 2 stone
+  expect no-error
+
+check a tunnel too wide is refused
+  run tunnel 10 6 3
+  seconds 5
+  expect turtle 3 fuel = 300
+  expect screen 3 width must be 1 to 5

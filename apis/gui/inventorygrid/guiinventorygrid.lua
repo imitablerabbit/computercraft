@@ -19,11 +19,11 @@ function GUIInventoryGrid.new(items, selected)
     object.selected = selected
     object.cursor = nil
     object.selectListeners = {}
-    object.backgroundColor = colors.black
-    object.textColor = colors.white
     object:setBorder(false)
     object.ui = guiinventorygridui.GUIInventoryGridUI.new(object)
     setmetatable(object, GUIInventoryGrid)
+    object:themed("backgroundColor", "background")
+    object:themed("textColor", "text")
     local l = function(e)
         object:clickHandler(e)
     end

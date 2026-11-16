@@ -18,12 +18,12 @@ function GUITurtleIcon.new(info)
     object.info = info or {}
     object.selectListeners = {}
     object.frame = 0 -- animation frame for the busy state
-    object.backgroundColor = colors.black
-    object.textColor = colors.white
-    object.borderColor = colors.gray
     object:setBorder(true)
     object.ui = guiturtleiconui.GUITurtleIconUI.new(object)
     setmetatable(object, GUITurtleIcon)
+    object:themed("backgroundColor", "background")
+    object:themed("textColor", "text")
+    object:themed("borderColor", "border")
     local l = function(e)
         object:clickHandler(e)
     end

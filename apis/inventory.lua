@@ -269,3 +269,98 @@ function placeTorch()
   end
   return true
 end
+
+--[[
+Helpers for jobs that carry their own materials (tunnel, rail, bridge,
+farm, lavafuel).
+--]]
+
+-- Wait until check() returns true. While waiting the `kind` alert is
+-- raised with `message` so turtle control shows what is needed. check
+-- runs again whenever items are put into the turtle, when space is
+-- pressed, and every `interval` seconds (default 10) for changes
+-- outside the turtle, such as a full chest being emptied. Like
+-- waitForFuel, the turtle carries on by itself once it has what it
+-- needs.
+function waitFor(check, kind, message, interval)
+  if check() then return end
+  alert.raise(kind, message)
+  print("(add it to the turtle, or press space to check again)")
+  interval = interval or 10
+  local timer = os.startTimer(interval)
+  while true do
+    local event, p1 = os.pullEvent()
+    local again = event == "turtle_inventory" or (event == "key" and p1 == keys.space)
+    if event == "timer" and p1 == timer then
+      again = true
+      timer = os.startTimer(interval)
+    end
+    if again and check() then break end
+  end
+  alert.clear(kind)
+end
+
+-- How many of an item the turtle carries across all its slots.
+function count(item)
+  local n = 0
+  for slot = Min, Max do
+    local data = turtle.getItemDetail(slot)
+    if data and data.name == item then n = n + data.count end
+  end
+  return n
+end
+
+-- The slots whose item pred(detail, slot) accepts.
+function findWhere(pred)
+  local found = {}
+  for slot = Min, Max do
+    local data = turtle.getItemDetail(slot)
+    if data and pred(data, slot) then table.insert(found, slot) end
+  end
+  return found
+end
+
+-- Select the first slot whose item pred accepts. Returns the slot, or
+-- nil when there is none.
+function selectWhere(pred)
+  local slot = findWhere(pred)[1]
+  if slot and turtle.select(slot) then return slot end
+  return nil
+end
+
+-- Name fragments of blocks that place but make a poor floor, wall or
+-- support: they need a block under them, break, light up, open, or
+-- are worth more than a building block.
+NotBuilding = {
+  "torch", "rail", "sapling", "propagule", "chest", "door", "sign", "ladder", "button",
+  "lever", "pressure_plate", "redstone", "carpet", "banner", "_bed$", "flower", "tulip",
+  "fence", "_wall$", "pane$", "bars$", "leaves", "vine", "seeds", "lantern", "candle",
+  "cobweb", "scaffolding", "shulker", "barrel", "furnace", "hopper", "crafting_table",
+  "tnt", ":ice$", "farmland", "cactus", "sugar_cane", "kelp", "mushroom", "spawner",
+  "beacon", "anvil", "bookshelf", "_ore$", "diamond_block", "emerald_block", "gold_block",
+  "iron_block", "netherite", "lapis_block", "coal_block", "turtle", "computer", "monitor",
+  "modem", "disk_drive", "cable",
+}
+
+-- Can this item be used as a plain building block: placeable (as far
+-- as turtleinv can tell from the name), not falling like sand and
+-- gravel, and not one of NotBuilding?
+function isBuildingBlock(name)
+  if type(name) ~= "string" then return false end
+  if tracker.isFalling(name) then return false end
+  local short = string.lower(name)
+  for _, p in ipairs(NotBuilding) do
+    if string.find(short, p) then return false end
+  end
+  return turtleinv.guessBlock(name)
+end
+
+-- Select a building block: the named item, or with item nil or "any"
+-- any building block the turtle carries (see isBuildingBlock). Returns
+-- the slot, or nil when there is none.
+function selectBuildingBlock(item)
+  if item == nil or item == "any" then
+    return selectWhere(function(d) return isBuildingBlock(d.name) end)
+  end
+  return selectWhere(function(d) return d.name == item end)
+end

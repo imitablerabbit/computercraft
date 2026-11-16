@@ -1,0 +1,30 @@
+# The quarry scenario from scenarios.js written as a scenario file, as
+# a worked example of the format. It builds exactly the same world.
+name Quarry (from file)
+description One turtle on the ground with a chest on its left.
+description Type a command in its screen, for example: quarry 4 4 3
+
+# Grass, dirt and stone with coal, iron and gravel down to bedrock:
+# corners x y, the top layer's z, depth.
+ground -6 -6 10 10 0 9
+block -1 0 1 chest
+
+turtle 3 label=Miner
+  pos 0 0 1
+  heading north
+  fuel 800
+  slots coal*20
+  peripheral left modem
+
+# A check run by `node test.mjs`: the turtle digs a 2x2x2 hole and
+# brings what it dug back to the chest.
+check quarry 2x2x2 from the file
+  run quarry 2 2 2
+  seconds 60
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 heading north
+  expect blocks 0 0 0 1 1 -1 air
+  expect chest -1 0 1 item dirt >= 4
+  expect screen 3 done: dug
+  expect no-error

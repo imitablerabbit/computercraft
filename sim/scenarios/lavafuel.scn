@@ -1,0 +1,69 @@
+# A lava lake for the lavafuel program: sources below the turtle's
+# level and at it, flowing lava that cannot be scooped, a stone pillar
+# in the way, and a depot chest behind the start with some empty
+# buckets other turtles left in it.
+name Lava fuel
+description A lava lake north of a turtle with four buckets and little fuel; a depot chest behind it holds a lava bucket, empty buckets and cobblestone.
+description Type in its screen, for example: lavafuel 3000 6 refuel behind 3
+
+ground -6 -4 6 12 0 4 ores=false pockets=false
+# the lake: sources one below the turtle's level across blocks 2 to 5
+fill -1 2 0 1 5 0 lava
+# a few sources at the turtle's own level, one of them flowing
+block 0 6 1 lava
+block -1 6 1 lava
+block 1 6 1 lava level=3
+# a stone pillar in the middle of the lake
+block 0 4 1 stone
+block 0 -1 1 chest
+items 0 -1 1 lava_bucket*1 bucket*5 cobblestone*10
+
+turtle 3 label=Scooper
+  pos 0 0 1
+  heading north
+  fuel 30
+  slots bucket*4 coal*2
+  peripheral left modem
+
+check refuel mode burns lava until the target and comes home
+  run lavafuel 3000 6 refuel behind 3
+  seconds 120
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 heading north
+  expect turtle 3 fuel >= 3000
+  expect turtle 3 item bucket = 4
+  expect turtle 3 item lava_bucket = 0
+  expect turtle 3 item coal = 2
+  expect screen 3 scooped 3, burnt 3
+  expect no-error
+
+check depot mode tops up, fills every bucket and swaps them at the chest
+  run lavafuel 1000 6 depot behind 3
+  seconds 200
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 fuel >= 1000
+  expect turtle 3 item lava_bucket = 0
+  expect turtle 3 item bucket = 5
+  expect turtle 3 item cobblestone = 1
+  expect chest 0 -1 1 item lava_bucket = 5
+  expect chest 0 -1 1 item cobblestone = 10
+  expect chest 0 -1 1 item bucket = 0
+  expect block 1 6 1 lava
+  expect screen 3 4 lava buckets put in the chest
+  expect no-error
+
+check the lake only reaches so far: a line finds nothing past the range
+  run lavafuel 3000 1 refuel behind 1
+  seconds 60
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 fuel < 100
+  expect screen 3 found no lava source within range
+
+check a target over the fuel limit is refused
+  run lavafuel 200000
+  seconds 5
+  expect turtle 3 fuel = 30
+  expect screen 3 is over the turtle's fuel limit of

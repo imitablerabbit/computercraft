@@ -18,6 +18,16 @@ Position is tracked relative to the start: x to the right, y forward,
 z along the digging direction (so z grows while going down in a
 quarry and while going up when flattening). Heading 0 faces forward,
 1 right, 2 back, 3 left.
+
+The chest can also be "depot": instead of a chest beside the start,
+the turtle empties itself at the nearest dump chest of a depot
+(apis/depot.lua), straight from wherever it is when it fills up, and
+comes back to the same block and heading to carry on. That needs nav
+in Minecraft coordinates (gps), which run checks before it digs
+anything. excavate moves the turtle itself, so before each trip it
+tells nav where the turtle is (from the start's nav position and its
+own tracking) and marks its own way out of the hole as known air, so
+nav's route leaves the hole the way excavate would.
 --]]
 
 MaxAttempts = 30 -- tries to dig or attack through one blocked move
@@ -28,8 +38,19 @@ Starts = { "left", "middle", "right" }
 DefaultStart = "left"
 
 local pos, heading, direction, firstLayer, chest
+local origin -- nav's position and heading at the start, for depot trips
+local stranded -- a depot trip did not get back, so pos is not to be trusted
 local xMin, xMax -- the footprint's columns, relative to the start
 local dug, dumps
+local cells, cellsTotal, layerEnd, layerText -- progress: cells cleared of all of them
+
+-- One more cell of the box cleared (see the progress api). Cells walked
+-- twice (getting to the corner from a middle start) do not count twice
+-- past the end of the layer.
+local function cellDone()
+  cells = math.min(cells + 1, layerEnd)
+  progress.report(cells, cellsTotal, layerText)
+end
 
 function isStart(start)
   for i, s in ipairs(Starts) do
@@ -202,11 +223,41 @@ local function returnTo(target)
   return true
 end
 
--- Empty the inventory into the chest beside the start. Items are
--- kept when there is nothing there to drop them into.
+-- Where the turtle is in nav's coordinates: right, up and forward of
+-- the start as the turtle saw it there.
+local function toWorld(rx, ry, rz)
+  return nav.relative(origin, rx, (direction == "down") and -rz or rz, ry)
+end
+
+-- Tell nav where the turtle is now, and that the way excavate itself
+-- would take out of the box (along the column to the first layer,
+-- across it to the start column, then to the start) is clear.
+local function syncNav()
+  local function air(rx, ry, rz)
+    local x, y, z = toWorld(rx, ry, rz)
+    nav.record(x, y, z, "a")
+  end
+  for z = math.min(pos.z, firstLayer), math.max(pos.z, firstLayer) do air(pos.x, pos.y, z) end
+  for x = math.min(pos.x, 0), math.max(pos.x, 0) do air(x, pos.y, firstLayer) end
+  for y = math.min(pos.y, 0), math.max(pos.y, 0) do air(0, y, firstLayer) end
+  for z = 0, firstLayer do air(0, 0, z) end
+  local x, y, z = toWorld(pos.x, pos.y, pos.z)
+  nav.setPosition(x, y, z, (origin.h + heading) % 4)
+end
+
+-- Empty the inventory into the chest beside the start, or at the
+-- depot from wherever the turtle is. Items are kept when there is
+-- nothing there to drop them into.
 local function dump()
-  face(0)
-  local ok, reason = inventory.dumpTo(chest)
+  local ok, reason
+  if chest == "depot" then
+    syncNav()
+    ok, reason = depot.unload()
+    if not ok then reason = "depot: " .. tostring(reason) end
+  else
+    face(0)
+    ok, reason = inventory.dumpTo(chest)
+  end
   if ok then
     dumps = dumps + 1
     alert.clear("chest")
@@ -217,6 +268,18 @@ local function dump()
 end
 
 local function dumpTrip()
+  if chest == "depot" then
+    print("inventory full, taking it to the depot")
+    dump()
+    -- depot.unload comes back to the same block and heading; make sure
+    local x, y, z, h = nav.position()
+    local wx, wy, wz = toWorld(pos.x, pos.y, pos.z)
+    if x ~= wx or y ~= wy or z ~= wz or h ~= (origin.h + heading) % 4 then
+      stranded = true
+      return false, "did not get back from the depot (nav says " .. x .. " " .. y .. " " .. z .. ")"
+    end
+    return true
+  end
   local target = { x = pos.x, y = pos.y, z = pos.z, h = heading }
   print("inventory full, taking it to the chest")
   if not goHome() then return false, "blocked on the way home" end
@@ -244,6 +307,7 @@ local function clearLayer(width, length)
     local corner = (pos.x - xMin <= xMax - pos.x) and xMin or xMax
     while pos.x ~= corner do
       if not stepTo(corner, pos.y) then return false, "blocked on layer " .. pos.z end
+      cellDone()
       if not inventory.anyFreeSpace() then
         local ok, err = dumpTrip()
         if not ok then return false, err end
@@ -257,6 +321,7 @@ local function clearLayer(width, length)
     local yEnd = (pos.y == 0) and (length - 1) or 0
     while pos.y ~= yEnd do
       if not stepTo(x, yEnd) then return false, "blocked on layer " .. pos.z end
+      cellDone()
       if not inventory.anyFreeSpace() then
         local ok, err = dumpTrip()
         if not ok then return false, err end
@@ -265,6 +330,7 @@ local function clearLayer(width, length)
     if x == xEnd then break end
     x = x + xStep
     if not stepTo(x, pos.y) then return false, "blocked on layer " .. pos.z end
+    cellDone()
     if not inventory.anyFreeSpace() then
       local ok, err = dumpTrip()
       if not ok then return false, err end
@@ -281,7 +347,7 @@ end
 
 -- Clear width x length x height blocks in the given direction ("down"
 -- or "up"). chestSide is one of inventory.ChestSides (default left) and
--- says where the chest is relative to the start; start is one of Starts
+-- says where the chest is relative to the start, or "depot"; start is one of Starts
 -- (default left) and says where on the near edge the turtle stands.
 -- Returns true, or false and a reason, after returning to the start and
 -- emptying into the chest either way.
@@ -292,11 +358,21 @@ function run(width, length, height, dir, chestSide, start)
   end
   if dir ~= "down" and dir ~= "up" then return false, "direction must be down or up" end
   chestSide = chestSide or inventory.DefaultChestSide
-  if not inventory.isChestSide(chestSide) then return false, "unknown chest side " .. tostring(chestSide) end
+  if chestSide ~= "depot" and not inventory.isChestSide(chestSide) then return false, "unknown chest side " .. tostring(chestSide) end
   start = start or DefaultStart
   if not isStart(start) then return false, "unknown start position " .. tostring(start) .. " (left, middle or right)" end
   local conflict = chestConflict(width, length, height, dir, chestSide, start)
   if conflict then return false, conflict end
+  if chestSide == "depot" then
+    -- Find out now, before digging, that the depot can be used.
+    local okPos, why = depot.ensurePosition()
+    if not okPos then return false, why end
+    local found, ferr = depot.find("dump")
+    if not found then return false, "depot: " .. tostring(ferr) end
+    local ox, oy, oz, oh = nav.position()
+    origin = { x = ox, y = oy, z = oz, h = oh }
+    print("emptying at the depot's " .. found.name .. " (" .. found.x .. " " .. found.y .. " " .. found.z .. ")")
+  end
   direction = dir
   chest = chestSide
   xMin, xMax = columns(width, start)
@@ -304,6 +380,8 @@ function run(width, length, height, dir, chestSide, start)
   pos = { x = 0, y = 0, z = 0 }
   heading = 0
   dug, dumps = 0, 0
+  stranded = false
+  cells, cellsTotal = 0, width * length * height
 
   local fuel = turtle.getFuelLevel()
   local needed = estimateFuel(width, length, height)
@@ -319,10 +397,16 @@ function run(width, length, height, dir, chestSide, start)
       break
     end
     print("layer " .. (layer - firstLayer + 1) .. " of " .. height)
+    layerText = "layer " .. (layer - firstLayer + 1) .. " of " .. height
+    cells = (layer - firstLayer) * width * length -- the corner it starts on
+    layerEnd = cells + width * length
+    cellDone()
     ok, err = clearLayer(width, length)
     if not ok then break end
   end
 
+  -- Away from where excavate thinks it is, the way home would be wrong.
+  if stranded then return false, err end
   if not goHome() then
     return false, (err and (err .. ", then ") or "") .. "blocked on the way home"
   end

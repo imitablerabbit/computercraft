@@ -8,6 +8,9 @@ local Registry = {
   records = {} -- Holds all of the registered computers
 }
 
+-- The file saveFile and loadFile use when not given one.
+registryFile = "registry_store.dat"
+
 --[[
 API Functions
 --]]
@@ -20,12 +23,18 @@ function new()
   return r
 end
 
--- Read the registry records from a file.
+-- Read the registry records from a file. Returns false, keeping the
+-- current records, when there is no such file or it is not a registry.
 function Registry:loadFile(file)
+  if not file then file = registryFile end
   local h = fs.open(file, "r")
+  if not h then return false end
   local d = h.readAll()
   h.close()
-  self.records = textutils.unserialize(d)
+  local records = textutils.unserialize(d or "")
+  if type(records) ~= "table" then return false end
+  self.records = records
+  return true
 end
 
 -- Save the registry records to a file.

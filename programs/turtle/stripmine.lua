@@ -41,8 +41,13 @@ end
 if args[6] then
   chest = args[6]
 end
-if not inventory.isChestSide(chest) then
-  print("chest must be one of " .. table.concat(inventory.ChestSides, ", "))
+if chest == "depot" then
+  -- Check the depot can be used before digging (see apis/depot.lua).
+  local ok, err = depot.ensurePosition()
+  if ok then ok, err = depot.find("dump") end
+  if not ok then error("depot: " .. tostring(err), 0) end
+elseif not inventory.isChestSide(chest) then
+  print("chest must be one of " .. table.concat(inventory.ChestSides, ", ") .. " or depot")
   return
 end
 

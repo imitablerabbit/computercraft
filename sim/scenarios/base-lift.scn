@@ -1,0 +1,52 @@
+# The lift dispatcher with three stops. Call buttons for Ground, Middle
+# and Top are on the computer's left, right and front; the send outputs
+# are colours of bundled cable on its back (white, orange, magenta), as
+# they would run to Create elevator contacts or train station links.
+# Top has an arrived input: a lever on top of the computer stands in
+# for the contact that is on while the car is there. The other stops
+# are reached by travel time (4 s a stop).
+name Lift dispatcher
+description A lift controller with call buttons left (Ground), right (Middle) and front (Top), send outputs on bundled cable at the back, and a lever on top as Top's arrived contact. Monitor: monitor_0.
+description The timeline sets up the stops at the prompt, calls Top at 5 s, then Ground and Middle while the car is on its way; the lever says it reached Top at 12 s. With look it serves Middle before Ground.
+
+ground -6 -6 6 6 0 3 ores=false pockets=false
+block -1 0 1 button
+block 1 0 1 button
+block 0 1 1 button
+block 0 0 2 lever
+fill 0 -1 0 0 -3 0 bundled_cable
+
+computer 1 Lift
+  pos 0 0 1
+  heading north
+  peripheral monitor_0 monitor size=3x2 at=-2,3,1
+  autorun lift monitor_0
+
+at 1 type 1 stop Ground left back:white
+at 1.5 type 1 unstop Top
+at 2 type 1 stop Middle right back:orange
+at 2.5 type 1 stop Top front back:magenta top
+at 5 press 0 1 1
+at 6 press -1 0 1
+at 7 press 1 0 1
+at 12 toggle 0 0 2
+
+check calls are queued and Middle is served before Ground
+  seconds 20
+  expect log stop 3 Top: call front, send back:magenta, arrived top
+  expect log sent to Top from Ground (back:magenta pulse)
+  expect log call at Ground (queue: Ground)
+  expect log call at Middle (queue: Ground, Middle)
+  expect log at Top
+  expect log sent to Middle from Top
+  expect not log sent to Ground
+  expect screen 1 Queue: Ground
+  expect no-error
+
+check the car ends up back at Ground with the queue empty
+  seconds 32
+  expect log sent to Ground from Middle
+  expect log at Ground (by travel time)
+  expect log waiting at Ground
+  expect screen 1 Queue: empty
+  expect no-error
