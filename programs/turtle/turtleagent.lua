@@ -7,7 +7,22 @@ also reports its inventory and selects, refuels from or drops a slot
 on request so the controller can look through the turtle's items, and
 passes on alerts (out of fuel, no chest, ...) raised with the alert
 api so the controller can show that the turtle needs a hand, and lets
-the controller see and edit the items it never burns as fuel.
+the controller see and edit the items it never burns as fuel. How far
+along a job is (the progress api) goes out with the status.
+
+The broadcast status and the alerts also go out on the bus (topics
+"turtle.status" and "alert", see apis/bus.lua) for the pocket pager
+and anything else listening, and a listener that asks with
+"alert.sync" gets them again straight away. The turtlectl messages are
+unchanged.
+
+The status also carries where the turtle is (nav's position and
+heading) once nav has tracked one, for the dispatcher and turtle
+control's map. With a wireless modem and gps in range the agent puts
+nav in Minecraft coordinates when it starts (the first time nav moves
+one block and back to learn the heading; later gps just corrects the
+position), and corrects the position after each job, since most jobs
+move the turtle without nav.
 
 Usage: turtleagent [heartbeatSeconds]
 --]]
@@ -26,13 +41,48 @@ local currentJob = nil
 local message = nil
 local pending = nil -- job table queued by the listener for the worker
 local alerts = {}   -- kind -> message of help currently needed
+local jobProgress = nil -- the job's latest { done, total, text } (progress api)
+local progressSent = 0 -- os.clock() of the last status sent for progress
+local progressEvery = 2 -- seconds between status messages for progress alone
+
+-- Publish on the bus, never letting a bus problem stop the agent.
+local function publish(topic, payload)
+  if bus and bus.publish then pcall(bus.publish, topic, payload) end
+end
+
+-- Tell the bus that an alert was raised (active) or is over.
+local function publishAlert(kind, text, active)
+  if bus and bus.newAlert then publish("alert", bus.newAlert(kind, text, active)) end
+end
+
+-- nav's position, when nav has ever tracked one (see apis/nav.lua).
+local function navStatus()
+  if not (nav and nav.status and fs.exists(nav.StateFile)) then return nil end
+  local ok, s = pcall(nav.status)
+  return ok and s or nil
+end
+
+-- Put nav in Minecraft coordinates with gps, or correct it after a job.
+-- Nothing happens (and nothing moves) without a wireless modem and gps.
+local function locate(atBoot)
+  if not (nav and nav.calibrate) then return end
+  if not peripheral.find("modem", function(_, m) return m.isWireless and m.isWireless() end) then return end
+  local s = navStatus()
+  if s and s.calibrated and s.headingSure then
+    pcall(nav.locate)
+  elseif atBoot then
+    local ok, done, x, y, z, h = pcall(nav.calibrate)
+    if ok and done then print("gps: at " .. x .. " " .. y .. " " .. z .. " facing " .. nav.headingName(h)) end
+  end
+end
 
 local function sendStatus(to)
-  local status = turtlectl.newStatus(state, currentJob, message, alerts)
+  local status = turtlectl.newStatus(state, currentJob, message, alerts, jobProgress, navStatus())
   if to then
     rednet.send(to, status, turtlectl.PROTOCOL)
   else
     rednet.broadcast(status, turtlectl.PROTOCOL)
+    publish("turtle.status", status)
   end
 end
 
@@ -203,16 +253,30 @@ local function listener()
   end
 end
 
--- Pass alerts raised by the running program on to the controllers.
+-- Pass alerts raised by the running program on to the controllers,
+-- and keep the latest progress it reported. Progress goes out with the
+-- status, at most every progressEvery seconds so a job reporting every
+-- block does not flood the network.
 local function alertLoop()
   while true do
-    local event, kind, text = os.pullEvent()
+    local event, kind, text, extra = os.pullEvent()
     if event == "turtle_alert" then
       alerts[kind] = text
       turtlectl.broadcastAlert(kind, text, true)
+      publishAlert(kind, text, true)
     elseif event == "turtle_alert_clear" and alerts[kind] then
       alerts[kind] = nil
       turtlectl.broadcastAlert(kind, nil, false)
+      publishAlert(kind, nil, false)
+    elseif event == "turtle_progress" and state == "busy" then
+      jobProgress = { done = kind, total = text, text = extra }
+      if os.clock() - progressSent >= progressEvery then
+        progressSent = os.clock()
+        sendStatus()
+      end
+    elseif event == "turtle_progress_clear" and jobProgress then
+      jobProgress = nil
+      sendStatus()
     end
   end
 end
@@ -221,8 +285,24 @@ end
 local function clearAlerts()
   for kind in pairs(alerts) do
     turtlectl.broadcastAlert(kind, nil, false)
+    publishAlert(kind, nil, false)
   end
   alerts = {}
+end
+
+-- Answer a listener on the bus that has just started (the pager) with
+-- the status and every active alert. receive runs in its own function
+-- under parallel, so the other loops still see every event.
+local function busLoop()
+  if not (bus and bus.subscribe) then return end -- an install from before the bus
+  bus.subscribe("alert.sync")
+  while true do
+    local topic = bus.receive()
+    if topic == "alert.sync" then
+      sendStatus()
+      for kind, text in pairs(alerts) do publishAlert(kind, text, true) end
+    end
+  end
 end
 
 -- Broadcast the status regularly so controllers notice us.
@@ -265,10 +345,13 @@ local function worker()
       print("Job " .. task.job.id .. " failed: " .. tostring(err))
     end
     currentJob = nil
+    jobProgress = nil
     clearAlerts()
+    locate(false)
     sendStatus()
   end
 end
 
+locate(true)
 print("Turtle agent " .. os.getComputerID() .. " listening on " .. turtlectl.PROTOCOL)
-parallel.waitForAll(listener, heartbeatLoop, worker, alertLoop)
+parallel.waitForAll(listener, heartbeatLoop, worker, alertLoop, busLoop)

@@ -70,7 +70,7 @@ export class UI {
     // Block tool in the 3D view
     const blockType = this.$('block-type');
     for (const type of Object.keys(BLOCKS)) {
-      if (type === 'computer' || type === 'monitor') continue; // devices come from their own tools
+      if (['computer', 'computer_normal', 'monitor', 'wireless_modem'].includes(type)) continue; // devices come from their own tools
       const o = document.createElement('option');
       o.value = type; o.textContent = type.replace(/_/g, ' ');
       blockType.appendChild(o);
@@ -84,6 +84,7 @@ export class UI {
       computer: 'click a block face to put a computer against it (it has a modem on top)',
       monitor: 'click a block face to stand the monitor against it; touching a computer attaches it to that computer, otherwise it joins the one chosen in On',
       remove: 'click a block, turtle, computer or monitor to take it away',
+      use: 'click a lever to flip it, a button to press it or a pressure plate to step on it',
     };
     const runOptions = {
       turtle: ['', 'turtleagent', 'inventorygui'],
@@ -109,6 +110,12 @@ export class UI {
       }
       if (kind === 'monitor') this.fillComputerSelect();
     };
+    if (![...this.$('tool').options].some((o) => o.value === 'use')) {
+      const o = document.createElement('option');
+      o.value = 'use'; o.textContent = 'uses a lever, button or plate';
+      const place = [...this.$('tool').options].find((x) => x.value === 'place');
+      this.$('tool').insertBefore(o, place ? place.nextSibling : null);
+    }
     this.$('tool').addEventListener('change', (e) => {
       this.view.tool = e.target.value;
       this.$('world-hint').textContent = hints[e.target.value];
@@ -174,6 +181,10 @@ export class UI {
   edit(e) {
     const world = this.sim.world;
     const fail = (text) => this.sim.log({ computer: 'world', text, level: 'error' });
+    if (e.tool === 'use') {
+      if (!world.use(e.x, e.y, e.z)) fail(`nothing to use at ${e.x},${e.y},${e.z}`);
+      return;
+    }
     if (e.tool === 'remove') {
       if (e.turtleId != null) { this.sim.removeComputer(e.turtleId); this.afterDevicesChanged(); return; }
       const mon = this.sim.monitorAt(e.x, e.y, e.z);
@@ -422,6 +433,9 @@ export class UI {
   }
 
   update(now) {
+    // a turtle placed or dug a computer: new tabs
+    if (this.devicesSeen !== undefined && this.devicesSeen !== this.sim.devicesVersion) this.afterDevicesChanged();
+    this.devicesSeen = this.sim.devicesVersion;
     this.renderScreen(now);
     this.renderTurtle();
     this.renderLog();

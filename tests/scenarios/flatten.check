@@ -1,0 +1,14 @@
+# Flatten on the built-in flatten scenario: turtle 4 at (0, 0, 1) with a
+# 5x4x3 hill of dirt in front of and around it and a chest on its left.
+
+check flatten the 5x4x3 hill
+  scenario flatten
+  run flatten 5 4 3
+  seconds 200
+  until done:
+  expect turtle 4 pos 0 0 1
+  expect turtle 4 heading north
+  expect blocks 0 0 1 4 3 3 air
+  expect blocks 0 0 0 4 3 0 grass
+  expect chest -1 0 1 item dirt = 59
+  expect no-error

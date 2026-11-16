@@ -1,0 +1,42 @@
+# A gap for the bridge program: grass on both sides of an eight block
+# chasm with a lava pool at the bottom, and water lying in the near
+# part of the crossing.
+name Bridge
+description Two grass banks with an eight block wide chasm between them; a turtle with planks, cobblestone and coal on the near bank.
+description Type in its screen, for example: bridge 20 walls 2
+
+ground -5 -3 5 4 0 4 ores=false pockets=false
+ground -5 13 5 20 0 4 ores=false pockets=false
+fill -5 5 -6 5 12 -6 lava
+# a pool of water at the near edge, level with the banks
+fill -1 5 0 1 5 0 water
+
+turtle 3 label=Builder
+  pos 0 0 1
+  heading north
+  fuel 100
+  slots cobblestone*20 oak_planks*10 coal*2
+  peripheral left modem
+
+check across the chasm with walls, stopping on the far bank
+  run bridge 30 walls 2
+  seconds 120
+  until done:
+  expect turtle 3 pos 0 14 1
+  expect blocks 0 5 0 0 12 0 air = 0
+  expect block 0 5 0 cobblestone
+  expect blocks -1 5 1 -1 12 1 air = 0
+  expect blocks 1 5 1 1 12 1 air = 0
+  expect turtle 3 item coal = 2
+  expect screen 3 reached solid ground
+  expect screen 3 done: 14 long, 8 floor blocks
+  expect no-error
+
+check only planks, it runs out and waits for more
+  run bridge 30 walls 2 minecraft:oak_planks
+  seconds 60
+  expect turtle 3 pos 0 8 1
+  expect block 0 8 0 planks
+  expect turtle 3 item cobblestone = 20
+  expect screen 3 out of minecraft:oak_planks after 8 blocks
+  expect not screen 3 done:

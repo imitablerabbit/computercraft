@@ -1,0 +1,37 @@
+# Quarry checks on the built-in quarry scenario: turtle 3 at (0, 0, 1)
+# facing north with 800 fuel and 20 coal, a chest on its left at
+# (-1, 0, 1), grass at z 0 over dirt, stone and ores.
+
+check a 3x3x2 hole from the left
+  scenario quarry
+  run quarry 3 3 2
+  seconds 120
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect turtle 3 heading north
+  expect turtle 3 fuel < 800
+  expect blocks 0 0 0 2 2 -1 air
+  expect block 3 0 0 grass
+  expect chest -1 0 1 item dirt = 18
+  expect screen 3 done: dug 18 blocks
+  expect no-error
+
+check a 3x3x4 hole from the middle reaches the stone
+  scenario quarry
+  run quarry 3 3 4 left middle
+  seconds 200
+  until done:
+  expect turtle 3 pos 0 0 1
+  expect blocks -1 0 0 1 2 -3 air
+  expect block 2 0 0 grass
+  expect chest -1 0 1 item cobblestone >= 1
+  expect chest -1 0 1 item dirt >= 18
+  expect no-error
+
+check a chest side inside the hole is refused
+  scenario quarry
+  run quarry 3 3 2 below
+  seconds 5
+  expect turtle 3 fuel = 800
+  expect block 0 0 0 grass
+  expect screen 3 the chest below is inside the area to clear

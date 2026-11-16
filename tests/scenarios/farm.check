@@ -1,0 +1,21 @@
+# Farm checks on the built-in farm scenario: a 9x9 field of wheat,
+# carrots and potatoes at mixed ages around a water block at (0, 0, 0),
+# turtle 3 over the corner crop at (-4, -4, 2) facing north with seeds,
+# carrots, potatoes and coal, and a chest behind it at (-4, -5, 2).
+
+check two passes over the 9x9 field, the second after everything ripened
+  scenario farm
+  run farm 9 9 wheat 40 2
+  seconds 300
+  until done:
+  expect turtle 3 pos -4 -4 2
+  expect turtle 3 heading north
+  expect blocks -4 -4 1 4 4 1 air = 1
+  expect block 0 0 1 air
+  expect chest -4 -5 2 item wheat >= 20
+  expect chest -4 -5 2 item carrot >= 20
+  expect chest -4 -5 2 item potato >= 20
+  expect turtle 3 item wheat_seeds >= 1
+  expect screen 3 pass 2: harvested 80, planted 80, 1 not farmland
+  expect screen 3 done: 2 passes
+  expect no-error

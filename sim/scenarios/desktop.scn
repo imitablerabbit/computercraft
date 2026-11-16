@@ -1,0 +1,39 @@
+# The desktop on an advanced computer and an advanced turtle. In the
+# game startup.lua opens it; the simulator boots each computer to its
+# scenario command instead, which here is desktop. The timeline opens
+# Where on the turtle, goes back, and opens the Files app on the
+# computer from the applications menu.
+name Desktop
+description An advanced computer and an advanced turtle showing the desktop, the applications menu each computer starts in. Click an app to open it; the x at the top right leaves for the shell.
+
+ground -6 -6 6 6 0 3 ores=false pockets=false
+
+computer 1 Base
+  pos 0 0 1
+  autorun desktop
+
+turtle 2 Miner
+  pos 2 0 1
+  autorun desktop
+
+# Run... on the keyboard: alert prints its usage and waits for a key
+at 4 touch 1 Run...
+at 5 touch 1 a
+at 5.3 touch 1 l
+at 5.6 touch 1 e
+at 5.9 touch 1 r
+at 6.2 touch 1 t
+at 6.6 touch 1 Done
+at 9 touch 1 10 10
+# choose an app to start with the computer
+at 11 touch 1 "Boot apps"
+at 12 touch 1 Storage
+at 13 touch 1 Done
+
+check the menu opens apps, comes back, and picks apps to start at boot
+  seconds 15
+  expect screen 1 Storage
+  expect screen 1 yes
+  expect screen 1 Touch an app to open it.
+  expect screen 2 Turtle control
+  expect no-error

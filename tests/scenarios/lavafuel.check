@@ -1,0 +1,15 @@
+# Lavafuel on the built-in lava scenario: turtle 4 at (0, 1, 1) facing
+# north with 16 buckets and 20 fuel, a 3x3 pool of lava sources in
+# front of it one level down, x -1 to 1, y 2 to 4.
+
+check the whole pool when the target is out of reach
+  scenario lava
+  run lavafuel 15000 3 refuel behind 3
+  seconds 120
+  until done:
+  expect turtle 4 pos 0 1 1
+  expect turtle 4 fuel >= 9000
+  expect blocks -1 2 0 1 4 0 air = 9
+  expect turtle 4 item bucket = 16
+  expect screen 4 scooped 9, burnt 9
+  expect no-error

@@ -8,7 +8,8 @@ left) or middle (width spread both ways). When its inventory fills up,
 and when it finishes, it comes back to the start and empties itself
 into a chest next to where it started: left (the default), right,
 behind or below (above is inside the area); a side inside the area is
-refused.
+refused. With "depot" it empties at a depot's nearest dump chest
+instead, straight from where it is (see apis/depot.lua; needs gps).
 
 Usage: flatten [width] [length] [height] [chest] [start]
 --]]

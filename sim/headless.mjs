@@ -5,7 +5,9 @@
 //
 // Arguments: scenario key, command to run on the first turtle (optional,
 // "" for none), simulated seconds to run (default 60). Prints every
-// screen, the turtles and chests, and the log.
+// screen, the turtles and chests, and the log. The key is a built-in
+// scenario, a scenario file's name in sim/scenarios (quarry-file for
+// sim/scenarios/quarry-file.scn) or the path to a .scn file.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,6 +16,7 @@ import fengari from 'fengari';
 import { Simulation } from './js/simulation.js';
 import { SCENARIOS } from './js/scenarios.js';
 import { HEADING_NAMES } from './js/world.js';
+import { parseScenario } from './js/scenariofile.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
@@ -33,9 +36,22 @@ function loadFiles() {
 }
 
 const [key = 'quarry', run, secondsArg] = process.argv.slice(2);
-const scenario = SCENARIOS[key];
+// A built-in scenario, else sim/scenarios/<key>.scn, else a .scn path.
+function findScenario(k) {
+  if (SCENARIOS[k]) return SCENARIOS[k];
+  const file = [path.join(here, 'scenarios', `${k}.scn`), path.resolve(k)].find((f) => f.endsWith('.scn') && fs.existsSync(f));
+  if (!file) return null;
+  try {
+    return parseScenario(fs.readFileSync(file, 'utf8'), { key: path.basename(file, '.scn'), file: path.relative(process.cwd(), file) });
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
+}
+const scenario = findScenario(key);
 if (!scenario) {
-  console.error(`unknown scenario ${key}; one of: ${Object.keys(SCENARIOS).join(', ')}`);
+  const files = fs.existsSync(path.join(here, 'scenarios')) ? fs.readdirSync(path.join(here, 'scenarios')).filter((f) => f.endsWith('.scn')).map((f) => f.slice(0, -4)) : [];
+  console.error(`unknown scenario ${key}; one of: ${[...Object.keys(SCENARIOS), ...files].join(', ')}, or a .scn file`);
   process.exit(1);
 }
 const seconds = parseFloat(secondsArg || '60');

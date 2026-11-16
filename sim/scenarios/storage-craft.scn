@@ -1,0 +1,73 @@
+# The storage program crafting with a crafty turtle. Three storage
+# chests (minecraft:chest_0 to chest_2), an input chest (chest_3), an
+# output chest (chest_4) and the crafting chest (chest_5), all on the
+# storage cable. The crafty turtle stands beside the crafting chest,
+# facing it, and runs crafter; it and the storage computer talk over
+# wireless modems. The timeline makes a recipe on the Recipe tab with
+# the on-screen keyboard and crafts with it.
+name Storage crafting
+description A storage computer with a crafting chest (minecraft:chest_5) and a crafty turtle beside it running crafter, both with wireless modems. Storage holds planks, logs, coal and cobblestone.
+description The timeline picks the crafting chest at 2 s, makes a recipe of two oak planks on the Recipe tab (squares 2 and 5, found by typing on the keyboard), saves it, crafts 16 sticks from the Craft tab and then 8 more with the craft command.
+
+ground -8 -8 8 8 0 3 ores=false pockets=false
+
+block -2 -3 1 chest network=storage
+items -2 -3 1 oak_planks*64 oak_planks*30 coal*20
+block -1 -3 1 chest network=storage
+items -1 -3 1 oak_log*20 cobblestone*64
+block 0 -3 1 chest network=storage
+
+# input (chest_3), output (chest_4) and the crafting chest (chest_5)
+block -2 2 1 chest network=storage
+block 2 2 1 chest network=storage
+block 2 -3 1 chest network=storage
+
+fill 0 -1 1 0 -2 1 cable
+fill -2 -2 1 2 -2 1 cable
+
+computer 1 Storage
+  pos 0 0 1
+  heading north
+  peripheral back modem wired=true network=storage
+  peripheral top modem
+  peripheral right monitor size=3x2 at=1,0,1
+  autorun storage right minecraft:chest_3 minecraft:chest_4
+
+turtle 6 Crafty
+  pos 3 -3 1
+  heading west
+  equip left crafting_table
+  peripheral right modem
+  autorun crafter
+
+at 2 type 1 craftchest minecraft:chest_5
+at 4 touch 1 Recipe
+# square 2: "oak pl" finds Oak Planks
+at 5 touch 1 17 8
+at 6 touch 1 o
+at 6.3 touch 1 a
+at 6.6 touch 1 k
+at 6.9 touch 1 Space
+at 7.2 touch 1 p
+at 7.5 touch 1 l
+at 8 touch 1 Done
+# square 5: "plank"
+at 9 touch 1 17 14
+at 10 touch 1 p
+at 10.3 touch 1 l
+at 10.6 touch 1 a
+at 10.9 touch 1 n
+at 11.2 touch 1 k
+at 11.6 touch 1 Done
+at 12 touch 1 Save
+at 13 touch 1 16
+at 30 type 1 craft stick 8
+
+check make a stick recipe on the keyboard and craft 16, then 8 more
+  seconds 45
+  expect log Crafted 16 Stick.
+  expect log Crafted 8 Stick.
+  expect chest 2 -3 1 items = 0
+  expect turtle 6 items = 0
+  expect screen 6 Made 4 Stick
+  expect no-error

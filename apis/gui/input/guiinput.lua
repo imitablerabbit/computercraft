@@ -7,14 +7,16 @@ function GUIInput.new(text)
     object.buttonListeners = {}
     
     object.cursorPos = 0
-    object.cursorTextColor = colors.black
-    object.cursorBackgroundColor = colors.white
     
     object.model = guiinputmodel.GUIInputModel.new()
-    object.activeColor = colors.lightGray
     object:setBorder(true)
     object.ui = guiinputui.GUIInputUI.new(object, object.model)
     setmetatable(object, GUIInput)
+    object:themed("backgroundColor", "field", colors.white)
+    object:themed("textColor", "fieldText", colors.black)
+    object:themed("activeColor", "highlight", colors.lightGray)
+    object:themed("cursorTextColor", "background", colors.black)
+    object:themed("cursorBackgroundColor", "text", colors.white)
     local kl = function(e)
         object:keyPressHandler(e)
     end
@@ -27,7 +29,52 @@ function GUIInput.new(text)
         object:mouseClickHandler(e)
     end
     object:addMouseClickListener(ml)
+    -- A monitor has no keyboard: touching the input opens an on-screen
+    -- one (see setKeyboard).
+    object.keyboard = "touch"
+    object.keyboardTitle = nil
+    object.keyboardHint = nil
+    object:addMonitorTouchListener(function(e) object:touchHandler(e) end)
     return object
+end
+
+-- When the on-screen keyboard (guikeyboard) opens: "touch" (the
+-- default) when the input is touched on a monitor, "always" on a mouse
+-- click too, false never. title is the keyboard's title, hint a
+-- function(text) whose answer is shown under the text as it is typed.
+function GUIInput:setKeyboard(mode, title, hint)
+    if mode == true then mode = "touch" end
+    self.keyboard = mode or false
+    if title ~= nil then self.keyboardTitle = title end
+    if hint ~= nil then self.keyboardHint = hint end
+end
+
+function GUIInput:within(e)
+    return e.x >= self.ax and e.x < self.ax + self.w and
+           e.y >= self.ay and e.y < self.ay + self.h
+end
+
+function GUIInput:touchHandler(e)
+    if self.keyboard and self.visible ~= false and self.started and self:within(e) then
+        self:openKeyboard(e)
+    end
+end
+
+-- Edit the text on an on-screen keyboard; Done puts it in the input and
+-- tells the done listeners, as enter does.
+function GUIInput:openKeyboard(openingEvent)
+    if not guikeyboard then return nil end
+    if self.model:isActive() then
+        self.model:setActive(false)
+        self:repaint()
+    end
+    return guikeyboard.open(self, self.keyboardTitle or "Type", self.text, function(text)
+        self:setText(text)
+        self.cursorPos = text:len()
+        for i, l in pairs(self.buttonListeners) do
+            l(guievent.GUIEvent.new("input_done"))
+        end
+    end, { hint = self.keyboardHint, openingEvent = openingEvent })
 end
 
 -- Check if the mouse click is within the bounds
@@ -35,8 +82,11 @@ end
 -- clicked within bounds then make the input active
 -- otherwise we should just disable the model.
 function GUIInput:mouseClickHandler(e)
-    if e.x >= self.ax and e.x < self.ax + self.w and
-       e.y >= self.ay and e.y < self.ay + self.h then
+    if self:within(e) then
+        if self.keyboard == "always" and self.visible ~= false and self.started then
+            self:openKeyboard(e)
+            return
+        end
         if not self.model:isActive() then
             self.model:setActive(true)
             self.cursorPos = self.text:len() -- start typing at the end

@@ -61,6 +61,19 @@ function mineOnce()
   return true
 end
 
+-- Progress (see the progress api): a single line reports blocks of its
+-- length; inside stripMine it reports blocks of every line together.
+local strip = nil -- { line, lines } while stripMine runs
+
+local function lineProgress(distance, length)
+  if strip then
+    progress.report((strip.line - 1) * length + distance, strip.lines * length,
+      "line " .. strip.line .. " of " .. strip.lines)
+  else
+    progress.report(distance, length, "mined " .. distance .. " of " .. length)
+  end
+end
+
 -- Mine a single line in front of the turtle. This assumes
 -- that the turtle already has fuel and that there are torches
 -- in the inventory.
@@ -75,6 +88,7 @@ function mineLine(length, torch, tDistance)
     if mineOnce() then
       distance = distance + 1
       lastTorch = lastTorch + 1
+      lineProgress(distance, length)
     else
       break
     end
@@ -112,12 +126,16 @@ function newMine(sep)
 end
 
 -- Start stripmining multiple lines. Items go into the chest on
--- chestSide of the start (see inventory.ChestSides, default left).
+-- chestSide of the start (see inventory.ChestSides, default left), or
+-- with "depot" to the depot's nearest dump chest (apis/depot.lua),
+-- from the start block each time.
 function stripMine(n, sep, length, torch, tDistance, chestSide)
   if not n then n = 5 end
   if not chestSide then chestSide = inventory.DefaultChestSide end
   local dx = 0
   for i = 1, n do
+    strip = { line = i, lines = n }
+    lineProgress(0, length or 64)
     local actualSep = newMine(sep)
     dx = dx + actualSep
     if actualSep ~= sep then
@@ -127,10 +145,18 @@ function stripMine(n, sep, length, torch, tDistance, chestSide)
     move.back(dy)
     move.left(dx) -- Go back to chest
     local torchSlots = inventory.find("minecraft:torch")
-    local ok, reason = inventory.dumpTo(chestSide, torchSlots) -- torches are kept
+    local ok, reason
+    if chestSide == "depot" then
+      -- The turtle is back on its starting block facing the way it
+      -- started, which is where nav still thinks it is.
+      ok, reason = depot.unload({ keep = { "minecraft:torch" } })
+    else
+      ok, reason = inventory.dumpTo(chestSide, torchSlots) -- torches are kept
+    end
     if not ok then print(reason .. ", keeping the items") end
     move.right(dx)
   end
+  strip = nil
   move.left(dx)
 end
 

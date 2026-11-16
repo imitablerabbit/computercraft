@@ -1,0 +1,17 @@
+# The reconstruct scenario: turtle 5 with a chest of 152 netherrack
+# behind it at (0, -1, 1), an empty chest on its right at (1, 0, 1) and
+# redstone on its left leading to an atomic reconstructor.
+
+check one stack becomes quartz and gold
+  scenario reconstruct
+  run reconstruct behind right left 1
+  seconds 200
+  until done: 1 stacks
+  expect turtle 5 pos 0 0 1
+  expect turtle 5 items = 0
+  expect chest 0 -1 1 item netherrack = 88
+  expect chest 1 0 1 items = 64
+  expect chest 1 0 1 item quartz >= 1
+  expect chest 1 0 1 item netherrack = 0
+  expect screen 5 done: 1 stacks, 64 blocks, 64 changed
+  expect no-error

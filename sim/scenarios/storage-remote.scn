@@ -1,0 +1,61 @@
+# Two pocket computers using the base storage from afar. The storage
+# computer has a wired modem on the chests and a wireless modem on top.
+# Chests minecraft:chest_5 and chest_6 stand in for two players' ender
+# chests: each pocket runs "storage remote" and picks its own, gets
+# items delivered there, and deposits what is in it.
+name Storage remote
+description A storage computer with a wireless modem, and two pocket computers (10 Alice, 11 Bob) running storage remote. Chests 5 and 6 (minecraft:chest_5, chest_6) stand in for ender chests; Alice's holds 5 diamonds.
+description The timeline has Alice pick chest 5, Bob try chest 5 too (it is taken) and pick chest 6, Alice deposit her diamonds, then Alice get 10 coal and Bob 5 torches, each into their own chest.
+
+ground -8 -8 8 8 0 3 ores=false pockets=false
+
+block -2 -3 1 chest network=storage
+items -2 -3 1 coal*50 cobblestone*64
+block -1 -3 1 chest network=storage
+items -1 -3 1 torch*64 oak_planks*40
+block 0 -3 1 chest network=storage
+
+# input (chest_3), output (chest_4), and the two "ender chests"
+block -2 2 1 chest network=storage
+block 2 2 1 chest network=storage
+block 2 -3 1 chest network=storage
+items 2 -3 1 diamond*5
+block 3 -3 1 chest network=storage
+
+fill 0 -1 1 0 -2 1 cable
+fill -2 -2 1 3 -2 1 cable
+
+computer 1 Storage
+  pos 0 0 1
+  heading north
+  peripheral back modem wired=true network=storage
+  peripheral top modem
+  peripheral right monitor size=3x2 at=1,0,1
+  autorun storage right minecraft:chest_3 minecraft:chest_4
+
+pocket 10 label=Alice
+  peripheral back modem
+  autorun storage remote
+
+pocket 11 label=Bob
+  peripheral back modem
+  autorun storage remote
+
+at 4 type 10 chest minecraft:chest_5
+at 5 type 11 chest minecraft:chest_5
+at 7 type 11 chest minecraft:chest_6
+at 9 type 10 deposit
+at 13 type 10 get coal 10
+at 15 type 11 get torch 5
+
+check two remotes, each with its own chest
+  seconds 20
+  expect log Remote Alice uses minecraft:chest_5
+  expect log Remote Bob uses minecraft:chest_6
+  expect log Remote 10 deposited 5 items
+  expect chest 2 -3 1 item diamond = 0
+  expect chest 2 -3 1 item coal = 10
+  expect chest 3 -3 1 item torch = 5
+  expect chest 2 2 1 items = 0
+  expect screen 11 Sent 5 Torch
+  expect no-error

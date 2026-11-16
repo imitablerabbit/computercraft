@@ -8,6 +8,42 @@ import { BLOCKS } from './world.js';
 
 const TURTLE_COLORS = ['#e8c547', '#5fb0e8', '#8ad15f', '#e87f5f', '#c08ae8', '#5fe0d0'];
 
+// How a block is drawn: its size in world axes (east, north, up), how
+// far its centre sits below the cell's, and its colour, which for some
+// blocks follows their state (a lit lamp, a pressed button, a crop's
+// age, powered wire).
+function blockShape(type, meta, def) {
+  const m = meta || {};
+  const box = (sx, sy, sz, color) => ({ sx, sy, sz, dz: -(1 - sz) / 2, color: color || def.color });
+  switch (type) {
+    case 'torch': return { sx: 0.2, sy: 0.2, sz: 0.6, dz: -0.2, color: def.color };
+    case 'wheat': case 'carrots': case 'potatoes': {
+      const age = m.age || 0;
+      const young = new THREE.Color('#4f9a2c');
+      const ripe = new THREE.Color(def.color);
+      return box(0.7, 0.7, 0.2 + age * 0.09, '#' + young.lerp(ripe, age / 7).getHexString());
+    }
+    case 'farmland': return box(1, 1, 0.94);
+    case 'rail': return box(0.9, 0.9, 0.08);
+    case 'redstone_wire': return box(0.9, 0.9, 0.06, m.power ? '#ff3b22' : '#7a1a10');
+    case 'lever': return box(0.25, 0.25, 0.4, m.on ? '#e0c060' : def.color);
+    case 'button': return box(0.3, 0.3, 0.15, m.on ? '#e06030' : def.color);
+    case 'pressure_plate': return box(0.85, 0.85, m.on ? 0.04 : 0.08, m.on ? '#7a7a7a' : def.color);
+    case 'daylight_sensor': return box(1, 1, 0.4);
+    case 'redstone_lamp': return box(1, 1, 1, m.lit ? '#ffd56b' : def.color);
+    case 'door': {
+      // a slab across the doorway when shut, along the side when open
+      const across = (m.facing ?? 0) % 2 === 0;
+      const thin = across !== !!m.open;
+      return { sx: thin ? 1 : 0.2, sy: thin ? 0.2 : 1, sz: 1, dz: 0, color: m.open ? '#9fb0c0' : def.color };
+    }
+    case 'wireless_modem': return box(0.5, 0.5, 0.5);
+    case 'cable': return { sx: 0.35, sy: 0.35, sz: 0.35, dz: 0, color: def.color };
+    case 'bundled_cable': return box(0.45, 0.45, 0.25);
+    default: return { sx: 1, sy: 1, sz: 1, dz: 0, color: def.color };
+  }
+}
+
 function labelSprite(text) {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 64;
@@ -50,11 +86,11 @@ export class View3D {
     this.blockMesh = null;
     this.blockKeys = [];
     this.blockVersion = -1;
-    this.tool = 'select';      // select | place | remove | turtle | computer | monitor
+    this.tool = 'select';      // select | place | use | remove | turtle | computer | monitor
     this.placeType = 'stone';
     // onEdit({ tool, x, y, z, normal, turtleId }): x, y, z is the clicked
-    // block (remove) or the free cell in front of the clicked face (the
-    // others); normal is the face direction in world axes.
+    // block (remove, use) or the free cell in front of the clicked face
+    // (the others); normal is the face direction in world axes.
     this.onEdit = null;
     this.turtleMeshes = new Map();
     this.selectedTurtle = null;
@@ -102,17 +138,19 @@ export class View3D {
     const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, count));
     const m = new THREE.Matrix4();
     const color = new THREE.Color();
+    const quaternion = new THREE.Quaternion();
     let i = 0;
     this.blockKeys = [];
     for (const [k, type] of world.blocks) {
       this.blockKeys[i] = k;
       const [x, y, z] = k.split(',').map(Number);
       const def = BLOCKS[type] || { color: '#ff00ff' };
-      if (type === 'torch') m.compose(this.toScene(x, y, z - 0.2), new THREE.Quaternion(), new THREE.Vector3(0.2, 0.6, 0.2));
-      else m.setPosition(this.toScene(x, y, z));
+      const shape = blockShape(type, world.meta.get(k), def);
+      // scene axes: x east, y up, z south
+      m.compose(this.toScene(x, y, z + shape.dz), quaternion, new THREE.Vector3(shape.sx, shape.sz, shape.sy));
       mesh.setMatrixAt(i, m);
       // a little variation so neighbouring blocks are distinguishable
-      color.set(def.color);
+      color.set(shape.color);
       const h = ((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) & 0xff;
       color.offsetHSL(0, 0, (h / 255 - 0.5) * 0.06);
       mesh.setColorAt(i, color);
@@ -178,6 +216,7 @@ export class View3D {
     }
     if (!hit || hit.instanceId === undefined) return;
     const [x, y, z] = this.blockKeys[hit.instanceId].split(',').map(Number);
+    if (this.tool === 'use') { this.onEdit({ tool: 'use', x, y, z }); return; }
     // the clicked face's normal, back in world axes (scene y is up,
     // scene z points south)
     const n = hit.face.normal;

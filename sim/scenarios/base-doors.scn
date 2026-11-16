@@ -1,0 +1,56 @@
+# The doors program driving a lamp on a schedule, an iron door from a
+# pressure plate, a porch lamp by hand and a bell lamp as a pulse. The
+# computer faces north with a networked 3x2 monitor (monitor_0).
+# A day is 1200 s here, so an hour of os.time() is 50 s and the
+# scenario starts at midnight.
+name Doors and lights
+description A computer with a hall lamp on its right (schedule 00:30-01:00, which is 25 s to 50 s here), an iron door behind it opened by the pressure plate on its left (closes 3 s after the plate is left), a porch lamp in front (manual) and a bell lamp on top (2 s pulse).
+description The timeline adds the circuits at the computer's prompt, steps on the plate at 10 s, switches the porch on at 20 s and rings the bell at 30 s.
+
+ground -6 -6 6 6 0 3 ores=false pockets=false
+block 1 0 1 redstone_lamp
+block 0 -1 1 door facing=2
+block -1 0 1 pressure_plate
+block 0 1 1 redstone_lamp
+block 0 0 2 redstone_lamp
+
+computer 1 Doors
+  pos 0 0 1
+  heading north
+  peripheral monitor_0 monitor size=3x2 at=-2,3,1
+  autorun doors monitor_0
+
+at 1 type 1 remove Lights
+at 1.5 type 1 add Hall lights schedule right 0:30 1:00
+at 2 type 1 add Front door sensor back left 3
+at 2.5 type 1 add Porch manual front
+at 3 type 1 add Bell pulse top 2
+at 10 step -1 0 1 seconds=1
+at 20 type 1 toggle porch
+at 30 type 1 toggle bell
+
+check the door opens while the plate is held and stays open
+  seconds 14
+  expect log the door at 0,-1,1 opened
+  expect not log the door at 0,-1,1 closed
+  expect log Front door on (sensor)
+  expect screen 1 Front door ON
+  expect no-error
+
+check the door closes 3 s after the plate is left
+  seconds 17
+  expect log the door at 0,-1,1 closed
+  expect log Front door off
+  expect screen 1 Front door off
+  expect no-error
+
+check the porch, the bell pulse and the hall lights schedule
+  seconds 55
+  expect log 00:30 Hall lights on (schedule until 01:00)
+  expect log 01:00 Hall lights off
+  expect log Porch on (manual)
+  expect log Bell on (pulse)
+  expect log Bell off
+  expect screen 1 Porch ON
+  expect screen 1 Hall lights off
+  expect no-error

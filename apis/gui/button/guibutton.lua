@@ -9,10 +9,12 @@ function GUIButton.new(text)
     object.model = guibuttonmodel.GUIButtonModel.new()
     object.buttonTicks = 5
     object.buttonTicksRemaining = 0
-    object.pressColor = colors.lightGray
     object:setBorder(true)
     object.ui = guibuttonui.GUIButtonUI.new(object, object.model)
     setmetatable(object, GUIButton)
+    object:themed("backgroundColor", "button", colors.white)
+    object:themed("textColor", "buttonText", colors.black)
+    object:themed("pressColor", "buttonPress", colors.lightGray)
     local l = function(e)
         object:mouseClickHandler(e)
     end

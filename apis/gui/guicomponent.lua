@@ -7,11 +7,65 @@ and key listeners.
 GUIComponent = {}
 GUIComponent.__index = GUIComponent
 
--- A component that has captured the pointer (an open dropdown) gets
--- every click and touch until it releases the capture.
-local captured = nil
-function setCapture(c) captured = c end
-function getCapture() return captured end
+-- A component that has captured the pointer (an open dropdown, a
+-- dialog) gets every click and touch until it releases the capture. One
+-- with capturesKeys set gets the keys and typed characters too.
+--
+-- Overlays are components drawn over the rest of the screen (dialogs).
+-- When anything else repaints itself it would draw over them, so the
+-- overlays are painted again on top afterwards.
+--
+-- This state belongs to each screen's top component (the root
+-- container), found from the component given, so programs in other
+-- multishell tabs, which share these APIs, keep theirs apart: a dialog
+-- open in one tab does not take the clicks of another. startup loads
+-- this file twice (once up front, once with the rest of the apis), so
+-- components may hold methods from either copy; keeping the state on
+-- the components means both copies see the same.
+local loose = { overlays = {}, painting = 0 } -- for calls that name no component
+
+-- The modal state of the screen component c is on.
+local function stateOf(c)
+    if not c then return loose end
+    while c.parent and c.parent.term do c = c.parent end
+    if not c.modal then c.modal = { overlays = {}, painting = 0 } end
+    return c.modal
+end
+
+-- Capture the pointer for c, or release it (c nil) on the screen that
+-- within is on.
+function setCapture(c, within) stateOf(c or within).captured = c end
+function getCapture(within) return stateOf(within).captured end
+
+-- Change the repaint depth of within's screen by delta and return it.
+function paintDepth(delta, within)
+    local s = stateOf(within)
+    s.painting = math.max(0, s.painting + (delta or 0))
+    return s.painting
+end
+
+function addOverlay(c)
+    removeOverlay(c)
+    table.insert(stateOf(c).overlays, c)
+end
+
+function removeOverlay(c)
+    local list = stateOf(c).overlays
+    for i = #list, 1, -1 do
+        if list[i] == c then table.remove(list, i) end
+    end
+end
+
+function getOverlays(within)
+    return stateOf(within).overlays
+end
+
+-- Forget any capture and overlays, for when the whole screen is
+-- replaced by a new root container.
+function resetModal(root)
+    if root then root.modal = { overlays = {}, painting = 0 } end
+    loose = { overlays = {}, painting = 0 }
+end
 
 function GUIComponent.new(t)
     t = t or term.current()
@@ -55,13 +109,19 @@ function GUIComponent.new(t)
         -- going to handle any events
         visible = true,
 
-        -- Default color settings
-        backgroundColor = colors.white,
+        -- Colours that follow the theme (see guitheme): field ->
+        -- { role, value }. A field changed from value is the program's
+        -- own choice and is left alone when the theme changes.
+        themeRoles = {},
+
         border = false,
-        borderColor = colors.gray,
-        textColor = colors.black,
     }
     setmetatable(object, GUIComponent)
+    -- Default colours. Until a program picks a theme plain components
+    -- keep the classic white look.
+    object:themed("backgroundColor", "background", colors.white)
+    object:themed("textColor", "text", colors.black)
+    object:themed("borderColor", "border", colors.gray)
     object.ui = guicomponentui.GUIComponentUI.new(object)
     return object
 end
@@ -79,6 +139,8 @@ end
 -- Repaint will paint this component and propagate through all
 -- other children.
 function GUIComponent:repaint()
+    local gc = guicomponent
+    gc.paintDepth(1, self)
     if self.ui and self.visible and self.started then
         self.ui:paint()
     end
@@ -87,6 +149,33 @@ function GUIComponent:repaint()
             c:repaint()
         end
     end
+    if gc.paintDepth(-1, self) == 0 and #gc.getOverlays(self) > 0 then self:paintOverlays() end
+end
+
+-- Is this component c or inside it?
+function GUIComponent:isWithin(c)
+    local p = self
+    while p do
+        if p == c then return true end
+        p = p.parent
+    end
+    return false
+end
+
+-- Paint the overlays above the one this component belongs to (all of
+-- them for an ordinary component) after it has drawn itself.
+function GUIComponent:paintOverlays()
+    local gc = guicomponent
+    local list = gc.getOverlays(self)
+    local from = 1
+    for i, o in ipairs(list) do
+        if self:isWithin(o) then from = i + 1 end
+    end
+    gc.paintDepth(1, self) -- the overlays' own repaints must not start this again
+    for i = from, #list do
+        if list[i] and list[i].started then list[i]:repaint() end
+    end
+    gc.paintDepth(-1, self)
 end
 
 -- Add a children component to this component.
@@ -400,3 +489,39 @@ end
 function GUIComponent:getBorderColor()
     return self.borderColor
 end
+
+-- Theme colours. themed sets a colour field from a theme role (see
+-- guitheme) and remembers it, so applyTheme can change it when the
+-- theme changes. classic is the colour used while no theme has been
+-- chosen, which keeps older programs looking as they always did.
+function GUIComponent:themed(field, role, classic)
+    local value = classic
+    if guitheme and guitheme.color then value = guitheme.color(role, classic) end
+    self.themeRoles[field] = { role = role, classic = classic, value = value }
+    self[field] = value
+end
+
+-- Re-read every colour that still follows the theme, here and in the
+-- children (themeChildren), then repaint.
+function GUIComponent:applyTheme(noRepaint)
+    for field, r in pairs(self.themeRoles or {}) do
+        if self[field] == r.value then
+            local value = guitheme.color(r.role, r.classic)
+            self[field] = value
+            r.value = value
+        else
+            self.themeRoles[field] = nil -- set by the program, keep it
+        end
+    end
+    for i, c in ipairs(self:themeChildren()) do
+        c:applyTheme(true)
+    end
+    if not noRepaint then self:repaint() end
+end
+
+-- The components applyTheme passes on to; containers that keep
+-- components out of their children (tabs) add those.
+function GUIComponent:themeChildren()
+    return self.children or {}
+end
+

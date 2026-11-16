@@ -1,119 +1,137 @@
 --[[
-Pull all of the files from github using the http api.
+Install or update this repo from GitHub.
+
+Asks the GitHub API for the list of files on a branch, then downloads every
+.lua file (except the browser simulator under sim/) to the same path on this
+computer. Nothing to maintain when files are added: the list comes from the
+repo itself.
+
+First install, on a computer that has nothing yet:
+
+    wget run https://raw.githubusercontent.com/imitablerabbit/computercraft/master/programs/github.lua
+
+Afterwards startup.lua puts programs/ on the path, so `github` updates.
 --]]
 
--- Print a usage string on how to use the command
-function usage()
+local owner = "imitablerabbit"
+local repo = "computercraft"
+local branch = "master"
+-- Directories that are never installed on the computer.
+local skipDirs = { "sim" }
+
+local function usage()
     print("github [branch]")
+    print("Downloads every .lua file of " .. owner .. "/" .. repo .. " from GitHub.")
 end
 
--- Fetch a single raw file from github url
-function fetchFile(url, filepath)
-    if not url then error("missing url") end
-    if not filepath then error("missing file path") end
-
-    r = http.get(url)
-    if not r then return false end
-    if r.getResponseCode() ~= 200 then
-        r.close()
-        return false
-    end
-    d = r.readAll()
+-- GET a URL and return its body, or nil and a reason.
+local function fetch(url)
+    local r, err = http.get(url)
+    if not r then return nil, err or "no response" end
+    local code = r.getResponseCode()
+    local body = r.readAll()
     r.close()
-    h = fs.open(filepath, "w")
-    h.write(d)
+    if code ~= 200 then return nil, "HTTP " .. tostring(code) end
+    return body
+end
+
+-- Pull the file paths out of a git tree API response.
+local function treePaths(json)
+    local paths = {}
+    local decode = textutils.unserialiseJSON or textutils.unserializeJSON
+    if decode then
+        local tree = decode(json)
+        if type(tree) ~= "table" or type(tree.tree) ~= "table" then
+            return nil, "unexpected API response"
+        end
+        if tree.truncated then
+            print("Warning: GitHub truncated the file list")
+        end
+        for _, entry in ipairs(tree.tree) do
+            if entry.type == "blob" then paths[#paths + 1] = entry.path end
+        end
+    else
+        -- Older ComputerCraft has no JSON decoder; the response is one
+        -- object per file with a "path" key, which is enough to go on.
+        for path in json:gmatch('"path"%s*:%s*"([^"]+)"') do
+            paths[#paths + 1] = path
+        end
+    end
+    return paths
+end
+
+local function wanted(path)
+    if path:sub(-4) ~= ".lua" then return false end
+    for _, dir in ipairs(skipDirs) do
+        if path == dir or path:sub(1, #dir + 1) == dir .. "/" then return false end
+    end
+    return true
+end
+
+local function save(path, data)
+    local dir = fs.getDir(path)
+    if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
+    local h, err = fs.open(path, "w")
+    if not h then return false, err end
+    h.write(data)
     h.close()
     return true
 end
 
--- Global variables
-local files = {
-    "apis/alert.lua",
-    "apis/excavate.lua",
-    "apis/files.lua",
-    "apis/inventory.lua",
-    "apis/mine.lua",
-    "apis/move.lua",
-    "apis/reconstruct.lua",
-    "apis/registry.lua",
-    "apis/turtlectl.lua",
-    "apis/turtleinv.lua",
-
-    "apis/gui/guiapplication.lua",
-    "apis/gui/guicomponent.lua",
-    "apis/gui/guicomponentui.lua",
-    "apis/gui/guievent.lua",
-    "apis/gui/guimodel.lua",
-    "apis/gui/rootcontainer/guirootcontainer.lua",
-    "apis/gui/rootcontainer/guirootcontainerui.lua",
-    "apis/gui/button/guibutton.lua",
-    "apis/gui/button/guibuttonmodel.lua",
-    "apis/gui/button/guibuttonui.lua",
-    "apis/gui/text/guitext.lua",
-    "apis/gui/text/guitextui.lua",
-    "apis/gui/input/guiinput.lua",
-    "apis/gui/input/guiinputmodel.lua",
-    "apis/gui/input/guiinputui.lua",
-    "apis/gui/scrollpane/guiscrollpane.lua",
-    "apis/gui/scrollpane/guiscrollpaneui.lua",
-    "apis/gui/turtleicon/guiturtleicon.lua",
-    "apis/gui/turtleicon/guiturtleiconui.lua",
-    "apis/gui/checkbox/guicheckbox.lua",
-    "apis/gui/checkbox/guicheckboxui.lua",
-    "apis/gui/dropdown/guidropdown.lua",
-    "apis/gui/dropdown/guidropdownui.lua",
-    "apis/gui/inventorygrid/guiinventorygrid.lua",
-    "apis/gui/layout/guilayout.lua",
-    "apis/gui/inventorygrid/guiinventorygridui.lua",
-    
-    "programs/gui/examples/button.lua",
-    "programs/gui/examples/input.lua",
-    "programs/register.lua",
-    "programs/registrydisplay.lua",
-    "programs/registrylistener.lua",
-    "programs/remotecommand.lua",
-    "programs/remotelistener.lua",
-    "programs/github.lua",
-    "programs/gui/examples/files.lua",
-    "programs/gui/examples/form.lua",
-    "programs/gui/examples/layout.lua",
-    "programs/gui/examples/todo.lua",
-    "programs/turtlecontrol.lua",
-
-    "programs/turtle/logger.lua",
-    "programs/turtle/flatten.lua",
-    "programs/turtle/inventorygui.lua",
-    "programs/turtle/loggergui.lua",
-    "programs/turtle/mineline.lua",
-    "programs/turtle/quarry.lua",
-    "programs/turtle/reconstruct.lua",
-    "programs/turtle/stripmine.lua",
-    "programs/turtle/turtleagent.lua",
-
-    "startup.lua",
-}
-local branch = "master"
-local githubBaseURL = "https://raw.github.com/imitablerabbit/computercraft/"
-
 -- Parse command line args
-local args = {...}
-if #args > 1 then
-  usage()
-  return
-end
-if args[1] then
-  if args[1] == "help" or args[1] == "-help" or args[1] == "--help" then
+local args = { ... }
+if #args > 1 or args[1] == "help" or args[1] == "-help" or args[1] == "--help" then
     usage()
     return
-  end
-  branch = args[1]
+end
+if args[1] then branch = args[1] end
+
+if not http then
+    print("Error: the http API is disabled in this world's ComputerCraft config")
+    return
 end
 
-githubURL = githubBaseURL..branch.."/"
-for k, file in pairs(files) do
-    url = githubURL..file
-    print("fetching "..file)
-    if not fetchFile(url, file) then
-        print("Error: unable to fetch file: "..file)
+local treeURL = "https://api.github.com/repos/" .. owner .. "/" .. repo
+    .. "/git/trees/" .. branch .. "?recursive=1"
+local rawURL = "https://raw.githubusercontent.com/" .. owner .. "/" .. repo
+    .. "/" .. branch .. "/"
+
+print("Listing " .. owner .. "/" .. repo .. " @ " .. branch)
+local json, err = fetch(treeURL)
+if not json then
+    print("Error: unable to list files: " .. err)
+    if err == "HTTP 404" then print("Does branch '" .. branch .. "' exist?") end
+    if err == "HTTP 403" then print("GitHub rate limit hit; try again in an hour") end
+    return
+end
+
+local paths, perr = treePaths(json)
+if not paths then
+    print("Error: " .. perr)
+    return
+end
+
+local ok, failed = 0, {}
+for _, path in ipairs(paths) do
+    if wanted(path) then
+        write("fetching " .. path .. " ")
+        local data, ferr = fetch(rawURL .. path)
+        if data then
+            local saved, serr = save(path, data)
+            if saved then
+                print("ok")
+                ok = ok + 1
+            else
+                print("FAILED (" .. tostring(serr) .. ")")
+                failed[#failed + 1] = path
+            end
+        else
+            print("FAILED (" .. ferr .. ")")
+            failed[#failed + 1] = path
+        end
     end
 end
+
+print(("Installed %d file(s), %d failed"):format(ok, #failed))
+for _, path in ipairs(failed) do print("  " .. path) end
+if ok > 0 then print("Run 'reboot' so startup.lua loads the new files.") end

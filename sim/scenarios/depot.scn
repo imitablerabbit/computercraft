@@ -1,0 +1,64 @@
+# A quarry that empties at a depot from deep in its hole. The turtle
+# carries 14 odd items, so its inventory fills on the stone layer, four
+# blocks down: it takes everything to the depot's dump chest with nav
+# (calibrated with the four gps hosts) and comes back to the same block
+# and heading to finish, then empties at the depot again at the end.
+# Our (x, y, z) is Minecraft (x, z, -y): the dump chest at -4 -3 1 is
+# Minecraft -4 1 3, the fuel chest at -4 -5 1 is Minecraft -4 1 5.
+name Depot quarry
+description A turtle with a nearly full inventory, a depot computer (41) with a fuel and a dump chest on its wired network, and four gps hosts.
+description The timeline sets up the depot and types quarry 3 3 4 depot on the turtle: it empties at the depot halfway down and comes back to carry on.
+
+ground -13 -13 13 13 0 6 ores=false pockets=false
+
+fill -11 -11 1 -11 -11 5 stone_bricks
+fill 11 -11 1 11 -11 9 stone_bricks
+fill -11 11 1 -11 11 13 stone_bricks
+fill 11 11 1 11 11 2 stone_bricks
+computer 20 label="GPS 1" pos=-11,-11,6 advanced=false
+  peripheral top modem
+  autorun gps host -11 6 11
+computer 21 label="GPS 2" pos=11,-11,10 advanced=false
+  peripheral top modem
+  autorun gps host 11 10 11
+computer 22 label="GPS 3" pos=-11,11,14 advanced=false
+  peripheral top modem
+  autorun gps host -11 14 -11
+computer 23 label="GPS 4" pos=11,11,3 advanced=false
+  peripheral top modem
+  autorun gps host 11 3 -11
+
+block -4 -5 1 chest network=depot
+items -4 -5 1 coal*64
+block -4 -3 1 chest network=depot
+
+computer 41 label=Depot
+  pos -6 -8 1
+  peripheral top modem
+  peripheral right modem wired=true network=depot
+
+turtle 1 label=Digger
+  pos 0 0 1
+  heading north
+  fuel 1000
+  slots oak_planks*1 stick*1 glass*1 sand*1 torch*1 rail*1 redstone*1 bucket*1 oak_log*1 wheat_seeds*1 iron_ingot*1 gold_nugget*1 quartz*1 cobblestone_wall*1
+  peripheral left modem
+
+at 2 type 41 depot add Fuel fuel -4 1 5 west minecraft:chest_0
+at 3 type 41 depot add Dump dump -4 1 3 west minecraft:chest_1
+at 4 type 41 depot
+at 6 type 1 quarry 3 3 4 depot
+
+check a quarry empties at the depot from four blocks down and finishes
+  seconds 300
+  until done: dug
+  expect log taking it to the depot
+  expect blocks 0 0 0 2 2 -3 air
+  expect turtle 1 pos 0 0 1
+  expect turtle 1 heading north
+  expect turtle 1 items = 0
+  expect chest -4 -3 1 item oak_planks = 1
+  expect chest -4 -3 1 item dirt = 27
+  expect chest -4 -3 1 items = 50
+  expect screen 1 done: dug 36 blocks, 2 chest trips
+  expect no-error

@@ -30,13 +30,14 @@ function GUIDropdown.new(options, selected)
     object.upward = false
     object.closedH = 1
     object.selectListeners = {}
-    object.backgroundColor = colors.blue
-    object.textColor = colors.white
-    object.listColor = colors.gray
-    object.highlightColor = colors.lightGray
     object:setBorder(false)
     object.ui = guidropdownui.GUIDropdownUI.new(object)
     setmetatable(object, GUIDropdown)
+    object:themed("backgroundColor", "accent")
+    object:themed("textColor", "accentText")
+    object:themed("listColor", "surface")
+    object:themed("highlightColor", "highlight")
+    object:themed("highlightTextColor", "highlightText")
     local l = function(e)
         object:clickHandler(e)
     end
@@ -157,6 +158,9 @@ function GUIDropdown:openList()
     local h = self.closedH + visible
     self.popupY = upward and (self.ay - visible) or self.ay
     self.popup = window.create(top.term, self.ax - (top.ax or 1) + 1, self.popupY - (top.ay or 1) + 1, self.w, h)
+    -- A dropdown in a dialog takes the capture from it and gives it back.
+    local previous = guicomponent.getCapture(self)
+    self.previousCapture = previous ~= self and previous or nil
     guicomponent.setCapture(self)
     self:repaint()
 end
@@ -165,7 +169,8 @@ function GUIDropdown:closeList()
     if not self.open then return end
     self.open = false
     self.popup = nil
-    guicomponent.setCapture(nil)
+    if guicomponent.getCapture(self) == self then guicomponent.setCapture(self.previousCapture, self) end
+    self.previousCapture = nil
     -- whatever the list covered has to be drawn again
     self:top():repaint()
 end

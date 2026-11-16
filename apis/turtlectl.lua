@@ -14,7 +14,10 @@ Controller -> turtle:
   { type = "move", action = "forward" }   one step or action from moves below
 
 Turtle -> controller:
-  { type = "status", id, label, state, job, message, fuel, fuelLimit }
+  { type = "status", id, label, state, job, message, fuel, fuelLimit,
+    alerts, progress }                    progress is { done, total, text }
+                                          while a job reports it (see the
+                                          progress api), absent otherwise
   { type = "ack", ok = true|false, job, message }
   { type = "output", text = "one line" }  a line printed by a shell command
 
@@ -39,6 +42,9 @@ PROTOCOL = "turtlectl"
 -- Where the chest is, for jobs that empty the turtle (see
 -- inventory.ChestSides).
 local chestSides = { "left", "right", "behind", "below", "above" }
+-- The same, or "depot": empty at a depot's nearest dump chest instead
+-- (apis/depot.lua), for the jobs that support it.
+local chestOrDepot = { "left", "right", "behind", "below", "above", "depot" }
 -- Which turtle side is wired to a machine, for jobs that pulse redstone
 -- (see reconstruct.PulseSides).
 local pulseSides = { "left", "right", "back", "top", "bottom" }
@@ -71,6 +77,7 @@ local function excavateChestSides(dir)
       end
       if not inside then table.insert(sides, side) end
     end
+    table.insert(sides, "depot")
     return sides
   end
 end
@@ -90,7 +97,7 @@ jobs = {
     { name = "length", label = "Length", type = "number", default = 64, min = 1 },
     { name = "torches", label = "Torches", type = "bool", default = true },
     { name = "torchDistance", label = "Torch gap", type = "number", default = 10, min = 1 },
-    { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "left" },
+    { name = "chest", label = "Chest", type = "choice", options = chestOrDepot, default = "left" },
   } },
   { id = "mineline", name = "Mine line", program = "mineline", params = {
     { name = "length", label = "Length", type = "number", default = 64, min = 1 },
@@ -125,6 +132,75 @@ jobs = {
     { name = "output", label = "Output chest", type = "choice", options = chestSides, default = "right" },
     { name = "pulse", label = "Pulse side", type = "choice", options = pulseSides, default = "left" },
     { name = "stacks", label = "Stacks", type = "number", default = 0, min = 0 },
+  } },
+  -- Tunnel, rail, bridge, farm and lavafuel: see the programs of the
+  -- same names and their engines in apis/.
+  { id = "tunnel", name = "Tunnel", program = "tunnel", params = {
+    { name = "length", label = "Length", type = "number", default = 32, min = 1 },
+    { name = "width", label = "Width", type = "number", default = 3, min = 1, max = 5 },
+    { name = "height", label = "Height", type = "number", default = 3, min = 2, max = 5 },
+    { name = "torchGap", label = "Torch gap", type = "number", default = 8, min = 0 },
+    { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },
+    { name = "returnHome", label = "Return", type = "bool", default = true },
+    { name = "plug", label = "Plug lava", type = "bool", default = true },
+  } },
+  { id = "rail", name = "Rail", program = "rail", params = {
+    { name = "length", label = "Length", type = "number", default = 64, min = 1 },
+    { name = "poweredGap", label = "Powered gap", type = "number", default = 0, min = 0 },
+    { name = "torchGap", label = "Torch gap", type = "number", default = 0, min = 0 },
+  } },
+  { id = "bridge", name = "Bridge", program = "bridge", params = {
+    { name = "length", label = "Length", type = "number", default = 32, min = 1 },
+    { name = "walls", label = "Walls", type = "choice", options = { "none", "rails", "walls" }, default = "none" },
+    { name = "untilGround", label = "Until ground", type = "number", default = 0, min = 0 },
+    { name = "block", label = "Block", type = "string", default = "any",
+      options = { "any", "minecraft:cobblestone", "minecraft:oak_planks", "minecraft:stone_bricks" } },
+  } },
+  -- The farm's chest cannot be below (the corner crop) nor on the right
+  -- of a field wider than one block (farm.chestConflict).
+  { id = "farm", name = "Farm", program = "farm", params = {
+    { name = "width", label = "Width", type = "number", default = 9, min = 1 },
+    { name = "length", label = "Length", type = "number", default = 9, min = 1 },
+    { name = "crop", label = "Sow", type = "choice", options = { "wheat", "carrots", "potatoes", "beetroots", "none" }, default = "wheat" },
+    { name = "sleep", label = "Sleep secs", type = "number", default = 300, min = 0, step = { 60, 300 } },
+    { name = "passes", label = "Passes", type = "number", default = 0, min = 0 },
+    { name = "chest", label = "Chest", type = "choice", default = "behind", optionsFor = function(values)
+      local sides = {}
+      for i, side in ipairs(chestSides) do
+        if side ~= "below" and (side ~= "right" or (tonumber(values.width) or 1) <= 1) then table.insert(sides, side) end
+      end
+      return sides
+    end },
+  } },
+  { id = "lavafuel", name = "Lava fuel", program = "lavafuel", params = {
+    { name = "target", label = "Target fuel", type = "number", default = 5000, min = 100, step = { 100, 1000 } },
+    { name = "range", label = "Range", type = "number", default = 16, min = 1 },
+    { name = "mode", label = "Mode", type = "choice", options = { "refuel", "depot" }, default = "refuel" },
+    { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },
+    { name = "width", label = "Width", type = "number", default = 1, min = 1 },
+  } },
+  -- build: a blueprint by name (a file, or one in /blueprints such as
+  -- the examples), the chest side relative to the start (or none) and
+  -- whether to dig out what is in the way.
+  { id = "build", name = "Build", program = "build", params = {
+    { name = "file", label = "Blueprint", type = "string", default = "hut", options = { "hut", "watchtower" } },
+    { name = "chest", label = "Chest", type = "choice", options = { "behind", "left", "right", "below", "above", "none" }, default = "behind" },
+    { name = "clear", label = "Clear", type = "bool", default = false },
+  } },
+  -- goto: a position in nav's coordinates (Minecraft's once calibrated),
+  -- as text so far-off coordinates can be typed.
+  { id = "goto", name = "Go to", program = "goto", params = {
+    { name = "x", label = "X", type = "string", default = "0" },
+    { name = "y", label = "Y", type = "string", default = "64" },
+    { name = "z", label = "Z", type = "string", default = "0" },
+    { name = "dig", label = "Dig", type = "bool", default = false },
+  } },
+  -- depot: unload at the nearest dump chest, or take fuel up to the
+  -- target at the nearest fuel chest, of a depot (programs/depot.lua),
+  -- coming back to where the turtle was.
+  { id = "depot", name = "Depot", program = "depot", params = {
+    { name = "action", label = "Action", type = "choice", options = { "unload", "refuel" }, default = "unload" },
+    { name = "target", label = "Fuel to", type = "number", default = 2000, min = 0, step = { 100, 1000 } },
   } },
   { id = "refuel", name = "Refuel", fn = function() inventory.refuelAll() end },
 }
@@ -241,8 +317,13 @@ function newSlotAction(action, slot)
 end
 
 -- alerts is a table of kind -> message for the help the turtle
--- currently needs (see the alert api).
-function newStatus(state, jobId, message, alerts)
+-- currently needs (see the alert api). progress is the running job's
+-- latest { done, total, text } from the progress api, or nil; older
+-- controllers ignore it. pos is where nav thinks the turtle is, {
+-- x, y, z, heading, calibrated } (Minecraft coordinates once
+-- calibrated, see nav.status), or nil when it has never tracked one;
+-- the dispatcher and the fleet map use it, older controllers ignore it.
+function newStatus(state, jobId, message, alerts, progress, pos)
   local status = {
     type = "status",
     id = os.getComputerID(),
@@ -252,6 +333,12 @@ function newStatus(state, jobId, message, alerts)
     message = message,
     alerts = alerts or {},
   }
+  if type(progress) == "table" then
+    status.progress = { done = progress.done, total = progress.total, text = progress.text }
+  end
+  if type(pos) == "table" and tonumber(pos.x) and tonumber(pos.y) and tonumber(pos.z) then
+    status.pos = { x = pos.x, y = pos.y, z = pos.z, heading = pos.heading, calibrated = pos.calibrated and true or false }
+  end
   if turtle then
     status.fuel = turtle.getFuelLevel()
     status.fuelLimit = turtle.getFuelLimit()

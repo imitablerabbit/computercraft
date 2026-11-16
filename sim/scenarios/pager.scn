@@ -1,0 +1,48 @@
+# The pocket pager: a pocket computer running pager, two turtles
+# running turtleagent and a base computer. At 4 s the base computer
+# starts a mine line on turtle 2, which has fuel for only a few
+# blocks, so it raises a fuel alert. At 12 s the base computer raises
+# an alert of its own through the bus.
+name Pager
+description A pocket computer (10) running pager, two turtles running turtleagent and a base computer (5).
+description At 4 s the base computer starts a mine line on turtle 2, which soon runs out of fuel; at 12 s it raises a power alert of its own.
+description Touch an alert on the pager for details and Acknowledge; the Turtles tab is a small fleet view.
+
+ground -8 -8 8 8 0 4 ores=false pockets=false
+
+turtle 1 label=Miner
+  pos -2 0 1
+  heading north
+  fuel 900
+  slots coal*8
+  peripheral left modem
+  autorun turtleagent
+
+turtle 2 label=Digger
+  pos 2 0 1
+  heading north
+  fuel 6
+  peripheral left modem
+  autorun turtleagent
+
+computer 5 label=Base
+  pos 0 -3 1
+  peripheral top modem
+
+pocket 10 label=Pager
+  peripheral back modem
+  autorun pager
+
+at 4 type 5 turtlejob 2 mineline 20 false 10 false
+at 12 type 5 alert power Smelter out of power
+
+# The pager lists both alerts, the newest (the base's) first, and has
+# heard both turtles.
+check pager shows the turtle and base alerts
+  seconds 25
+  expect screen 10 Base    power Smelter
+  expect screen 10 Digger  fuel  out of f
+  expect screen 10 2 alerts, 2 new, 2 turtles
+  expect screen 5 OK: mineline starting
+  expect turtle 2 fuel = 0
+  expect no-error

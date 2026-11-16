@@ -1,0 +1,70 @@
+# A covered maze for goto: the turtle has to find its way through
+# without digging, learning the walls as it bumps into them. The four
+# gps hosts of the GPS demo stand on pillars around it, so goto
+# calibrates first and takes Minecraft coordinates.
+name Maze
+description A turtle at the entrance of a covered stone brick maze, with four gps hosts on pillars around it.
+description The goal at the far end is Minecraft 0 1 -8: try goto 0 1 -8 (it calibrates with gps first), then where and goto home.
+
+ground -9 -9 9 12 0 3 ores=false pockets=false
+
+# The maze: a solid block of stone bricks two high with a roof, and
+# three corridors carved out of it, joined by gaps at alternate ends.
+fill -5 0 1 5 10 3 stone_bricks
+clear 0 0 1 0 0 2        # the entrance, in front of the turtle
+clear -4 1 1 4 2 2       # first corridor
+clear 4 3 1 4 3 2        # gap at the east end
+clear -4 4 1 4 5 2       # second corridor
+clear -4 6 1 -4 6 2      # gap at the west end
+clear -4 7 1 4 9 2       # last corridor, with the goal at 0 8
+
+# gps hosts as in the GPS demo: our (x, y, z) is Minecraft (x, z, -y).
+fill -6 -6 1 -6 -6 5 stone_bricks
+fill 6 -6 1 6 -6 9 stone_bricks
+fill -6 6 1 -6 6 13 stone_bricks
+fill 6 6 1 6 6 2 stone_bricks
+computer 20 label="GPS 1" pos=-6,-6,6 advanced=false
+  peripheral top modem
+  autorun gps host -6 6 6
+computer 21 label="GPS 2" pos=6,-6,10 advanced=false
+  peripheral top modem
+  autorun gps host 6 10 6
+computer 22 label="GPS 3" pos=-6,6,14 advanced=false
+  peripheral top modem
+  autorun gps host -6 14 -6
+computer 23 label="GPS 4" pos=6,6,3 advanced=false
+  peripheral top modem
+  autorun gps host 6 3 -6
+
+turtle 3 label=Runner
+  pos 0 -1 1
+  heading north
+  fuel 1000
+  peripheral left modem
+
+check goto finds its way through the maze without digging
+  run goto 0 1 -8
+  seconds 600
+  until arrived at
+  expect turtle 3 pos 0 8 1
+  expect screen 3 arrived at 0 1 -8
+  expect blocks -5 0 1 5 10 3 stone_bricks = 231
+  expect no-error
+
+check goto refuses a goal inside a wall and digs nothing
+  run goto 0 1 -3
+  seconds 600
+  until stopped at
+  expect screen 3 stopped at
+  expect screen 3 is blocked
+  expect blocks -5 0 1 5 10 3 stone_bricks = 231
+  expect no-error
+
+check goto with dig goes straight through
+  run goto 0 1 -8 dig
+  seconds 120
+  until arrived at
+  expect turtle 3 pos 0 8 1
+  expect turtle 3 fuel >= 985
+  expect blocks -5 0 1 5 10 3 stone_bricks < 231
+  expect no-error

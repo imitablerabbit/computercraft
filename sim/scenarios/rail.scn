@@ -1,0 +1,50 @@
+# Uneven ground for the rail program: a ravine to bridge with
+# supports, a stone ridge to dig through, gravel over the line and a
+# rail already in place further on.
+name Rail
+description Flat grass with a ravine, a stone ridge and gravel; a turtle carrying rails, cobblestone, torches and coal.
+description Type in its screen, for example: rail 20 0 5
+
+ground -5 -3 5 26 0 4 ores=false pockets=false
+# a ravine three blocks deep across blocks 5 to 7 of the line
+clear -5 5 0 5 7 -2
+# a stone ridge over blocks 10 and 11, two high, with gravel on top
+fill -5 10 1 5 11 2 stone
+block 0 11 3 gravel
+block 0 11 4 gravel
+# someone already laid a rail at block 15
+block 0 15 1 rail
+block 0 -1 1 chest
+
+# a player hands over more rails
+at 100 give 3 minecraft:rail 8
+
+turtle 3 label=Railer
+  pos 0 0 1
+  heading north
+  fuel 200
+  slots rail*16 cobblestone*10 torch*4 coal*4
+  peripheral left modem
+
+check twenty blocks of rail over a ravine and through a ridge
+  run rail 20 0 5
+  seconds 200
+  until done:
+  expect turtle 3 pos 0 19 2
+  expect blocks 0 0 1 0 19 1 rail = 20
+  expect blocks 0 5 0 0 7 0 cobblestone = 3
+  expect blocks 0 10 2 0 11 4 air
+  expect blocks 1 0 1 1 19 1 torch = 4
+  expect block 1 4 1 torch
+  expect screen 3 out of rails after 17 blocks
+  expect screen 3 done: 19 rails, 0 powered, 4 torches, 3 supports, 1 already there
+  expect turtle 3 item rail = 5
+  expect no-error
+
+check out of rails it raises an alert and waits for more
+  run rail 20 0 0
+  seconds 60
+  expect turtle 3 pos 0 17 2
+  expect screen 3 out of rails after 17 blocks
+  expect not screen 3 done:
+  expect no-error

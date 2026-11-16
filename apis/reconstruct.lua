@@ -260,6 +260,9 @@ function run(opts)
     local slot, name, count = takeStack(o.input)
     print(string.format("stack %d: %d %s", stats.stacks + 1, count, shortName(name)))
     local tally, changed = {}, 0
+    local stackText = (o.stacks > 0) and ("stack " .. (stats.stacks + 1) .. " of " .. o.stacks) or ("stack " .. (stats.stacks + 1))
+    local done = 0
+    progress.report(done, count, stackText)
     while stackLeft(slot, name) do
       if not placeBlock(slot, name) then break end
       local before = blockAhead()
@@ -273,6 +276,8 @@ function run(opts)
       end
       digBlock(o.output, slot)
       stats.blocks = stats.blocks + 1
+      done = done + 1
+      progress.report(done, count, stackText)
     end
     stats.changed = stats.changed + changed
     stats.stacks = stats.stacks + 1

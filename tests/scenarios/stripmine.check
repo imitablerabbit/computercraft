@@ -1,0 +1,20 @@
+# Strip mining on the built-in stripmine scenario: turtle 5 underground
+# at (0, 0, 1) with 16 coal and 40 torches.
+
+check three short mines with torches
+  scenario stripmine
+  run stripmine 3 2 12 true 5 behind
+  seconds 150
+  expect turtle 5 pos 0 0 1
+  expect turtle 5 heading north
+  expect turtle 5 item torch < 40
+  expect chest 0 -1 1 item cobblestone >= 10
+  expect blocks -20 -5 0 20 20 3 torch >= 6
+  expect no-error
+
+check a bad chest side is refused
+  scenario stripmine
+  run stripmine 3 2 12 true 5 sideways
+  seconds 5
+  expect screen 5 chest must be one of
+  expect turtle 5 fuel = 1500

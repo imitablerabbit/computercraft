@@ -21,13 +21,13 @@ function GUIScrollPane.new()
     object.scroll = 0
     object.barShown = false
     object.contentH = 0
-    object.backgroundColor = colors.black
-    object.barColor = colors.gray
-    object.thumbColor = colors.lightGray
-    object.arrowColor = colors.white
     object:setBorder(false)
     object.ui = guiscrollpaneui.GUIScrollPaneUI.new(object)
     setmetatable(object, GUIScrollPane)
+    object:themed("backgroundColor", "background")
+    object:themed("barColor", "surface")
+    object:themed("thumbColor", "muted")
+    object:themed("arrowColor", "text")
     return object
 end
 
