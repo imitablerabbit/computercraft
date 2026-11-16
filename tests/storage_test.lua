@@ -58,7 +58,11 @@ local function network(chests)
       return { name = st.name, count = st.count, maxCount = stackMax(st), displayName = storage.prettyName(st.name) }
     elseif method == "pushItems" then
       local to = chests[args[1]]
-      if not to then error("Target '" .. args[1] .. "' does not exist") end
+      -- like the game, a chest on a side and one on the network cannot
+      -- reach each other
+      if not to or storage.isSide(name) ~= storage.isSide(args[1]) then
+        error("Target '" .. args[1] .. "' does not exist")
+      end
       local st = c.slots[args[2]]
       if not st then return 0 end
       local n = math.min(st.count, args[3] or 64)
@@ -312,5 +316,246 @@ describe("storage helpers", function()
     expect.falsy(created2)
     expect.equal(c2.input, "minecraft:chest_9")
     fs.delete(path)
+  end)
+end)
+
+describe("storage chests on the computer's sides", function()
+  it("leaves side chests out of storage when the chests are on a network", function()
+    -- the input chest touches the computer and is on the cable too, so
+    -- it is seen twice: as left and as minecraft:chest_0
+    local s = storage.new({ input = "minecraft:chest_0", output = "out" }, { peripheral = network({
+      left = chest(27, { st("coal", 5) }),
+      ["minecraft:chest_0"] = chest(27, { st("coal", 5) }),
+      ["minecraft:chest_1"] = chest(),
+      out = chest(),
+    }) })
+    s:refresh()
+    expect.same(s.names, { "minecraft:chest_1" })
+    local stored, left, why = s:deposit()
+    expect.equal(stored, 5)
+    expect.equal(left, 0)
+    expect.equal(why, nil)
+    expect.same(s:chestChoices(), { "minecraft:chest_0", "minecraft:chest_1", "out" })
+  end)
+
+  it("says what to do when the input is a side and the rest are on the network", function()
+    local s = storage.new({ input = "left", output = "out" }, { peripheral = network({
+      left = chest(27, { st("coal", 5) }),
+      ["minecraft:chest_1"] = chest(),
+      out = chest(),
+    }) })
+    s:refresh()
+    expect.match(s:problem(), "wired modem")
+    local stored, left, why = s:deposit()
+    expect.equal(stored, 0)
+    expect.match(why, "input chest is set to left")
+  end)
+
+  it("works with only side chests when there is no network", function()
+    local net = network({ left = chest(27, { st("coal", 5) }), right = chest(), top = chest() })
+    local s = storage.new({ input = "left", output = "right" }, { peripheral = net })
+    s:refresh()
+    expect.same(s.names, { "top" })
+    expect.equal(s:problem(), nil)
+    expect.equal((s:deposit()), 5)
+    expect.equal(net.count("top", "minecraft:coal"), 5)
+  end)
+
+  it("explains a target the network cannot reach", function()
+    expect.match(storage.explain("Target 'left' does not exist"), "left cannot be reached")
+    expect.equal(storage.explain("boom"), "boom")
+  end)
+end)
+
+-- The keys of every slot in storage order ("" for empty), after
+-- listing the chests again.
+local function layout(s)
+  s:refresh(s.names)
+  local out = {}
+  for _, pos in ipairs(s:slotList()) do
+    local st = s.chests[pos.chest].slots[pos.slot]
+    out[#out + 1] = st and storage.keyOf(st) or ""
+  end
+  return out
+end
+
+-- Check storage is sorted: items first, by key, each kind in as few
+-- stacks as it fits, and the totals unchanged.
+local function expectSorted(s, before)
+  local keys = layout(s)
+  local seenEmpty = false
+  for i, k in ipairs(keys) do
+    if k == "" then seenEmpty = true
+    else
+      expect.falsy(seenEmpty, "an item after a free slot at " .. i)
+      if i > 1 and keys[i - 1] ~= "" then expect.truthy(keys[i - 1] <= k, "out of order at " .. i) end
+    end
+  end
+  local after = s:index()
+  for key, count in pairs(before) do
+    local item = after[key]
+    expect.equal(item and item.count, count, "count of " .. key)
+    local max = s:maxCount(key)
+    expect.equal(item.stacks, math.ceil(count / max), "stacks of " .. key)
+  end
+  for key in pairs(after) do expect.truthy(before[key], "new item " .. key) end
+end
+
+local function totals(s)
+  local out = {}
+  for key, item in pairs(s:index()) do out[key] = item.count end
+  return out
+end
+
+describe("storage.sort", function()
+  it("condenses partial stacks and puts each kind of item together", function()
+    local s = make({
+      a = chest(6, { st("dirt", 5), st("coal", 10), [5] = st("dirt", 30) }),
+      b = chest(6, { st("coal", 60), [3] = st("cobblestone", 64), [4] = st("coal", 20) }),
+    })
+    local before = totals(s)
+    local moved, why = s:sort()
+    expect.equal(why, nil)
+    expect.truthy(moved > 0)
+    expectSorted(s, before)
+    expect.same(layout(s), { "minecraft:coal", "minecraft:coal", "minecraft:cobblestone", "minecraft:dirt", "", "",
+                             "", "", "", "", "", "" })
+  end)
+
+  it("keeps to smaller stack sizes and NBT", function()
+    local s = make({
+      a = chest(9, { st("ender_pearl", 10), st("enchanted_book", 1, "x"), st("ender_pearl", 9), [7] = st("enchanted_book", 1, "y") }),
+    })
+    local before = totals(s)
+    s:sort()
+    expectSorted(s, before)
+    expect.equal(s:index()["minecraft:ender_pearl"].stacks, 2)
+  end)
+
+  it("does nothing when storage is already sorted", function()
+    local s = make({ a = chest(4, { st("coal", 64), st("dirt", 3) }) })
+    local job = s:startSort()
+    expect.equal(#job.moves, 0)
+    expect.equal((s:sort()), 0)
+  end)
+
+  it("needs a free slot to swap stacks, but still condenses", function()
+    local s = make({ a = chest(3, { st("dirt", 64), st("coal", 64), st("bone", 64) }) })
+    local moved, why = s:sort()
+    expect.match(why, "free slot")
+    expect.equal(moved, 0)
+  end)
+
+  it("plans again when the chests change in the middle", function()
+    local s, net = make({
+      a = chest(9, { st("dirt", 5), st("coal", 10), st("dirt", 7), st("coal", 3), st("sand", 4), st("dirt", 2) }),
+    })
+    local job = s:startSort()
+    local finished = s:sortStep(job, 1)
+    expect.falsy(finished)
+    -- someone takes every stack of dirt out by hand
+    for i, stack in pairs(net.chests.a.slots) do
+      if stack.name == "minecraft:dirt" then net.chests.a.slots[i] = nil end
+    end
+    local why
+    for _ = 1, 50 do
+      finished, why = s:sortStep(job, 4)
+      if finished then break end
+    end
+    expect.truthy(finished)
+    expect.equal(why, nil)
+    expect.truthy(job.replans >= 1)
+    local keys = layout(s)
+    expect.same({ keys[1], keys[2], keys[3] }, { "minecraft:coal", "minecraft:sand", "" })
+  end)
+
+  it("sorts random storage without losing anything", function()
+    math.randomseed(42)
+    local names = { "coal", "dirt", "sand", "ender_pearl", "torch", "gravel", "oak_log" }
+    for round = 1, 20 do
+      local chests = {}
+      for c = 1, math.random(1, 4) do
+        local size = ({ 5, 9, 27 })[math.random(1, 3)]
+        local slots = {}
+        for slot = 1, size do
+          if math.random() < 0.6 then
+            local name = names[math.random(1, #names)]
+            local max = maxCounts["minecraft:" .. name] or 64
+            slots[slot] = st(name, math.random(1, max))
+          end
+        end
+        chests["minecraft:chest_" .. c] = chest(size, slots)
+      end
+      local s = make(chests)
+      local before = totals(s)
+      local used, total = s:capacity()
+      local moved, why = s:sort()
+      if used < total then
+        expect.equal(why, nil, "round " .. round)
+        expectSorted(s, before)
+      else
+        expect.equal(totals(s)["minecraft:coal"], before["minecraft:coal"])
+      end
+    end
+  end)
+end)
+
+describe("remote chests", function()
+  local function remoteStore()
+    local net = network({
+      ["minecraft:chest_0"] = chest(27, { st("coal", 20) }),
+      ["minecraft:chest_1"] = chest(),
+      ["minecraft:chest_5"] = chest(),
+      ["minecraft:chest_6"] = chest(),
+      ["enderstorage:ender_chest_0"] = chest(),
+      ["in"] = chest(), ["out"] = chest(),
+    })
+    local s = storage.new({ input = "in", output = "out", craftChest = "minecraft:chest_6", remotes = {} }, { peripheral = net })
+    s:refresh()
+    return s, net
+  end
+
+  it("never uses an ender chest as storage", function()
+    local s = remoteStore()
+    expect.same(s.names, { "minecraft:chest_0", "minecraft:chest_1", "minecraft:chest_5" })
+  end)
+
+  it("gives each remote its own chest, taken out of storage", function()
+    local s = remoteStore()
+    expect.truthy(s:setRemote(10, "minecraft:chest_5", "Alice"))
+    s:refresh()
+    expect.same(s.names, { "minecraft:chest_0", "minecraft:chest_1" })
+    local ok, why = s:setRemote(11, "minecraft:chest_5", "Bob")
+    expect.falsy(ok)
+    expect.match(why, "Alice")
+    expect.truthy(s:setRemote(11, "enderstorage:ender_chest_0", "Bob"))
+    expect.equal(s:remoteOf("enderstorage:ender_chest_0"), 11)
+  end)
+
+  it("offers chests that are not the input, output, crafting or someone else's", function()
+    local s = remoteStore()
+    s:setRemote(10, "minecraft:chest_5", "Alice")
+    local choices = s:remoteChoices(11)
+    expect.same(choices, { "enderstorage:ender_chest_0", "minecraft:chest_0", "minecraft:chest_1" })
+    expect.contains(s:remoteChoices(10), "minecraft:chest_5")
+    local ok = s:setRemote(11, "out")
+    expect.falsy(ok)
+  end)
+
+  it("delivers to a remote's chest and deposits from it", function()
+    local s, net = remoteStore()
+    s:setRemote(10, "minecraft:chest_5", "Alice")
+    s:refresh()
+    expect.equal((s:withdraw("coal", 5, "minecraft:chest_5")), 5)
+    expect.equal(net.count("minecraft:chest_5", "minecraft:coal"), 5)
+    expect.equal((s:deposit("minecraft:chest_5")), 5)
+    expect.equal(net.count("minecraft:chest_5"), 0)
+  end)
+
+  it("forgets a remote", function()
+    local s = remoteStore()
+    s:setRemote(10, "minecraft:chest_5", "Alice")
+    s:setRemote(10, nil)
+    expect.equal(s:remoteOf("minecraft:chest_5"), nil)
   end)
 end)

@@ -10,9 +10,11 @@ Then on a computer or turtle in game:
 
     wget run http://<host>:<port>/install.lua
 
-That downloads every .lua file in the repo into the same paths on the
-computer and saves the installer as /update.lua, so later you can just run
-"update" to pull the latest files again.
+That downloads every .lua file in the repo (except the simulator and the
+unit tests) into the same paths on the computer and saves the installer as
+/update.lua, so later you can just run "update" to pull the latest files
+again. install.lua?tests=1 installs the tests too, for the test program.
+The installer checks there is room before it changes anything.
 
 Individual files are also available, e.g.:
 
@@ -32,6 +34,9 @@ EXCLUDED_DIRS = {".git", "__pycache__"}
 EXCLUDED_FILES = {"serve.py"}
 # Served to the browser but never installed in game.
 MANIFEST_EXCLUDED_DIRS = EXCLUDED_DIRS | {"sim"}
+# Installed only when asked for (install.lua?tests=1): the unit tests are
+# only needed by the test program, and a computer has 1 MB by default.
+OPTIONAL_DIRS = {"tests"}
 # Only files with these extensions go into the installer manifest.
 MANIFEST_EXTENSIONS = {".lua"}
 
@@ -43,9 +48,33 @@ local base = ...
 if not base or base == "" then base = "{base_url}" end
 if base:sub(-1) ~= "/" then base = base .. "/" end
 
+-- path and size in bytes
 local files = {{
 {file_list}
 }}
+
+-- ComputerCraft counts every file as at least this many bytes.
+local MinFileSize = 500
+-- Room kept for this installer's own copy (update.lua) and new folders.
+local Spare = {spare}
+
+local function cost(size) return math.max(size, MinFileSize) end
+
+-- Is there room for every file? Files already here are replaced, so
+-- their space counts as free.
+local need = Spare
+for _, f in ipairs(files) do
+  need = need + cost(f[2])
+  if fs.exists(f[1]) and not fs.isDir(f[1]) then need = need - cost(fs.getSize(f[1])) end
+end
+local free = fs.getFreeSpace("/")
+if type(free) == "number" and need > free then
+  print(string.format("Not enough space: this needs about %d KB more, and the computer has %d KB free.",
+    math.ceil(need / 1000), math.floor(free / 1000)))
+  print("Nothing was changed. Delete files you do not need, or raise")
+  print("computer_space_limit in computercraft-server.toml.")
+  return
+end
 
 local function fetch(url)
   local r, err = http.get(url)
@@ -57,31 +86,50 @@ local function fetch(url)
   return data
 end
 
+-- Write to a new file first and only then replace the old one, so a
+-- write that fails leaves the old file as it was.
 local function save(path, data)
-  local dir = fs.getDir(path)
-  if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
-  local h = fs.open(path, "w")
-  if not h then return false end
-  h.write(data)
-  h.close()
+  local part = path .. ".part"
+  local ok, err = pcall(function()
+    local dir = fs.getDir(path)
+    if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
+    local h, openErr = fs.open(part, "w")
+    if not h then error(openErr or "cannot open " .. part, 0) end
+    local wrote, writeErr = pcall(h.write, data)
+    h.close()
+    if not wrote then error(writeErr, 0) end
+    if fs.exists(path) then fs.delete(path) end
+    fs.move(part, path)
+  end)
+  if not ok then
+    pcall(fs.delete, part)
+    return false, tostring(err)
+  end
   return true
 end
 
 local ok, failed = 0, 0
-for _, file in ipairs(files) do
+for _, f in ipairs(files) do
+  local file = f[1]
   io.write("fetching " .. file .. " ... ")
   local data, err = fetch(base .. file)
-  if data and save(file, data) then
+  local saved = false
+  if data then saved, err = save(file, data) end
+  if saved then
     ok = ok + 1
     print("ok")
   else
     failed = failed + 1
-    print("FAILED (" .. tostring(err or "write error") .. ")")
+    print("FAILED (" .. tostring(err) .. ")")
+    if tostring(err):find("Out of space") then
+      print("The computer is full; stopping. The files not fetched are as they were.")
+      break
+    end
   end
 end
 
 -- Keep a copy of this installer so "update" re-fetches everything later.
-local self, err = fetch(base .. "install.lua")
+local self, err = fetch(base .. "{self_path}")
 if self then save("update.lua", self) end
 
 print(string.format("%d fetched, %d failed from %s", ok, failed, base))
@@ -91,11 +139,14 @@ end
 """
 
 
-def manifest(root):
+def manifest(root, with_tests=False):
     """Return the sorted list of files to put in the installer."""
     found = []
+    excluded = MANIFEST_EXCLUDED_DIRS if with_tests else MANIFEST_EXCLUDED_DIRS | OPTIONAL_DIRS
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in MANIFEST_EXCLUDED_DIRS and not d.startswith("."))
+        top = os.path.abspath(dirpath) == os.path.abspath(root)
+        dirnames[:] = sorted(d for d in dirnames
+                             if not (d in excluded and (top or d not in OPTIONAL_DIRS)) and not d.startswith("."))
         for name in filenames:
             if name in EXCLUDED_FILES or name.startswith("."):
                 continue
@@ -106,10 +157,13 @@ def manifest(root):
     return sorted(found)
 
 
-def render_installer(root, base_url):
-    files = manifest(root)
-    file_list = "\n".join('  "%s",' % f for f in files)
-    return INSTALLER_TEMPLATE.format(base_url=base_url, file_list=file_list)
+def render_installer(root, base_url, with_tests=False):
+    files = manifest(root, with_tests)
+    file_list = "\n".join('  { "%s", %d },' % (f, os.path.getsize(os.path.join(root, f))) for f in files)
+    self_path = "install.lua?tests=1" if with_tests else "install.lua"
+    # room for update.lua itself (about the size of the list) and folders
+    spare = 8000 + len(file_list)
+    return INSTALLER_TEMPLATE.format(base_url=base_url, file_list=file_list, self_path=self_path, spare=spare)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -139,11 +193,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(data)
 
     def do_GET(self):
-        path = self.path.split("?", 1)[0]
+        path, _, query = self.path.partition("?")
+        with_tests = "tests=1" in query.split("&")
         if path in ("/", "/install.lua", "/update.lua"):
-            return self._send_text(render_installer(SERVE_ROOT, self._base_url()))
+            return self._send_text(render_installer(SERVE_ROOT, self._base_url(), with_tests))
         if path == "/files.txt":
-            return self._send_text("\n".join(manifest(SERVE_ROOT)) + "\n")
+            return self._send_text("\n".join(manifest(SERVE_ROOT, with_tests)) + "\n")
         if path in ("/sim", "/sim/"):
             self.path = "/sim/index.html"
             return super().do_GET()
@@ -191,8 +246,9 @@ def main():
     SERVE_ROOT = os.path.abspath(args.dir)
 
     files = manifest(SERVE_ROOT)
+    size = sum(os.path.getsize(os.path.join(SERVE_ROOT, f)) for f in files)
     server = ThreadingHTTPServer((args.bind, args.port), Handler)
-    print("Serving %d lua files from %s" % (len(files), SERVE_ROOT), flush=True)
+    print("Serving %d lua files (%d KB) from %s" % (len(files), size // 1000, SERVE_ROOT), flush=True)
     print("In game, run one of:")
     for ip in local_ips() or ["<this machine's ip>"]:
         print("  wget run http://%s:%d/install.lua" % (ip, args.port))

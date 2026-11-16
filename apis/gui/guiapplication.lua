@@ -106,7 +106,7 @@ end
 -- A new root replaces the whole screen, so dialogs and open lists of
 -- the old one are forgotten.
 function GUIApplication:setRootContainer(container)
-  guicomponent.resetModal()
+  guicomponent.resetModal(container)
   self.child = container
   container.parent = self
 end

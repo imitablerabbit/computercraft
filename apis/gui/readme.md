@@ -34,6 +34,19 @@ Meters and lists:
   closes it and runs its function. guidialog.confirm(component, title,
   message, onYes, onNo, { yes, no, danger }) and guidialog.alert(component,
   title, message, onOk) make the usual two.
+- Modal state (the component that has captured the pointer, and the
+  overlays drawn on top) belongs to each screen's root container, so
+  programs in different multishell tabs, which share these APIs, never
+  take each other's clicks. guicomponent.getCapture(c) and
+  setCapture(c, within) find the screen from the component given.
+- GUIKeyboard: an on-screen keyboard for touch monitors, opened over the
+  whole screen like a dialog: the text being typed, an optional hint line
+  (hint(text) is asked after every key), digits, letters, `_ : . -`, and
+  Aa, Space, Del, Clear, Cancel and Done. guikeyboard.open(component,
+  title, text, onDone, { hint, onChange, onCancel, maxLength }). The keys
+  grow to three lines high on a big monitor. A GUIInput touched on a
+  monitor opens one by itself; setKeyboard("always") opens it on mouse
+  clicks too, setKeyboard(false) never.
 - GUITable: a list view with columns ({ title, width } or { title, flex },
   align, key), rows of values (setRows, addRow) that scroll inside it, a
   touch on a column title sorts by it (again to reverse), a touch on a row

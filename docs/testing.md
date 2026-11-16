@@ -34,9 +34,13 @@ Each test is printed with ok in green or FAIL in red (plain on a basic
 computer), the failures are listed again at the end with their errors,
 then a line like `tests: 94 passed, 0 failed, 6 files`. When something
 failed the program ends with an error, so `shell.run("test")` returns
-false. The installer copies `tests/` along with everything else, and
-the tests never touch the real turtle: the turtle code is tested
-against a fake one.
+false. The tests never touch the real turtle: the turtle code is
+tested against a fake one.
+
+The installer leaves `tests/` out by default, since the test files take
+about 150 KB and a computer has 1 MB. To run them in game, install with
+`wget run http://<your-ip>:8080/install.lua?tests=1`; the `update.lua`
+it saves keeps fetching them.
 
 ### Writing unit tests
 
@@ -160,6 +164,10 @@ and the lines after it describe it:
 - `label <text>`, `pos x y z` (or `x,y,z`), `heading north` (or 0 to 3),
   `fuel <n>`, `advanced false` (computers are advanced by default).
 - `slots <item>...` sets the slots in order; `slot <n> <item>` sets one.
+- `equip <left|right> <item|none>` sets a turtle's upgrade on that
+  side: `equip left crafting_table` makes a crafty turtle (the
+  simulator crafts sticks, planks, torches, chests, crafting tables,
+  furnaces, stone pickaxes, ladders and rails).
 - `autorun <command line>` runs at boot after `startup.lua`.
 - `peripheral <side> <type> key=value...` attaches a peripheral, with
   any fields passed on (`peripheral back modem wired=true
@@ -177,7 +185,11 @@ happen while the scenario runs go on `at` lines:
 `{ at, action, ... }` in the scenario's timeline, with the words named
 for the known actions (`at 10 toggle 2 0 1` gives x, y and z,
 `at 20 give 7 minecraft:coal 8` gives computer, item and count) and
-kept in `args` for the rest.
+kept in `args` for the rest. `type` and `touch` take the rest of the
+line as text: `at 6 type 1 deposit` pastes a command at computer 1's
+prompt, and `at 8 touch 1 "Sort chests"` touches computer 1's monitor
+in the middle of that text where it is shown as whole words (or at
+`touch 1 12 3`), which is how a check presses on-screen buttons.
 
 ## Scenario checks
 

@@ -147,7 +147,7 @@ function GUIDialog:show(component)
     self:treeInit(top)
     self:setStarted(top.started)
     self.open = true
-    self.previousCapture = guicomponent.getCapture()
+    self.previousCapture = guicomponent.getCapture(top)
     guicomponent.setCapture(self)
     guicomponent.addOverlay(self)
     self:repaint()
@@ -158,7 +158,7 @@ function GUIDialog:close()
     if not self.open then return end
     self.open = false
     guicomponent.removeOverlay(self)
-    if guicomponent.getCapture() == self then guicomponent.setCapture(self.previousCapture) end
+    if guicomponent.getCapture(self) == self then guicomponent.setCapture(self.previousCapture, self) end
     self.previousCapture = nil
     local top = self.host
     self.host = nil

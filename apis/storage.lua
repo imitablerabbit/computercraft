@@ -18,6 +18,17 @@ kept up to date from what this program moves instead of listing again.
 refresh(names) lists only the chests given; a full refresh now and then
 catches changes made by hand.
 
+A chest touching the computer is seen under the name of that side
+(left, top ...), not its name on the network, and the chests on the
+cable cannot push items to or from it. So the storage chests are the
+network's inventories, and side ones only when the input or output
+chest is itself on a side (a small setup with no cable at all).
+problem() says when the input or output is a side that the network
+cannot reach.
+
+sort() condenses partial stacks and lays every kind of item out one
+after another, chest by chest; see "Sorting" below.
+
 Items are keyed by name, plus the NBT hash for items that carry data
 (an enchanted book and a plain one do not stack). The display name and
 stack size come from getItemDetail, asked once per kind of item.
@@ -30,6 +41,8 @@ how the tests run it against fake chests.
 DefaultConfig = {
   input = "",           -- peripheral name of the input chest
   output = "",          -- peripheral name of the output chest
+  craftChest = "",      -- chest beside the crafty turtle (see apis/crafting.lua)
+  remotes = {},         -- computer id -> { chest, label }: each remote's own chest
   exclude = {},         -- other inventories that are not storage
   autoDeposit = 0,      -- seconds between automatic deposits, 0 for off
   refresh = 60,         -- seconds between full re-indexes
@@ -86,6 +99,24 @@ end
 Helpers
 --]]
 
+-- The sides of a computer. A chest there is reached by the side's
+-- name, not over the wired network.
+Sides = { top = true, bottom = true, left = true, right = true, front = true, back = true }
+
+function isSide(name)
+  return Sides[name] == true
+end
+
+-- A peripheral error in words a player can act on.
+function explain(err)
+  err = tostring(err)
+  local target = err:match("Target '(.-)' does not exist")
+  if target then
+    return target .. " cannot be reached: all the chests must be on the same wired network"
+  end
+  return err
+end
+
 -- The key items are indexed by.
 function keyOf(stack)
   if stack.nbt then return stack.name .. "#" .. stack.nbt end
@@ -127,6 +158,8 @@ The storage object
 
 local Storage = {}
 Storage.__index = Storage
+-- The class, for apis/remotestorage.lua, which shares its searching.
+Class = Storage
 
 function new(config, opts)
   opts = opts or {}
@@ -150,10 +183,115 @@ end
 -- output or excluded)?
 function Storage:isStorage(name)
   local c = self.config
-  if name == c.input or name == c.output then return false end
+  if name == c.input or name == c.output or name == c.craftChest then return false end
+  for _, r in pairs(c.remotes or {}) do
+    if r.chest == name then return false end
+  end
+  -- an ender chest is someone's, picked or not yet
+  if name:find("ender_chest", 1, true) then return false end
+  if isSide(name) ~= self:onSides() then return false end
   for _, x in ipairs(c.exclude or {}) do if x == name then return false end end
   if name:match("^turtle_") or name:match("^computer_") then return false end
   return self.p.hasType(name, "inventory") == true
+end
+
+-- Whether the chests in use are the ones on the computer's sides,
+-- because the input (or else the output) chest is on one.
+function Storage:onSides()
+  local c = self.config
+  local io = c.input
+  if not io or io == "" then io = c.output end
+  return io ~= nil and io ~= "" and isSide(io)
+end
+
+-- Is there any inventory on a wired network (not on a side)?
+function Storage:networked()
+  for _, name in ipairs(self.p.getNames()) do
+    if not isSide(name) and self.p.hasType(name, "inventory") then return true end
+  end
+  return false
+end
+
+-- Why the input and output chests cannot work together with the
+-- storage chests, or nil when they can: a chest given by the side of
+-- the computer it touches while the other chests are on the cable.
+function Storage:problem()
+  local c = self.config
+  if not self:networked() then return nil end
+  for _, which in ipairs({ "input", "output" }) do
+    local name = c[which]
+    if name and isSide(name) then
+      return "The " .. which .. " chest is set to " .. name .. ", the side of the computer it touches, "
+        .. "and chests on the cable cannot reach it there. Put a wired modem on it, connect it to "
+        .. "the cable and pick its network name (minecraft:chest_N) instead."
+    end
+  end
+  return nil
+end
+
+-- The inventories that can be the input or output chest: those on the
+-- network, or the side ones when there is no network.
+function Storage:chestChoices()
+  local out, sides = {}, {}
+  for _, name in ipairs(self:inventories()) do
+    if isSide(name) then sides[#sides + 1] = name else out[#out + 1] = name end
+  end
+  if #out == 0 then return sides end
+  return out
+end
+
+--[[
+Remote chests. A remote (storage remote on a pocket computer, see
+apis/remotestorage.lua) has its own chest on the network, such as an
+ender chest, that its items are delivered to and deposited from. The
+chests are kept in config.remotes by computer id and are not storage,
+and nor is any ender chest (a name with ender_chest in it), so the
+storage never fills one before its owner has picked it.
+--]]
+
+-- The remote that has chest, as its id and record, or nil.
+function Storage:remoteOf(chest)
+  for id, r in pairs(self.config.remotes or {}) do
+    if r.chest == chest then return id, r end
+  end
+  return nil
+end
+
+-- The chests remote id may pick: those on the network other than the
+-- input, output and crafting chests and the chests of other remotes.
+function Storage:remoteChoices(id)
+  local c = self.config
+  local out = {}
+  for _, name in ipairs(self:chestChoices()) do
+    local owner = self:remoteOf(name)
+    if name ~= c.input and name ~= c.output and name ~= c.craftChest and (owner == nil or owner == id)
+        and not name:match("^turtle_") and not name:match("^computer_") then
+      out[#out + 1] = name
+    end
+  end
+  return out
+end
+
+-- Give remote id the chest (nil to forget it). Returns true, or false
+-- and why.
+function Storage:setRemote(id, chest, label)
+  local c = self.config
+  c.remotes = c.remotes or {}
+  if chest == nil or chest == "" then
+    c.remotes[id] = nil
+    return true
+  end
+  local owner, r = self:remoteOf(chest)
+  if owner and owner ~= id then
+    return false, chest .. " is already the chest of " .. tostring(r.label or ("computer " .. owner))
+  end
+  local ok = false
+  for _, name in ipairs(self:remoteChoices(id)) do
+    if name == chest then ok = true end
+  end
+  if not ok then return false, chest .. " is not a chest on the storage network that can be used" end
+  c.remotes[id] = { chest = chest, label = label }
+  return true
 end
 
 -- Every inventory peripheral this computer can see, storage or not.
@@ -345,12 +483,16 @@ end
 
 -- Send count of an item (a key, name or search text) to target (the
 -- output chest by default, or any inventory on the network such as
--- turtle_5). Takes from the smallest stacks first, so partial stacks
+-- turtle_5), into slot toSlot of it when given. Takes from the smallest stacks first, so partial stacks
 -- are used up and free their slots. Returns the number moved and, when
 -- that is less than asked, why.
-function Storage:withdraw(text, count, target)
+function Storage:withdraw(text, count, target, toSlot)
   target = target or self.config.output
   if not target or target == "" then return 0, "no output chest set" end
+  if target == self.config.output then
+    local problem = self:problem()
+    if problem then return 0, problem end
+  end
   local item, why = self:find(text)
   if not item then return 0, why end
   count = parseAmount(count or 1, item)
@@ -375,8 +517,8 @@ function Storage:withdraw(text, count, target)
   for _, src in ipairs(sources) do
     if moved >= want then break end
     local n = math.min(src.count, want - moved)
-    local ok, got = pcall(self.call, self, src.chest, "pushItems", target, src.slot, n)
-    if not ok then reason = tostring(got); break end
+    local ok, got = pcall(self.call, self, src.chest, "pushItems", target, src.slot, n, toSlot)
+    if not ok then reason = explain(got); break end
     got = got or 0
     self:adjust(src.chest, src.slot, item.key, -got)
     moved = moved + got
@@ -435,6 +577,11 @@ end
 function Storage:deposit(from)
   from = from or self.config.input
   if not from or from == "" then return 0, 0, "no input chest set" end
+  if from == self.config.input then
+    local problem = self:problem()
+    if problem then return 0, 0, problem end
+  end
+  if #self.names == 0 then return 0, 0, "no storage chests found" end
   local ok, list = pcall(self.call, self, from, "list")
   if not ok or type(list) ~= "table" then return 0, 0, "cannot read " .. from end
   local slots = {}
@@ -453,7 +600,7 @@ function Storage:deposit(from)
       if not chest then reason = "storage is full"; break end
       local n = math.min(remaining, space)
       local ok2, got = pcall(self.call, self, from, "pushItems", chest, slot, n, toSlot)
-      if not ok2 then reason = tostring(got); break end
+      if not ok2 then reason = explain(got); break end
       got = got or 0
       self:adjust(chest, toSlot, key, got, stack)
       remaining = remaining - got
@@ -470,15 +617,225 @@ function Storage:deposit(from)
   return stored, left, reason
 end
 
--- How many items are waiting in the input chest.
-function Storage:inputCount()
-  local input = self.config.input
+-- How many items are waiting in the input chest (or chest).
+function Storage:inputCount(chest)
+  local input = chest or self.config.input
   if not input or input == "" then return 0 end
   local ok, list = pcall(self.call, self, input, "list")
   if not ok or type(list) ~= "table" then return 0 end
   local n = 0
   for _, st in pairs(list) do n = n + st.count end
   return n
+end
+
+--[[
+Sorting
+
+planSort works out, on a copy of the index, the moves that
+
+1. condense: for each kind of item, the last stacks are poured into the
+   first partial ones, so it ends up in as few stacks as it fits;
+2. lay out: the kinds of item, sorted by name, take the storage slots
+   one after another in storage order (chest by chest as discover
+   sorts them, slot by slot), so each kind sits together and all the
+   free slots end up at the end.
+
+A stack in the way is moved to a free slot first: one in its own
+kind's place when there is one, else one past the end of the items.
+That needs at least one free slot, without which the lay out stops
+early. Each slot takes at most two moves. A move is { from, fromSlot,
+to, toSlot, count, key }.
+
+A sort is done a few moves at a time, so the program can deliver
+items in between:
+
+  local job = s:startSort()
+  repeat local finished, why = s:sortStep(job, 16) until finished
+
+Every move is checked against the index before it is made. When items
+were taken out or put in since the plan (by this program, which keeps
+the index up to date, or by hand, which the move then finds out), the
+rest of the sort is planned again from the index.
+--]]
+
+-- Every storage slot in storage order: { chest, slot }.
+function Storage:slotList()
+  local out = {}
+  for _, cname in ipairs(self.names) do
+    local chest = self.chests[cname]
+    if chest then
+      for slot = 1, chest.size do out[#out + 1] = { chest = cname, slot = slot } end
+    end
+  end
+  return out
+end
+
+-- The moves that sort storage, and why it stops early (or nil).
+function Storage:planSort()
+  local positions = self:slotList()
+  local total = #positions
+  local state = {}
+  for i, pos in ipairs(positions) do
+    local st = self.chests[pos.chest].slots[pos.slot]
+    if st then state[i] = { key = keyOf(st), count = st.count } end
+  end
+  local moves = {}
+  local function move(from, to, n)
+    local a, b = state[from], state[to]
+    moves[#moves + 1] = { from = positions[from].chest, fromSlot = positions[from].slot,
+                          to = positions[to].chest, toSlot = positions[to].slot, count = n, key = a.key }
+    if b then b.count = b.count + n else state[to] = { key = a.key, count = n } end
+    a.count = a.count - n
+    if a.count <= 0 then state[from] = nil end
+  end
+
+  -- 1. condense
+  local posOf = {}
+  for i = 1, total do
+    local st = state[i]
+    if st then
+      posOf[st.key] = posOf[st.key] or {}
+      table.insert(posOf[st.key], i)
+    end
+  end
+  local keys = {}
+  for key in pairs(posOf) do keys[#keys + 1] = key end
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    local list = posOf[key]
+    local max = self:maxCount(key)
+    local i, j = 1, #list
+    while i < j do
+      local into = state[list[i]]
+      if into.count >= max then
+        i = i + 1
+      else
+        move(list[j], list[i], math.min(state[list[j]].count, max - into.count))
+        if not state[list[j]] then
+          table.remove(list, j)
+          j = j - 1
+        end
+      end
+    end
+  end
+
+  -- 2. lay out: the place of each kind of item
+  local target, first, last = {}, {}, {}
+  local n = 0
+  for _, key in ipairs(keys) do
+    first[key] = n + 1
+    for _ = 1, #posOf[key] do
+      n = n + 1
+      target[n] = key
+    end
+    last[key] = n
+  end
+
+  local function freeIn(a, b)
+    for i = math.max(1, a), math.min(total, b) do
+      if not state[i] then return i end
+    end
+    return nil
+  end
+  local function relocate(from, to)
+    local key = state[from].key
+    move(from, to, state[from].count)
+    local list = posOf[key]
+    for k = #list, 1, -1 do
+      if list[k] == from then table.remove(list, k); break end
+    end
+    local k = #list
+    while k > 0 and list[k] > to do k = k - 1 end
+    table.insert(list, k + 1, to)
+  end
+
+  for p = 1, n do
+    local want = target[p]
+    local here = state[p]
+    if not (here and here.key == want) then
+      if here then
+        local k = here.key
+        local r = freeIn(math.max(p + 1, first[k]), last[k]) or freeIn(n + 1, total) or freeIn(p + 1, n)
+        if not r then return moves, "sorting needs at least one free slot" end
+        relocate(p, r)
+      end
+      local list = posOf[want]
+      local q = list[#list]
+      if not q or q <= p then return moves, "lost track of " .. want end
+      relocate(q, p)
+    end
+  end
+  return moves, nil
+end
+
+-- Start a sort: plan it. The job counts moves done in done.
+function Storage:startSort()
+  local moves, why = self:planSort()
+  return { moves = moves, at = 1, done = 0, replans = 0, stopWhy = why }
+end
+
+-- Moves left in a sort job (an estimate, as plans can change).
+function sortLeft(job)
+  return #job.moves - job.at + 1
+end
+
+-- Is move m still right for what the index says is in the chests?
+function Storage:moveFits(m)
+  local from = self.chests[m.from]
+  local to = self.chests[m.to]
+  local src = from and from.slots[m.fromSlot]
+  if not src or keyOf(src) ~= m.key or src.count < m.count then return false end
+  local dst = to and to.slots[m.toSlot]
+  if dst and (keyOf(dst) ~= m.key or dst.count + m.count > self:maxCount(m.key)) then return false end
+  return to ~= nil
+end
+
+-- Make up to budget moves of a sort job. Returns true and a message
+-- (nil when all went well) once it has finished, false while there
+-- are moves left.
+function Storage:sortStep(job, budget)
+  budget = budget or math.huge
+  local made = 0
+  while made < budget do
+    local m = job.moves[job.at]
+    if not m then return true, job.stopWhy end
+    local fits = self:moveFits(m)
+    local got = 0
+    if fits then
+      local src = self.chests[m.from].slots[m.fromSlot]
+      local stack = { name = src.name, nbt = src.nbt }
+      local ok, res = pcall(self.call, self, m.from, "pushItems", m.to, m.fromSlot, m.count, m.toSlot)
+      if not ok then return true, explain(res) end
+      got = res or 0
+      if got > 0 then
+        self:adjust(m.from, m.fromSlot, m.key, -got)
+        self:adjust(m.to, m.toSlot, m.key, got, stack)
+        job.done = job.done + 1
+      end
+    end
+    made = made + 1
+    if fits and got == m.count then
+      job.at = job.at + 1
+    else
+      -- the chests are not what the plan thought: look again and plan
+      -- the rest from there
+      job.replans = job.replans + 1
+      if job.replans > 5 then return true, "the chests kept changing while sorting" end
+      if fits then self:refresh({ m.from, m.to }) end
+      job.moves, job.stopWhy = self:planSort()
+      job.at = 1
+    end
+  end
+  return false
+end
+
+-- Sort storage in one go. Returns the number of moves made and why it
+-- stopped early (or nil).
+function Storage:sort()
+  local job = self:startSort()
+  local finished, why
+  repeat finished, why = self:sortStep(job, 64) until finished
+  return job.done, why
 end
 
 --[[

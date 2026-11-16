@@ -7,6 +7,9 @@ installs, then runs startup.lua and a shell prompt like the game does.
 --]]
 
 local sim = sim
+-- Like the game's "ComputerCraft 1.x (Minecraft 1.x)"; programs can tell
+-- they are in the simulator by it.
+_HOST = "ComputerCraft simulator"
 local rawtostring = tostring
 
 -- Lua 5.3 prints integral floats as "5.0"; the game (5.1 style) prints
@@ -1094,7 +1097,11 @@ if sim.isTurtle() then
     if not ok then error(err, 2) end
     return true
   end
-  turtle.craft = function() return false, "No crafting table" end
+  local craft = action("craft")
+  turtle.craft = function(limit)
+    if limit ~= nil and type(limit) ~= "number" then error("bad argument #1 (number expected, got " .. type(limit) .. ")", 2) end
+    return craft(limit)
+  end
   for _, name in ipairs({ "equipLeft", "equipRight", "getEquippedLeft", "getEquippedRight" }) do
     turtle[name] = query(name)
   end

@@ -10,48 +10,61 @@ GUIComponent.__index = GUIComponent
 -- A component that has captured the pointer (an open dropdown, a
 -- dialog) gets every click and touch until it releases the capture. One
 -- with capturesKeys set gets the keys and typed characters too.
-local captured = nil
-function setCapture(c) captured = c end
-function getCapture() return captured end
-
+--
 -- Overlays are components drawn over the rest of the screen (dialogs).
 -- When anything else repaints itself it would draw over them, so the
 -- overlays are painted again on top afterwards.
 --
--- startup loads this file twice (once up front, once with the rest of
--- the apis), so components may hold methods from either copy. The
--- methods therefore reach this state through the guicomponent global,
--- which is the copy loaded last, never through the locals directly.
-local overlays = {}
-local painting = 0 -- depth of nested repaint calls
+-- This state belongs to each screen's top component (the root
+-- container), found from the component given, so programs in other
+-- multishell tabs, which share these APIs, keep theirs apart: a dialog
+-- open in one tab does not take the clicks of another. startup loads
+-- this file twice (once up front, once with the rest of the apis), so
+-- components may hold methods from either copy; keeping the state on
+-- the components means both copies see the same.
+local loose = { overlays = {}, painting = 0 } -- for calls that name no component
 
--- Change the repaint depth by delta and return it.
-function paintDepth(delta)
-    painting = math.max(0, painting + (delta or 0))
-    return painting
+-- The modal state of the screen component c is on.
+local function stateOf(c)
+    if not c then return loose end
+    while c.parent and c.parent.term do c = c.parent end
+    if not c.modal then c.modal = { overlays = {}, painting = 0 } end
+    return c.modal
+end
+
+-- Capture the pointer for c, or release it (c nil) on the screen that
+-- within is on.
+function setCapture(c, within) stateOf(c or within).captured = c end
+function getCapture(within) return stateOf(within).captured end
+
+-- Change the repaint depth of within's screen by delta and return it.
+function paintDepth(delta, within)
+    local s = stateOf(within)
+    s.painting = math.max(0, s.painting + (delta or 0))
+    return s.painting
 end
 
 function addOverlay(c)
     removeOverlay(c)
-    table.insert(overlays, c)
+    table.insert(stateOf(c).overlays, c)
 end
 
 function removeOverlay(c)
-    for i = #overlays, 1, -1 do
-        if overlays[i] == c then table.remove(overlays, i) end
+    local list = stateOf(c).overlays
+    for i = #list, 1, -1 do
+        if list[i] == c then table.remove(list, i) end
     end
 end
 
-function getOverlays()
-    return overlays
+function getOverlays(within)
+    return stateOf(within).overlays
 end
 
 -- Forget any capture and overlays, for when the whole screen is
 -- replaced by a new root container.
-function resetModal()
-    captured = nil
-    overlays = {}
-    painting = 0
+function resetModal(root)
+    if root then root.modal = { overlays = {}, painting = 0 } end
+    loose = { overlays = {}, painting = 0 }
 end
 
 function GUIComponent.new(t)
@@ -127,7 +140,7 @@ end
 -- other children.
 function GUIComponent:repaint()
     local gc = guicomponent
-    gc.paintDepth(1)
+    gc.paintDepth(1, self)
     if self.ui and self.visible and self.started then
         self.ui:paint()
     end
@@ -136,7 +149,7 @@ function GUIComponent:repaint()
             c:repaint()
         end
     end
-    if gc.paintDepth(-1) == 0 and #gc.getOverlays() > 0 then self:paintOverlays() end
+    if gc.paintDepth(-1, self) == 0 and #gc.getOverlays(self) > 0 then self:paintOverlays() end
 end
 
 -- Is this component c or inside it?
@@ -153,16 +166,16 @@ end
 -- them for an ordinary component) after it has drawn itself.
 function GUIComponent:paintOverlays()
     local gc = guicomponent
-    local list = gc.getOverlays()
+    local list = gc.getOverlays(self)
     local from = 1
     for i, o in ipairs(list) do
         if self:isWithin(o) then from = i + 1 end
     end
-    gc.paintDepth(1) -- the overlays' own repaints must not start this again
+    gc.paintDepth(1, self) -- the overlays' own repaints must not start this again
     for i = from, #list do
         if list[i] and list[i].started then list[i]:repaint() end
     end
-    gc.paintDepth(-1)
+    gc.paintDepth(-1, self)
 end
 
 -- Add a children component to this component.

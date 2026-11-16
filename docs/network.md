@@ -1,4 +1,4 @@
-# Pager, alerts, event bus and GPS
+# Pager, alerts and the event bus
 
 ## Pocket pager
 
@@ -39,6 +39,11 @@ theirs. When the pager starts it asks everyone for their active alerts
 statuses carry their alerts anyway. An alert raised once by a plain
 program that has since ended is only heard by pagers running at the
 time.
+
+In the simulator, the Pager scenario has a pocket computer running
+`pager`, two turtles running `turtleagent`, one of which is sent a mine
+line it has too little fuel for, and a base computer that raises a
+power alert.
 
 ## Alerts from base computers
 
@@ -130,54 +135,3 @@ instead of being listed twice.
 register [registryID]
 registrylistener [file]
 ```
-
-## GPS deploy
-
-`gpsdeploy` builds a gps constellation from one turtle, so every
-computer with a wireless modem in range can `gps locate`. Give the
-turtle 4 computers, 4 wireless modems, a disk drive, a floppy disk and
-fuel (about twice the climb plus 200), stand it on open ground with
-clear sky above, and tell it where it is and which way it faces (F3
-shows both), or use `gps` when another constellation is in range:
-
-```
-gpsdeploy <x> <y> <z> <north|east|south|west> [height]
-gpsdeploy gps [height]
-gpsdeploy remove
-```
-
-It climbs straight up to `height` (the y to reach; by default as high
-as it can up to y=250, stopping under anything in the way, and lower
-if the fuel will not stretch) and puts the four hosts eight blocks
-apart at the corners of a tetrahedron around its column: three on one
-level and the fourth four blocks lower, because gps needs four hosts
-that are not all in one plane. For each it places the computer, backs
-off a block and places the modem into the gap so it sticks to the
-computer, puts the disk drive on top with the floppy in it and writes
-an installer to the floppy, then turns the computer on from the side.
-The computer runs the installer, which writes its own startup file
-(`gps host x y z`) and labels it `GPS x,y,z` (labelled computers keep
-their files when picked up); when the turtle sees the label it takes
-the floppy and the drive back. Finally it comes back down to where it
-started and checks itself with `gps locate`, printing whether the
-answer matches.
-
-If something is in the way or a computer does not start, it raises an
-alert, comes back down its column and stops with the reason. The
-constellation is remembered in `gpsdeploy.dat`, and `gpsdeploy remove`
-run from the same starting block flies the same route and digs the
-hosts and modems back up (it needs five empty slots). Computers used
-before still carry their old startup file, but a gpsdeploy floppy next
-to them wins, so they can be deployed again elsewhere.
-
-In the turtle control job list GPS deploy has text fields for x, y and
-z (typed with the on screen keyboard), a facing choice whose default
-`gps` finds both with an existing constellation, and the height (0 for
-as high as possible).
-
-In the simulator, the GPS deploy and locate scenario has the deployer
-and a second turtle that runs `gps locate` at 90 seconds; type
-`gpsdeploy 0 1 0 north 20` in the deployer's shell. The Pager scenario
-has a pocket computer running `pager`, two turtles running
-`turtleagent`, one of which is sent a mine line it has too little fuel
-for, and a base computer that raises a power alert.

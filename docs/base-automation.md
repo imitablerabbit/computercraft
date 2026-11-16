@@ -18,7 +18,7 @@ an `alert`, so the pocket pager shows it. A pager that starts later
 asks for active alerts (`alert.sync`) and these programs answer.
 
 The logic lives in APIs with unit tests (`apis/storage.lua`,
-`circuits.lua`, `machines.lua`, `lift.lua`). `apis/basepanel.lua` is the
+`crafting.lua`, `circuits.lua`, `machines.lua`, `lift.lua`). `apis/basepanel.lua` is the
 shared frame: picking the screen, the command prompt, bus alerts.
 
 ## Storage
@@ -37,14 +37,31 @@ storage request <item> [count]
 (`minecraft:chest_6`); given once, they are saved. Without them the
 panel opens on Settings, where both are picked from a list.
 
+All the chests have to be on the same wired network. A chest touching
+the computer is also seen under the name of that side (`left`, `top`
+...), and the chests on the cable cannot push items to or from that
+name. So side chests are never storage and are not offered in
+Settings, and an input or output chest set to a side opens Settings
+with a message saying to put a wired modem on it and pick its network
+name. A setup with no cable at all, where every chest touches the
+computer, still works with side names.
+
 The Items tab lists everything stored with its count. Touch a row to
 pick an item, then 1, 16, 64, Stack or All to send that many to the
-output chest, or type a number in the box and press Get. A request is
+output chest, or put a number in the box and press Get. A request is
 split over as many slots as needed, taking the smallest stacks first so
 partial stacks are used up, and honours stack sizes (a stack of ender
 pearls is 16). If the output chest fills up, what was sent is reported
-with why it stopped. Find narrows the list by name or display name, and
-the button next to it sorts by count or name. Deposit moves everything
+with why it stopped. Find narrows the list by name or display name, x
+clears it, and the button next to it sorts by count or name.
+
+On a monitor, touching the Find box or the amount box opens an
+on-screen keyboard over the panel: digits, letters, `_ : . -`, Aa for
+capitals, Space, Del, Clear, Cancel and Done. The search keyboard
+shows how many items match as you type; Done applies it. The keys are
+three lines high on a big monitor and one line on a small one. Any
+text box in the GUI framework does the same on a monitor (see
+`apis/gui/readme.md`). Deposit moves everything
 in the input chest into storage, topping up stacks of the same item
 first, then empty slots in chests that already hold that item, then any
 empty slot. Auto deposits by itself every 10 s to 5 minutes. The bar at
@@ -58,6 +75,19 @@ every minute, and Re-index does it at once, to catch changes made by
 hand. Items with NBT data (enchanted books, named items) are kept apart
 from plain ones, as they do not stack.
 
+Sort chests (on Settings, or the `sort` command) tidies storage up.
+It first pours partial stacks of the same item together, so each item
+takes as few slots as it can. Then it lays the items out one kind
+after another in name order (`minecraft:coal`, `minecraft:cobblestone`
+...), filling the first chest slot by slot, then the next, so the free
+slots all end up at the end. A stack in the way is moved aside to a
+free slot first, so at least one slot must be free. Each slot takes at
+most two moves, and a move is a game tick. The sort runs 16 moves at a
+time, with deposits, requests and Get in between, and the status line
+counts the moves. When the chests change under it, by this program or
+by hand, it plans the rest again. Pressing the button again (it reads
+Stop sorting meanwhile) or `sort stop` stops it.
+
 A turtle with a wired modem on the same network can ask for items over
 the bus: `storage request coal 16` at its prompt, or
 `storage.request(item, count)` from a program such as a builder
@@ -65,7 +95,100 @@ restocking. The storage computer pushes them straight into the turtle
 (it is `turtle_<id>` on the network) and answers with how many it sent.
 
 Commands: `get <item> [count|stack|all]`, `deposit`, `find <text>`,
-`refresh`, `auto <seconds>`, `input <chest>`, `output <chest>`, `list`.
+`refresh`, `sort [stop]`, `craft <recipe> [count|max]`, `craft stop`,
+`recipes`, `auto <seconds>`, `input <chest>`, `output <chest>`,
+`craftchest <chest>`, `list`.
+
+### Crafting
+
+Storage can craft saved recipes from what it holds, with a crafty
+turtle (a turtle with a crafting table equipped) doing the crafting.
+
+Setting it up:
+
+1. Put a new chest on the storage cable, with a wired modem on it, and
+   pick it as the crafting chest on Settings (or `craftchest
+   minecraft:chest_9`). It is no longer used as storage.
+2. Put a crafty turtle beside that chest, with the chest in front of
+   it, above it or below it, and run `crafter` on it (in its startup
+   file, so it comes back after a restart). Leave the turtle empty.
+3. The turtle needs a modem the storage computer can reach. Give both
+   a wireless modem (a crafty wireless turtle has the crafting table on
+   one side and the modem on the other), or touch the turtle with a
+   wired modem block on the storage cable.
+
+The Craft tab's top line says when the crafter has been heard
+("Crafter Crafty 6 is ready").
+
+To make a recipe, open the Recipe tab. Touch a square of the 3x3 grid
+and type part of an item's name on the on-screen keyboard; the line
+under the text shows what it finds. Done fills the square when one
+item matches, or lists the matches beside the grid to touch. Done with
+nothing typed, or Empty square, empties it. Give the recipe a name,
+or leave it blank, and press Save. A recipe learns what it makes, and
+how many, the first time it is crafted, and a recipe saved without a
+name then takes that item's name. Edit on the Craft tab loads a recipe
+back into the grid, and Delete removes it. Recipes are kept in
+`/recipes.cfg`.
+
+To craft, touch a recipe on the Craft tab and press 1, 16, 64 or Max,
+or put a number in the box and press Craft. The number is how many
+items to make; Can shows how many the storage has the ingredients
+for. A recipe that has never been crafted makes one craft first, to
+learn its output, and then the rest. `craft stick 64` does the same
+from the prompt.
+
+Each round, the storage puts away anything in the crafting chest and
+moves the ingredients in, one square to a chest slot (square 1 in
+slot 1 and so on), up to a stack of each. It then asks the turtle over
+the bus. The turtle sucks the slots into its own crafting grid,
+crafts, and drops what it made back into the chest. The storage puts
+that away and starts the next round, until it has made the number
+asked for or runs out of an ingredient. Stop (the New button while
+crafting) or `craft stop` stops after the round under way. When the
+turtle does not answer in time, or reports a problem, the storage puts
+the ingredients away again and says why.
+
+### Storage remote
+
+A pocket computer, or any computer, can use the storage at the base
+from afar with `storage remote`. It has the same Items and Craft tabs,
+and items come to the player's own chest on the storage network. That
+is usually an ender chest whose other half the player carries.
+Several people can each have their own chest and pocket computer on
+one storage.
+
+Setting it up:
+
+1. Give the storage computer a wireless (or ender) modem, besides its
+   wired one. The pocket computer needs one too, in range.
+2. Put each player's chest on the storage cable with a wired modem.
+   An ender chest from a mod such as EnderStorage works, with the
+   matching one carried or placed where the player is. Any inventory
+   whose network name has `ender_chest` in it is never used as
+   storage, even before it is picked.
+3. On the pocket computer, run `storage remote` (Storage remote on the
+   desktop) and pick the chest on its Settings tab. The storage
+   computer remembers which chest is whose, by computer id. A chest
+   already picked by someone else is refused.
+
+Then:
+
+- **Get** (1, 16, 64, Stack, All, or a number) sends items to your
+  chest.
+- **Deposit** empties your chest into storage. Auto deposits every few
+  seconds.
+- **Craft** asks the base to craft one of its recipes. The results go
+  into storage, ready to get. Recipes are made at the base.
+- **Find** and the sort button work on the list the base sends, which
+  is fetched again every minute and after every deposit. Refresh on
+  Settings fetches it at once.
+
+The first storage computer that answers is used, and remembered in
+`/storageremote.cfg`. Find storage on Settings looks again. At the
+base, `remotes` lists the remote chests and `unremote <id>` forgets
+one. The pocket's commands are `get`, `deposit`, `find`, `refresh`,
+`craft`, `recipes`, `auto`, `chest <name>` and `list`.
 
 ## Doors and lights
 
@@ -182,7 +305,14 @@ Each program has a world in the simulator: `base-storage`,
 timeline that types commands and presses buttons, and checks that the
 items arrive, the door opens and closes on time, the power alert
 switches the generator and reaches a pager, and the lift serves its
-calls in look order.
+calls in look order. `storage-remote` has two pocket computers, each
+picking its own chest (a stand-in for an ender chest), depositing, and
+getting items delivered there. `storage-craft` has a crafty turtle by the
+crafting chest; its timeline makes a two-plank recipe on the keyboard,
+crafts 16 sticks from the Craft tab and 8 more with `craft stick 8`.
+`storage-sort` has an input chest touching the
+computer as well as on the cable, deposits from it, presses Sort chests
+and searches for coal on the on-screen keyboard.
 
 ```
 cd sim && node headless.mjs base-storage "" 60

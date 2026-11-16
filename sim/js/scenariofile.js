@@ -41,6 +41,7 @@ export const TIMELINE_ARGS = {
   place: ['x', 'y', 'z', 'block'],
   remove: ['x', 'y', 'z'],
   type: ['computer'],
+  touch: ['computer'],
   turnOn: ['computer'],
   shutdown: ['computer'],
   reboot: ['computer'],
@@ -419,7 +420,7 @@ export function parseScenario(text, { key = null, file = null } = {}) {
           const names = TIMELINE_ARGS[entry.action] || [];
           const extra = [];
           plain.forEach((w, i) => { if (i < names.length) entry[names[i]] = value(w); else extra.push(value(w)); });
-          if (entry.action === 'type' && extra.length) entry.text = plain.slice(names.length).map((w) => w.text).join(' ');
+          if ((entry.action === 'type' || entry.action === 'touch') && extra.length) entry.text = plain.slice(names.length).map((w) => w.text).join(' ');
           else if (extra.length) entry.args = extra;
           Object.assign(entry, fields);
           timeline.push(entry);
@@ -457,6 +458,14 @@ export function parseScenario(text, { key = null, file = null } = {}) {
               current.slots = current.slots || [];
               while (current.slots.length < slot - 1) current.slots.push(null);
               current.slots[slot - 1] = parseItem(args[1].text);
+              break;
+            }
+            case 'equip': {
+              // equip <left|right> <item|none>: a tool, modem or crafting table
+              const side = args[0] && args[0].text;
+              if ((side !== 'left' && side !== 'right') || !args[1]) throw new Error('equip <left|right> <item|none>');
+              const item = args[1].text;
+              current.equipped = { ...(current.equipped || {}), [side]: item === 'none' ? null : (item.includes(':') ? item : `minecraft:${item}`) };
               break;
             }
             case 'set': {

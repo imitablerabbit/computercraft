@@ -179,16 +179,6 @@ jobs = {
     { name = "chest", label = "Chest", type = "choice", options = chestSides, default = "behind" },
     { name = "width", label = "Width", type = "number", default = 1, min = 1 },
   } },
-  -- Coordinates are text so the keyboard can type them; facing gps
-  -- finds position and facing with an existing constellation instead.
-  -- Height 0 climbs as high as possible (up to y=250).
-  { id = "gpsdeploy", name = "GPS deploy", program = "gpsdeploy", params = {
-    { name = "x", label = "X", type = "string", default = "0" },
-    { name = "y", label = "Y", type = "string", default = "64" },
-    { name = "z", label = "Z", type = "string", default = "0" },
-    { name = "facing", label = "Facing", type = "choice", options = { "gps", "north", "east", "south", "west" }, default = "gps" },
-    { name = "height", label = "Height", type = "number", default = 0, min = 0, max = 319, step = { 10, 50 } },
-  } },
   -- build: a blueprint by name (a file, or one in /blueprints such as
   -- the examples), the chest side relative to the start (or none) and
   -- whether to dig out what is in the way.

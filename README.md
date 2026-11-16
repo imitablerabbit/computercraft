@@ -2,6 +2,46 @@
 
 Various APIs and commands for the computers and turtles in the Computercraft Minecraft mod.
 
+## Desktop
+
+Every computer, turtle and pocket computer with a colour screen starts
+in the desktop: an applications menu over the programs in this repo.
+`startup.lua` opens it once the APIs are loaded.
+
+- **Opening apps.** Touch or click an app to open it. On an advanced
+  computer each app opens in its own tab, and the tab bar at the top
+  switches between the apps and the desktop. An app's tab closes when
+  the app ends. An app that ends within a few seconds, or with an
+  error, waits for a key first so its output can be read.
+- **Categories.** The bar at the top picks Apps (the whole catalogue),
+  Base, Turtles, Tools, Programs (everything else in `programs/`) or
+  Running (the open tabs), and shows the Minecraft time. Turtle-only
+  apps such as Crafter and Turtle agent are only listed on turtles.
+- **Run...** types any command, with its arguments, on the on-screen
+  keyboard or the real one.
+- **Boot apps** switches to choosing the apps that start with the
+  computer: touch them, then Done. They start in background tabs
+  before the desktop opens, so a storage computer or a crafty turtle
+  comes back by itself after a restart.
+- **Power** reboots, shuts down, or leaves for the shell, as does the x
+  at the top right. Type `desktop` to open it again.
+
+From the shell:
+
+```
+desktop                                  open the desktop
+desktop off                              start in the plain shell instead (on turns it back)
+desktop autostart add storage            start storage with the computer
+desktop autostart remove storage
+desktop autostart                        list what starts with the computer
+```
+
+The settings are kept in `/desktop.cfg`, and the catalogue is
+`apis/desktop.lua`. A computer without tabs (a basic computer or
+turtle) has no desktop; it runs the first autostart app at startup.
+The simulator does not open the desktop by itself, since each of its
+computers runs its scenario's command; the Desktop scenario shows it.
+
 ## Turtle control monitor
 
 `turtlecontrol` is a touch dashboard for mining turtles. It runs on a
@@ -27,7 +67,7 @@ a small chart beside the icon shows the fuel level from recent status
 messages, with the highest and lowest values at its left. Under that are
 buttons for the jobs in `apis/turtlectl.lua` (strip mine, mine line,
 quarry, flatten, logger, reconstruct, tunnel, rail, bridge, farm, lava
-fuel, build, go to, GPS deploy, depot, refuel) and Stop.
+fuel, build, go to, depot, refuel) and Stop.
 
 On a wide screen (a monitor, or an advanced computer's own screen) the
 turtle's other screens are tabs along the top: Jobs, Items, Move, Shell
@@ -123,8 +163,8 @@ on a turtle with a wireless modem and four gps hosts in range, it
 calibrates nav once by moving one block and back to learn its heading,
 and asks gps again after every job. Without gps it never moves by itself.
 It also publishes its status and alerts on the event bus, so the pocket
-`pager` sees them (see [Pager, alerts, event bus and
-GPS](docs/network.md)).
+`pager` sees them (see [Pager, alerts and the event
+bus](docs/network.md)).
 
 ### Job progress
 
@@ -156,13 +196,15 @@ Each of these has its own page under `docs/`:
   tells turtles where the nearest fuel and dump chests are, so
   quarries can empty themselves wherever they are; and the map in
   turtle control.
-- [Pager, alerts, event bus and GPS](docs/network.md): `pager` lists
+- [Pager, alerts and the event bus](docs/network.md): `pager` lists
   every alert in the base on a pocket computer; the `bus` API is a
   publish and subscribe layer over rednet; `alert` and `turtlejob` raise
-  alerts and start jobs from the shell; `gpsdeploy` builds a gps
-  constellation from one turtle.
+  alerts and start jobs from the shell.
 - [Base automation](docs/base-automation.md): `storage` runs a chest
-  network with search, withdraw and deposit; `doors` drives lights and
+  network with search (an on-screen keyboard on a monitor), withdraw,
+  deposit, sorting, crafting saved recipes with a crafty turtle
+  running `crafter`, and `storage remote` on a pocket computer, which
+  delivers to each player's own ender chest; `doors` drives lights and
   doors on schedules and sensors; `machines` watches energy, tanks and
   inventories and switches generators; `lift` dispatches an elevator or
   train between stops.
@@ -364,10 +406,11 @@ and three turtles running `turtleagent`, one almost out of fuel), quarry, recons
 netherrack, redstone and an atomic reconstructor that picks nether quartz ore,
 nether gold ore or ancient debris by the mod's weights of 3000, 500 and 1), flatten, strip mine, the
 inventory viewer, a blank turtle with a shell, and worlds for storage
-networks, redstone, farming, lava, gps, gps deploy and machines (see
+networks, redstone, farming, lava, gps and machines (see
 [Simulator](docs/simulator.md)). Text-file scenarios add one for each
 new program: tunnel, rail, bridge, farm, lava fuel, build, scan, maze
-(goto), pager, gps deploy, the four base programs, fleet and depot.
+(goto), pager, the four base programs, storage sorting,
+storage crafting, storage remote, fleet, depot and the desktop.
 Each computer boots
 `startup.lua` first, so all the APIs are loaded, then its scenario command,
 then drops to a shell where any program can be typed, for example
@@ -425,7 +468,7 @@ wget run https://raw.githubusercontent.com/imitablerabbit/computercraft/master/p
 It asks GitHub for the list of files on `master`, downloads every `.lua`
 file to the same path on the computer (the browser simulator under `sim/`
 is skipped) and asks you to `reboot`, after which `startup.lua` loads the
-APIs and puts the `programs` folders on the path. From then on `github`
+APIs, puts the `programs` folders on the path and opens the desktop. From then on `github`
 pulls the latest copies again, and `github <branch>` installs a branch
 instead. Files deleted from the repo are not removed from the computer.
 This needs the `http` API, which CC: Tweaked enables by default along with
@@ -452,6 +495,15 @@ That downloads every `.lua` file into the same paths on the computer and
 saves the installer as `update.lua`, so after the first install you can
 just run `update` to pull the latest copies. Reboot afterwards so
 `startup.lua` loads the new APIs.
+
+The unit tests in `tests/` are left out, as a computer only has 1 MB by
+default and the rest already takes about 860 KB; add `?tests=1` to the
+URL to install them too. Before it changes anything, the installer
+checks the files fit and stops with a message when they do not. Each
+file is written next to the old one and only then swapped in, so a
+failed write leaves the old file as it was. To give every computer
+more room, raise `computer_space_limit` (in bytes) in
+`computercraft-server.toml`.
 
 Single files work too:
 

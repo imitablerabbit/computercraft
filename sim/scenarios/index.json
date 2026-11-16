@@ -1,9 +1,11 @@
 [
   "quarry-file.scn",
   "base-storage.scn",
+  "storage-sort.scn",
+  "storage-craft.scn",
+  "storage-remote.scn",
   "base-doors.scn",
   "pager.scn",
-  "gpsdeploy-locate.scn",
   "base-machines.scn",
   "build.scn",
   "scan.scn",
@@ -15,5 +17,6 @@
   "lavafuel.scn",
   "base-lift.scn",
   "fleet.scn",
-  "depot.scn"
+  "depot.scn",
+  "desktop.scn"
 ]

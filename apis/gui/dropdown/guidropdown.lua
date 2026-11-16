@@ -159,7 +159,7 @@ function GUIDropdown:openList()
     self.popupY = upward and (self.ay - visible) or self.ay
     self.popup = window.create(top.term, self.ax - (top.ax or 1) + 1, self.popupY - (top.ay or 1) + 1, self.w, h)
     -- A dropdown in a dialog takes the capture from it and gives it back.
-    local previous = guicomponent.getCapture()
+    local previous = guicomponent.getCapture(self)
     self.previousCapture = previous ~= self and previous or nil
     guicomponent.setCapture(self)
     self:repaint()
@@ -169,7 +169,7 @@ function GUIDropdown:closeList()
     if not self.open then return end
     self.open = false
     self.popup = nil
-    if guicomponent.getCapture() == self then guicomponent.setCapture(self.previousCapture) end
+    if guicomponent.getCapture(self) == self then guicomponent.setCapture(self.previousCapture, self) end
     self.previousCapture = nil
     -- whatever the list covered has to be drawn again
     self:top():repaint()

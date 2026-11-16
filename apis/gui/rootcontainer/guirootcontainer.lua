@@ -50,14 +50,14 @@ end
 
 function GUIRootContainer:triggerMonitorTouchEvent(e)
     if self.monitorSide and e.side ~= self.monitorSide then return end
-    local captured = guicomponent.getCapture()
+    local captured = guicomponent.getCapture(self)
     if captured then return captured:triggerMonitorTouchEvent(e) end
     guicomponent.GUIComponent.triggerMonitorTouchEvent(self, e)
 end
 
 function GUIRootContainer:triggerMouseClickEvent(e)
     if self.monitorSide then return end
-    local captured = guicomponent.getCapture()
+    local captured = guicomponent.getCapture(self)
     if captured then return captured:triggerMouseClickEvent(e) end
     guicomponent.GUIComponent.triggerMouseClickEvent(self, e)
 end
@@ -65,19 +65,19 @@ end
 -- Keys, typed characters and the mouse wheel go only to a captured
 -- component that asks for them (a dialog), otherwise to everything.
 function GUIRootContainer:triggerKeyPressEvent(e)
-    local captured = guicomponent.getCapture()
+    local captured = guicomponent.getCapture(self)
     if captured and captured.capturesKeys then return captured:triggerKeyPressEvent(e) end
     guicomponent.GUIComponent.triggerKeyPressEvent(self, e)
 end
 
 function GUIRootContainer:triggerCharEvent(e)
-    local captured = guicomponent.getCapture()
+    local captured = guicomponent.getCapture(self)
     if captured and captured.capturesKeys then return captured:triggerCharEvent(e) end
     guicomponent.GUIComponent.triggerCharEvent(self, e)
 end
 
 function GUIRootContainer:triggerMouseScrollEvent(e)
-    local captured = guicomponent.getCapture()
+    local captured = guicomponent.getCapture(self)
     if captured and captured.capturesKeys then return captured:triggerMouseScrollEvent(e) end
     guicomponent.GUIComponent.triggerMouseScrollEvent(self, e)
 end

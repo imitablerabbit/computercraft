@@ -359,25 +359,6 @@ Object.assign(SCENARIOS, {
     ],
   },
 
-  gpsdeploy: {
-    name: 'GPS deploy',
-    description: 'A turtle on open ground with 4 computers, 4 wireless modems, a disk drive and an empty floppy, nothing else. Computers it places start off with an empty disk and face it; a modem placed through a gap sticks to the computer behind it, a floppy dropped into a drive mounts as disk/ and the computer runs disk/startup.lua when turned on.',
-    build(world) {
-      flat(world, 8);
-    },
-    computers: [
-      {
-        id: 2, label: 'Deployer', kind: 'turtle', advanced: true, pos: { x: 0, y: 0, z: 1 }, heading: 0, fuel: 2000,
-        slots: [
-          { name: 'computercraft:computer_normal', count: 4 }, { name: 'computercraft:wireless_modem_normal', count: 4 },
-          { name: 'computercraft:disk_drive', count: 1 }, { name: 'computercraft:disk', count: 1 },
-        ],
-        peripherals: { left: { type: 'modem' } },
-        autorun: '',
-      },
-    ],
-  },
-
   machines: {
     name: 'Machines',
     description: 'A computer with an energy cell on its left (energy_storage) and a wired modem on its back, networked to a lava tank (fluid_storage) and a second energy cell. Their contents drift slowly: try getEnergy(), getEnergyCapacity() and tanks().',

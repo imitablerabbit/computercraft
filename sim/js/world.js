@@ -109,6 +109,9 @@ export const ITEMS = {
   'minecraft:diamond_hoe':   { displayName: 'Diamond Hoe', maxCount: 1, maxDamage: 1561, groups: ['Tools & Utilities'], tool: 'hoe' },
   'minecraft:diamond_sword': { displayName: 'Diamond Sword', maxCount: 1, maxDamage: 1561, groups: ['Combat'], tool: 'sword' },
   'minecraft:crafting_table': { displayName: 'Crafting Table', fuel: 15, groups: ['Functional Blocks'], tool: 'crafting' },
+  'minecraft:stick':         { displayName: 'Stick', fuel: 5, groups: ['Ingredients'] },
+  'minecraft:furnace':       { displayName: 'Furnace', groups: ['Functional Blocks'] },
+  'minecraft:ladder':        { displayName: 'Ladder', fuel: 15, groups: ['Functional Blocks'] },
   'minecraft:bucket':        { displayName: 'Bucket', maxCount: 16, groups: ['Tools & Utilities'] },
   'minecraft:lava_bucket':   { displayName: 'Lava Bucket', maxCount: 1, fuel: 1000, remainder: 'minecraft:bucket', liquid: 'lava', groups: ['Tools & Utilities'] },
   'minecraft:water_bucket':  { displayName: 'Water Bucket', maxCount: 1, remainder: 'minecraft:bucket', liquid: 'water', groups: ['Tools & Utilities'] },
@@ -231,6 +234,51 @@ export function insertInto(slots, stack, n, order) {
     }
   }
   return n - left;
+}
+
+// What a crafty turtle can craft here: a few vanilla recipes. A shaped
+// recipe's pattern is its rows (spaces are empty), matched wherever it
+// sits in the grid and mirrored too; a key letter may stand for several
+// items. A shapeless one lists its items.
+const PLANKS = ['minecraft:oak_planks'];
+const COALS = ['minecraft:coal', 'minecraft:charcoal'];
+export const RECIPES = [
+  { items: ['minecraft:oak_log'], out: 'minecraft:oak_planks', count: 4 },
+  { pattern: ['P', 'P'], key: { P: PLANKS }, out: 'minecraft:stick', count: 4 },
+  { pattern: ['C', 'S'], key: { C: COALS, S: ['minecraft:stick'] }, out: 'minecraft:torch', count: 4 },
+  { pattern: ['PP', 'PP'], key: { P: PLANKS }, out: 'minecraft:crafting_table', count: 1 },
+  { pattern: ['PPP', 'P P', 'PPP'], key: { P: PLANKS }, out: 'minecraft:chest', count: 1 },
+  { pattern: ['CCC', 'C C', 'CCC'], key: { C: ['minecraft:cobblestone'] }, out: 'minecraft:furnace', count: 1 },
+  { pattern: ['CCC', ' S ', ' S '], key: { C: ['minecraft:cobblestone'], S: ['minecraft:stick'] }, out: 'minecraft:stone_pickaxe', count: 1 },
+  { pattern: ['S S', 'SSS', 'S S'], key: { S: ['minecraft:stick'] }, out: 'minecraft:ladder', count: 3 },
+  { pattern: ['I I', 'ISI', 'I I'], key: { I: ['minecraft:iron_ingot'], S: ['minecraft:stick'] }, out: 'minecraft:rail', count: 16 },
+];
+
+// The recipe a 3x3 grid of item names (null for empty) makes, or null.
+export function matchRecipe(grid) {
+  const used = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) if (grid[r][c]) used.push([r, c]);
+  if (!used.length) return null;
+  const r0 = Math.min(...used.map((u) => u[0])); const r1 = Math.max(...used.map((u) => u[0]));
+  const c0 = Math.min(...used.map((u) => u[1])); const c1 = Math.max(...used.map((u) => u[1]));
+  const rows = [];
+  for (let r = r0; r <= r1; r++) rows.push(grid[r].slice(c0, c1 + 1));
+  for (const recipe of RECIPES) {
+    if (recipe.items) {
+      const have = used.map(([r, c]) => grid[r][c]).sort();
+      const want = [...recipe.items].sort();
+      if (have.length === want.length && have.every((n, i) => n === want[i])) return recipe;
+      continue;
+    }
+    const p = recipe.pattern;
+    if (p.length !== rows.length || p[0].length !== rows[0].length) continue;
+    const fits = (mirror) => rows.every((row, r) => row.every((name, c) => {
+      const ch = p[r][mirror ? row.length - 1 - c : c];
+      return ch === ' ' ? !name : !!name && recipe.key[ch].includes(name);
+    }));
+    if (fits(false) || fits(true)) return recipe;
+  }
+  return null;
 }
 
 // The detail table turtle.getItemDetail and inventory peripherals give.
@@ -1022,6 +1070,37 @@ export class World {
     return { ok: true };
   }
 
+  // turtle.craft: the grid is slots 1-3, 5-7 and 9-11, every other
+  // slot must be empty, and a crafting table must be equipped. Crafts
+  // up to limit times (0 only checks); the results go in from the
+  // selected slot on, and what does not fit is dropped.
+  _craft(t, limit) {
+    if (t.equipped.left !== 'minecraft:crafting_table' && t.equipped.right !== 'minecraft:crafting_table') {
+      return { ok: false, reason: 'No crafting table' };
+    }
+    const n = limit == null ? 64 : limit;
+    if (n < 0 || n > 64) return { ok: false, reason: 'Crafting count must be between 0 and 64' };
+    const gridSlots = [0, 1, 2, 4, 5, 6, 8, 9, 10];
+    for (let i = 0; i < 16; i++) if (!gridSlots.includes(i) && t.slots[i]) return { ok: false, reason: 'No matching recipes' };
+    const grid = [0, 1, 2].map((r) => [0, 1, 2].map((c) => (t.slots[gridSlots[r * 3 + c]] || {}).name || null));
+    const recipe = matchRecipe(grid);
+    if (!recipe) return { ok: false, reason: 'No matching recipes' };
+    if (n === 0) return { ok: true };
+    const k = Math.min(n, ...gridSlots.filter((i) => t.slots[i]).map((i) => t.slots[i].count));
+    for (const i of gridSlots) {
+      const s = t.slots[i];
+      if (s) { s.count -= k; if (s.count === 0) t.slots[i] = null; }
+    }
+    const total = k * recipe.count;
+    const order = [];
+    for (let i = 0; i < 16; i++) order.push((t.selected - 1 + i) % 16);
+    let moved = insertInto(t.slots, { name: recipe.out }, total, order.filter((i) => t.slots[i]));
+    moved += insertInto(t.slots, { name: recipe.out }, total - moved, order);
+    this._inventoryChanged(t);
+    this.log(t.id, `crafted ${total} ${recipe.out}` + (moved < total ? ` (${total - moved} dropped, no room)` : ''));
+    return { ok: true };
+  }
+
   // Swap the selected slot with the upgrade on a side, like
   // turtle.equipLeft. Only tools, modems and a crafting table fit.
   _equip(t, side) {
@@ -1057,6 +1136,7 @@ export class World {
       case 'suck': return this._suck(t, 'forward', arg);
       case 'suckUp': return this._suck(t, 'up', arg);
       case 'suckDown': return this._suck(t, 'down', arg);
+      case 'craft': return this._craft(t, arg);
       case 'attack': case 'attackUp': case 'attackDown': return { ok: false, reason: 'Nothing to attack here' };
       default: return { ok: false, reason: `unknown action ${action}` };
     }

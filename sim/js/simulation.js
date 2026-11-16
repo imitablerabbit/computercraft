@@ -259,6 +259,9 @@ export class Simulation {
   //                              like { name, files } for a floppy
   //   place   { pos, block, meta }, remove { pos }
   //   type    { computer, text } paste a line and press enter
+  //   touch   { computer, text } touch the computer's monitor (or click
+  //                              its own screen) on text shown there, a
+  //                              whole word or words, or at "x y"
   //   turnOn / shutdown / reboot { computer }
   runTimeline(ev) {
     // the position may also be given flat (x, y, z) and the turtle or
@@ -285,6 +288,30 @@ export class Simulation {
         if (!c) { fail(`no computer ${ev.computer}`); break; }
         c.pushEvent(['paste', ev.text]);
         c.pushEvent(['key', 257, false]);
+        break;
+      }
+      case 'touch': {
+        const c = this.computers.get(ev.computer);
+        if (!c) { fail(`no computer ${ev.computer}`); break; }
+        let side = null;
+        let screen = c.terminal;
+        for (const [s, t] of c.terminals) if (s !== 'native') { side = s; screen = t; break; }
+        const text = String(ev.text == null ? '' : ev.text).trim();
+        let x = null;
+        let y = null;
+        const at = text.match(/^(\d+)\s+(\d+)$/);
+        if (at) { x = Number(at[1]); y = Number(at[2]); }
+        const lines = at ? [] : screen.dump().split('\n');
+        for (let row = 0; row < lines.length && x == null; row++) {
+          const line = lines[row];
+          for (let k = line.indexOf(text); k >= 0 && text; k = line.indexOf(text, k + 1)) {
+            const before = k === 0 || line[k - 1] === ' ';
+            const after = k + text.length >= line.length || line[k + text.length] === ' ';
+            if (before && after) { x = k + 1 + Math.floor((text.length - 1) / 2); y = row + 1; break; }
+          }
+        }
+        if (x == null) { fail(`no "${text}" on computer ${ev.computer}'s screen`); break; }
+        c.pushEvent(side ? ['monitor_touch', side, x, y] : ['mouse_click', 1, x, y]);
         break;
       }
       case 'turnOn': case 'shutdown': case 'reboot': {

@@ -85,8 +85,6 @@ New scenarios, each with a short note in the top bar:
 - **Lava**: a lava pool and a turtle with 16 buckets and almost no fuel.
 - **GPS**: four gps hosts at different heights and a turtle; type
   `gps locate` in the turtle's shell.
-- **GPS deploy**: a turtle with 4 computers, 4 wireless modems, a disk
-  drive and a floppy, on empty ground.
 - **Machines**: a computer beside an energy cell, networked to a tank and
   another cell.
 
@@ -94,5 +92,6 @@ A scenario can script a player with a `timeline`: entries like
 `{ at: 10, action: 'toggle', pos: { x, y, z } }` (a lever, or holding a
 pressure plate down), `press` (a button, or a quick step on a plate),
 `step` with `seconds`, `give` with `turtle`, `item` and `count`, `place`
-and `remove` a block, `type` a line into a `computer`, and `turnOn`,
-`shutdown` or `reboot` a computer.
+and `remove` a block, `type` a line into a `computer`, `touch` a
+computer's monitor (or click its own screen) on some text shown there
+or at `x y`, and `turnOn`, `shutdown` or `reboot` a computer.

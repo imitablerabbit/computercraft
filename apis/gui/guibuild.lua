@@ -44,7 +44,8 @@ Types and their own fields:
   tabs       a GUITabs; each child is a tab with a title; onChange
   text       text, align, valign
   button     text, onPress, pressColor
-  input      text, onDone
+  input      text, onDone, keyboard ("touch", "always" or false: when
+             an on-screen keyboard opens), keyboardTitle, keyboardHint
   checkbox   text, checked, onChange
   dropdown   options, selected (index) or value, onSelect
   progress   value, max, label, showPercent, warnBelow, fill, empty
@@ -129,6 +130,9 @@ end
 makers.input = function(spec)
   local c = guiinput.GUIInput.new(tostring(spec.text or ""))
   if spec.onDone then c:addDoneListener(spec.onDone) end
+  if spec.keyboard ~= nil or spec.keyboardTitle or spec.keyboardHint then
+    c:setKeyboard(spec.keyboard == nil and "touch" or spec.keyboard, spec.keyboardTitle, spec.keyboardHint)
+  end
   return c
 end
 makers.checkbox = function(spec)

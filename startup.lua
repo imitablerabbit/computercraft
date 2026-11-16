@@ -68,3 +68,10 @@ local addPath = function(f, acc)
 end
 local newPath = foldDirs(addPath, path, programDir)
 shell.setPath(newPath)
+
+-- Open the desktop (programs/desktop.lua): start the apps set to start
+-- with the computer, then the applications menu. "desktop off" keeps
+-- the plain shell instead.
+if desktop and desktop.startsAtBoot() then
+  shell.run("desktop", "boot")
+end
