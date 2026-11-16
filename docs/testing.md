@@ -39,8 +39,8 @@ tested against a fake one.
 
 The installer leaves `tests/` out by default, since the test files take
 about 150 KB and a computer has 1 MB. To run them in game, install with
-`wget run http://<your-ip>:8080/install.lua?tests=1`; the `update.lua`
-it saves keeps fetching them.
+`wget run http://<your-ip>:8080/install.lua?tests=1` (the `update.lua`
+it saves keeps fetching them), or `github master tests` from GitHub.
 
 ### Writing unit tests
 

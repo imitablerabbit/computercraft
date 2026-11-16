@@ -467,10 +467,13 @@ wget run https://raw.githubusercontent.com/imitablerabbit/computercraft/master/p
 
 It asks GitHub for the list of files on `master`, downloads every `.lua`
 file to the same path on the computer (the browser simulator under `sim/`
-is skipped) and asks you to `reboot`, after which `startup.lua` loads the
+and the unit tests under `tests/` are skipped) and asks you to `reboot`, after which `startup.lua` loads the
 APIs, puts the `programs` folders on the path and opens the desktop. From then on `github`
 pulls the latest copies again, and `github <branch>` installs a branch
 instead. Files deleted from the repo are not removed from the computer.
+A computer has 1 MB by default, so it checks the files fit before
+changing anything, and a failed write leaves the old file as it was.
+`github master tests` installs the tests too, for the `test` program.
 This needs the `http` API, which CC: Tweaked enables by default along with
 access to GitHub's hosts.
 
