@@ -16,6 +16,14 @@ GUITabs = {}
 GUITabs.__index = GUITabs
 setmetatable(GUITabs, {__index = guicomponent.GUIComponent})
 
+-- A tab that is not shown keeps its window, and CraftOS redraws a
+-- visible window whenever it is moved or resized, so a hidden tab whose
+-- layout changes would draw over the shown one. Hide its window; adding
+-- the tab again gives it fresh visible windows.
+local function hideTerm(c)
+    if c.term and c.term.setVisible then c.term.setVisible(false) end
+end
+
 function GUITabs.new()
     local object = guicomponent.GUIComponent.new()
     object.tabs = {} -- { title, component }
@@ -43,7 +51,10 @@ end
 function GUITabs:addTab(title, component)
     table.insert(self.tabs, { title = title, component = component })
     local index = #self.tabs
-    if not self.selected then self:select(index, false) else self:repaint() end
+    if not self.selected then self:select(index, false) else
+        hideTerm(component)
+        self:repaint()
+    end
     return index
 end
 
@@ -114,6 +125,7 @@ function GUITabs:select(index, notify)
     if current and current ~= tab.component then
         guicomponent.GUIComponent.remove(self, current)
         current:setStarted(false)
+        hideTerm(current)
     end
     self.selected = index
     if current ~= tab.component then
