@@ -7,7 +7,7 @@
 # the on-screen keyboard and crafts with it.
 name Storage crafting
 description A storage computer with a crafting chest (minecraft:chest_5) and a crafty turtle beside it running crafter, both with wireless modems. Storage holds planks, logs, coal and cobblestone.
-description The timeline picks the crafting chest at 2 s, makes a recipe of two oak planks on the Recipe tab (squares 2 and 5, found by typing on the keyboard), saves it, crafts 16 sticks from the Craft tab and then 8 more with the craft command.
+description The timeline picks the crafting chest at 2 s, makes a recipe of two oak planks on the Recipe tab (squares 2 and 5, found by typing on the keyboard), saves it, crafts 16 sticks from the Craft tab and then 8 more with the craft command, then 8 torches and 2 chests from the built-in recipes.
 
 ground -8 -8 8 8 0 3 ores=false pockets=false
 
@@ -62,11 +62,16 @@ at 11.6 touch 1 Done
 at 12 touch 1 Save
 at 13 touch 1 16
 at 30 type 1 craft stick 8
+# built-in recipes: torches from coal and the sticks, chests from any planks
+at 38 type 1 craft torch 8
+at 46 type 1 craft chest 2
 
-check make a stick recipe on the keyboard and craft 16, then 8 more
-  seconds 45
+check make a stick recipe on the keyboard and craft 16, then 8 more, then built-in torches and chests
+  seconds 60
   expect log Crafted 16 Stick.
   expect log Crafted 8 Stick.
+  expect log Crafted 8 Torch.
+  expect log Crafted 2 Chest.
   expect chest 2 -3 1 items = 0
   expect turtle 6 items = 0
   expect screen 6 Made 4 Stick

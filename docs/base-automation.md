@@ -96,13 +96,14 @@ restocking. The storage computer pushes them straight into the turtle
 
 Commands: `get <item> [count|stack|all]`, `deposit`, `find <text>`,
 `refresh`, `sort [stop]`, `craft <recipe> [count|max]`, `craft stop`,
-`recipes`, `auto <seconds>`, `input <chest>`, `output <chest>`,
+`recipes [all] [text]`, `auto <seconds>`, `input <chest>`, `output <chest>`,
 `craftchest <chest>`, `list`.
 
 ### Crafting
 
-Storage can craft saved recipes from what it holds, with a crafty
-turtle (a turtle with a crafting table equipped) doing the crafting.
+Storage can craft from what it holds, with a crafty turtle (a turtle
+with a crafting table equipped) doing the crafting. It comes with
+built-in recipes, and you can add your own.
 
 Setting it up:
 
@@ -130,6 +131,30 @@ how many, the first time it is crafted, and a recipe saved without a
 name then takes that item's name. Edit on the Craft tab loads a recipe
 back into the grid, and Delete removes it. Recipes are kept in
 `/recipes.cfg`.
+
+The built-in recipes are in `apis/recipebook.lua`. They cover the
+vanilla (1.20 and later) and CC: Tweaked recipes a base uses most:
+- planks, slabs, stairs, fences, gates, doors, trapdoors, signs,
+  pressure plates, buttons and boats in every wood;
+- sticks, chests, crafting tables, barrels, ladders and torches;
+- wooden, stone, iron, golden and diamond tools;
+- leather, iron, golden and diamond armour;
+- furnaces, glass panes, rails, hoppers, pistons and redstone parts;
+- storage blocks and back;
+- computers, turtles, monitors, modems and cables.
+
+They aren't saved to `/recipes.cfg`, and they already know what they
+make. Recipes that take any planks, logs, coal or cobblestone use a
+tag such as "Any planks". Each batch uses the kind that storage has
+most of. On the Craft tab:
+- **Can make** shows your own recipes and the built-in ones that
+  storage has the items for. Touch it to switch to **All**.
+- **Find** narrows the list by name.
+- **Edit** on a built-in recipe saves a copy of it, which then replaces
+  the built-in one. Delete the copy to get the built-in one back.
+
+`recipes` at the prompt lists the same as Can make; `recipes all door`
+lists every recipe with "door" in its name.
 
 To craft, touch a recipe on the Craft tab and press 1, 16, 64 or Max,
 or put a number in the box and press Craft. The number is how many
@@ -178,8 +203,9 @@ Then:
   chest.
 - **Deposit** empties your chest into storage. Auto deposits every few
   seconds.
-- **Craft** asks the base to craft one of its recipes. The results go
-  into storage, ready to get. Recipes are made at the base.
+- **Craft** asks the base to craft one of its recipes, built-in or
+  saved. The results go into storage, ready to get. Recipes are made
+  at the base.
 - **Find** and the sort button work on the list the base sends, which
   is fetched again every minute and after every deposit. Refresh on
   Settings fetches it at once.
@@ -309,7 +335,8 @@ calls in look order. `storage-remote` has two pocket computers, each
 picking its own chest (a stand-in for an ender chest), depositing, and
 getting items delivered there. `storage-craft` has a crafty turtle by the
 crafting chest; its timeline makes a two-plank recipe on the keyboard,
-crafts 16 sticks from the Craft tab and 8 more with `craft stick 8`.
+crafts 16 sticks from the Craft tab and 8 more with `craft stick 8`,
+then torches and chests from the built-in recipes.
 `storage-sort` has an input chest touching the
 computer as well as on the cable, deposits from it, presses Sort chests
 and searches for coal on the on-screen keyboard.

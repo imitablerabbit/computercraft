@@ -25,7 +25,7 @@ storage chests. A chest touching the computer is also seen under the
 side's name (left, top ...), which the chests on the cable cannot
 reach, so side chests are not offered or used as storage.
 
-The Craft tab crafts saved recipes with a crafty turtle running crafter
+The Craft tab crafts recipes with a crafty turtle running crafter
 (programs/turtle/crafter.lua) beside the crafting chest, a chest on the
 network picked in Settings. Touch a recipe, then 1, 16, 64 or Max (or a
 number and Craft) for that many items. The storage moves the
@@ -35,7 +35,11 @@ crafts at a time. The Recipe tab makes and edits recipes: touch a
 square of the 3x3 grid, search storage for its item on the on-screen
 keyboard, and Save. A recipe learns what it makes the first time it is
 crafted, and takes that item's name if it was saved without one.
-Recipes are kept in /recipes.cfg (apis/crafting.lua).
+Recipes are kept in /recipes.cfg (apis/crafting.lua). Built-in recipes
+(apis/recipebook.lua: planks, sticks, torches, chests, tools, armour
+and more) are listed too; the Craft tab shows the ones storage has the
+items for, or All, and Find narrows the list. Editing a built-in recipe
+saves a copy, which then takes its place.
 
 A turtle with a wired modem on the same network can ask for items over
 the bus ("base.storage.request"): `storage request coal 16` on the
@@ -45,7 +49,7 @@ builder restocking. The items are pushed straight into the turtle
 
 On a monitor the computer's own screen logs what happens and takes
 commands: get <item> [count|stack|all], deposit, find <text>, refresh,
-sort [stop], craft <recipe> [count|max], craft stop, recipes, auto
+sort [stop], craft <recipe> [count|max], craft stop, recipes [all] [text], auto
 <seconds>, input <chest>, output <chest>, craftchest <chest>, list,
 help, quit. On the
 own screen a pasted line runs as a command.
@@ -129,8 +133,13 @@ if remote then RecipeTab, SettingsTab = nil, 3 end
 
 -- Crafting: the recipes, the picked one, the craft under way and the
 -- crafter turtle last heard on the bus.
+-- recipes are the saved ones; book adds the built-in ones, and is what
+-- the Craft tab lists and craft finds by name. selectedRecipe is one of
+-- book's recipes.
 local recipes = crafting.loadRecipes()
+local book = recipebook.merge(recipes)
 local selectedRecipe = nil
+local recipeQuery = ""
 local craftJob = nil
 local crafterId, crafterLabel, crafterSeen, crafterBusy = nil, nil, 0, false
 local craftCounter = 0
@@ -202,6 +211,7 @@ end
 -- An item's name for people, from the index or what is known of it.
 local function itemName(key)
   if not key then return "?" end
+  if crafting.isTag(key) then return recipebook.tagName(key) end
   local item = store:index()[key]
   if item then return item.displayName end
   local info = store.info[key]
@@ -221,30 +231,74 @@ end
 
 -- What the items in storage are enough for: items when the recipe's
 -- output is known, crafts (5x) when not.
-local function canText(r)
-  local n = crafting.maxCrafts(r, store:index())
+local function canText(r, n)
+  n = n or crafting.maxCrafts(r, store:index())
   if r.output then return tostring(n * r.output.count) end
   return n .. "x"
 end
 
+-- The saved recipe's index, or nil for a built-in one.
+local function savedIndex(r)
+  for i, other in ipairs(recipes) do
+    if other == r then return i end
+  end
+  return nil
+end
+
+-- After the saved recipes change: list them with the built-in ones, and
+-- keep the picked recipe (by name, so a saved copy replaces the
+-- built-in one it was made from).
+local function rebuildBook()
+  book = recipebook.merge(recipes)
+  if selectedRecipe then
+    local name = selectedRecipe.name:lower()
+    selectedRecipe = nil
+    for _, r in ipairs(book) do
+      if r.name:lower() == name then selectedRecipe = r; break end
+    end
+  end
+end
+
+-- The recipes the Craft tab lists, each with how many crafts storage
+-- has the items for: those matching Find, and unless All is on only
+-- the saved ones and the ones that can be made now.
+local function shownRecipes()
+  local q = recipeQuery:lower()
+  local all = config.recipeFilter == "all"
+  local items = store:index()
+  local out = {}
+  for _, r in ipairs(book) do
+    if q == "" or r.name:lower():find(q, 1, true) then
+      local n = crafting.maxCrafts(r, items)
+      if all or not r.builtin or n > 0 or r == selectedRecipe then out[#out + 1] = { recipe = r, crafts = n } end
+    end
+  end
+  return out
+end
+
 local function updateRecipes()
   if not ids then return end
-  local rows = {}
-  for i, r in ipairs(recipes) do
-    rows[i] = { r.name, r.output and tostring(r.output.count) or "?", canText(r), index = i }
+  local rows, selectIndex = {}, nil
+  for i, s in ipairs(shownRecipes()) do
+    local r = s.recipe
+    rows[i] = { r.name, r.output and tostring(r.output.count) or "?", canText(r, s.crafts), recipe = r }
+    if r == selectedRecipe then selectIndex = i end
   end
+  local all = config.recipeFilter == "all"
+  ids.recipes:setEmptyText(recipeQuery ~= "" and ("No recipe matches " .. recipeQuery .. ".")
+    or (all and "No recipes." or "Nothing to make yet: touch Can make for All."))
   ids.recipes:sortBy(nil)
   ids.recipes:setRows(rows)
-  ids.recipes:select(selectedRecipe and recipes[selectedRecipe] and selectedRecipe or nil)
-  local r = selectedRecipe and recipes[selectedRecipe]
+  ids.recipes:select(selectIndex)
+  ids.recipeFilter:setText(all and "All" or "Can make")
+  local r = selectedRecipe
   if r then
     local parts = {}
     for key, per in pairs(crafting.needs(r)) do parts[#parts + 1] = per .. " " .. itemName(key) end
     table.sort(parts)
     ids.recipePicked:setText(r.name .. ": " .. table.concat(parts, ", "))
   else
-    ids.recipePicked:setText(#recipes > 0 and "Touch a recipe to pick it."
-      or (remote and "No recipes at the base yet." or "No recipes yet: make one on the Recipe tab."))
+    ids.recipePicked:setText("Touch a recipe to pick it.")
   end
   ids.crafter:setText(crafterText())
   ids.craftStop:setText(craftJob and "Stop" or "New")
@@ -272,7 +326,8 @@ local function updateEditor()
   local rows = {}
   for i, item in ipairs(edit.matches) do rows[i] = { item.displayName, item.count, key = item.key } end
   ids.matches:setRows(rows)
-  ids.editing:setText(edit.index and recipes[edit.index] and ("Editing " .. recipes[edit.index].name) or "New recipe")
+  ids.editing:setText(edit.index and recipes[edit.index] and ("Editing " .. recipes[edit.index].name)
+    or (edit.from and ("Copy of built-in " .. edit.from.name)) or "New recipe")
 end
 
 -- A remote's Settings: the storage computer and the chest picked.
@@ -365,6 +420,7 @@ end
 
 local function saveRecipes()
   crafting.saveRecipes(recipes)
+  rebuildBook()
 end
 
 -- What a craft made so far, in words.
@@ -384,7 +440,6 @@ end
 -- Move one batch of ingredients into the crafting chest and ask the
 -- crafter, or finish when there is nothing more to make.
 local function craftBatch(job)
-  local r = job.recipe
   local left = job.crafts - job.done
   if job.stop then return craftFinish(job, craftSummary(job) .. "; stopped.") end
   if left <= 0 then return craftFinish(job, craftSummary(job) .. ".") end
@@ -395,13 +450,16 @@ local function craftBatch(job)
   if store:inputCount(chest) > 0 then
     return craftFinish(job, "Crafting stopped: the crafting chest is not empty and storage cannot take what is in it.")
   end
+  -- this batch's items: the planks (and so on) storage has most of
+  local r = crafting.resolve(job.recipe, store:index())
   local k = crafting.batchSize(r, left, function(key) return store:maxCount(key) end)
   local can, short = crafting.maxCrafts(r, store:index())
   k = math.min(k, can)
   -- a recipe never crafted makes one first, to learn what it makes
   if not r.output then k = math.min(k, 1) end
   if k < 1 then
-    local msg = "not enough " .. itemName(short)
+    local _, anyShort = crafting.maxCrafts(job.recipe, store:index())
+    local msg = "not enough " .. itemName(anyShort or short)
     return craftFinish(job, job.done > 0 and (craftSummary(job) .. "; then " .. msg .. ".") or ("Cannot craft " .. r.name .. ": " .. msg .. "."))
   end
   local grid = {}
@@ -502,7 +560,8 @@ local function doJob(job)
     status("Asking the storage...")
     local ok, why = store:refresh()
     if ok then
-      recipes = store.recipes
+      recipes = store.recipes or {}
+      rebuildBook()
       local used, total = store:capacity()
       status((store.label or "Storage") .. ": " .. used .. "/" .. total .. " slots used.")
     else
@@ -629,7 +688,7 @@ local requests = basepanel.busLoop({ "base.storage.request", "base.craft.hello",
   elseif topic == "base.storage.deposit" and forMe(payload) then
     queue({ "remoteDeposit", payload = payload, sender = sender })
   elseif topic == "base.storage.craft" and forMe(payload) then
-    local r = crafting.findRecipe(recipes, payload.recipe)
+    local r = crafting.findRecipe(book, payload.recipe)
     local msg = r and startCraft(r, payload.count or 1) or ("No recipe called " .. tostring(payload.recipe) .. " at the base.")
     answer("base.storage.crafting", sender, payload, { message = msg })
   elseif topic == "base.craft.hello" and type(payload) == "table" then
@@ -718,10 +777,11 @@ local function stopCraft()
   return "Stopping after this batch."
 end
 
--- The editor: start a new recipe, or load recipe i.
-local function editRecipe(i)
-  local r = i and recipes[i]
-  edit = { index = r and i or nil, grid = {}, cell = nil, matches = {} }
+-- The editor: start a new recipe, or load a recipe. A built-in one is
+-- loaded as a new recipe of the same name, which replaces it once saved.
+local function editRecipe(r)
+  local i = r and savedIndex(r)
+  edit = { index = i, from = r and not i and r or nil, grid = {}, cell = nil, matches = {} }
   if r then for cell, key in pairs(r.grid) do edit.grid[cell] = key end end
   ids.recipeName:setText(r and r.name or "")
   ids.cellHint:setText("Touch a square.")
@@ -768,7 +828,17 @@ end
 local function saveRecipe()
   if not next(edit.grid) then return status("Put at least one item in the grid first.") end
   local name = ids.recipeName:getText():gsub("^%s+", ""):gsub("%s+$", "")
-  local r = edit.index and recipes[edit.index] or { grid = {} }
+  local r = edit.index and recipes[edit.index]
+  if not r and edit.from then
+    -- a copy of a built-in recipe keeps what it makes while its grid is the same
+    r = { grid = {} }
+    for cell, key in pairs(edit.from.grid) do r.grid[cell] = key end
+    if edit.from.output then
+      r.output = {}
+      for k, v in pairs(edit.from.output) do r.output[k] = v end
+    end
+  end
+  r = r or { grid = {} }
   local auto = nil
   if name == "" then
     name = r.name or ("Recipe " .. (#recipes + 1))
@@ -791,8 +861,9 @@ local function saveRecipe()
     recipes[#recipes + 1] = r
     edit.index = #recipes
   end
+  edit.from = nil
+  selectedRecipe = r
   saveRecipes()
-  selectedRecipe = edit.index
   updateRecipes()
   updateEditor()
   status("Saved " .. name .. (r.output and "." or "; it learns what it makes the first time it is crafted."))
@@ -801,12 +872,14 @@ end
 
 local function deleteRecipe()
   local i = edit.index
-  if not i or not recipes[i] then return status("Nothing saved to delete.") end
+  if not i or not recipes[i] then
+    return status(edit.from and "Built-in recipes cannot be deleted." or "Nothing saved to delete.")
+  end
   guidialog.confirm(root, "Delete", "Delete the recipe " .. recipes[i].name .. "?", function()
-    table.remove(recipes, i)
+    local gone = table.remove(recipes, i)
+    -- a built-in recipe of the same name comes back
+    if selectedRecipe == gone then selectedRecipe = nil end
     saveRecipes()
-    if selectedRecipe == i then selectedRecipe = nil
-    elseif selectedRecipe and selectedRecipe > i then selectedRecipe = selectedRecipe - 1 end
     editRecipe(nil)
     updateRecipes()
     status("Deleted.")
@@ -846,9 +919,9 @@ local function chestOptions()
   return opts
 end
 
-local helpText = "commands: get <item> [n|stack|all], deposit, find <text>, refresh, sort [stop], craft <recipe> [n|max], craft stop, recipes, auto <s>, input <chest>, output <chest>, craftchest <chest>, remotes, unremote <id>, list, quit"
+local helpText = "commands: get <item> [n|stack|all], deposit, find <text>, refresh, sort [stop], craft <recipe> [n|max], craft stop, recipes [all] [text], auto <s>, input <chest>, output <chest>, craftchest <chest>, remotes, unremote <id>, list, quit"
 
-local remoteHelp = "commands: get <item> [n|stack|all], deposit (from your chest), find <text>, refresh, craft <recipe> [n|max], recipes, auto <s>, chest <name>, list, quit"
+local remoteHelp = "commands: get <item> [n|stack|all], deposit (from your chest), find <text>, refresh, craft <recipe> [n|max], recipes [all] [text], auto <s>, chest <name>, list, quit"
 
 local function command(line)
   local w = basepanel.words(line)
@@ -920,14 +993,24 @@ local function command(line)
       count = last == "max" and "max" or tonumber(last)
       nameEnd = #w - 1
     end
-    local r, i = crafting.findRecipe(recipes, table.concat(w, " ", 2, nameEnd))
-    if not r then return i end
-    selectedRecipe = i
+    local r, why = crafting.findRecipe(book, table.concat(w, " ", 2, nameEnd))
+    if not r then return why end
+    selectedRecipe = r
     return startCraft(r, count)
   elseif cmd == "recipes" then
-    if #recipes == 0 then return "no recipes yet" end
+    -- the saved ones and those storage has the items for, or with
+    -- "all" every one; any other words narrow it by name
+    local all = (w[2] or ""):lower() == "all"
+    local q = table.concat(w, " ", all and 3 or 2):lower()
     local out = {}
-    for _, r in ipairs(recipes) do out[#out + 1] = r.name .. " (can make " .. canText(r) .. ")" end
+    local items = store:index()
+    for _, r in ipairs(book) do
+      if q == "" or r.name:lower():find(q, 1, true) then
+        local n = crafting.maxCrafts(r, items)
+        if all or not r.builtin or n > 0 then out[#out + 1] = r.name .. " (can make " .. canText(r, n) .. ")" end
+      end
+    end
+    if #out == 0 then return all and "no recipes match" or "nothing to make; recipes all lists every recipe" end
     return table.concat(out, ", ")
   elseif cmd == "auto" then
     local n = tonumber(w[2])
@@ -963,6 +1046,20 @@ end
 --[[
 Building the screen
 --]]
+
+local function setRecipeSearch(text)
+  recipeQuery = text or ""
+  ids.recipeSearch:setText(recipeQuery)
+  updateRecipes()
+end
+
+local function recipeHint(text)
+  local q, n = (text or ""):lower(), 0
+  for _, r in ipairs(book) do
+    if r.name:lower():find(q, 1, true) then n = n + 1 end
+  end
+  return n == 1 and "1 recipe matches" or (n .. " recipes match")
+end
 
 local compact = disp.compact
 local amountButtons = {}
@@ -1004,31 +1101,44 @@ local itemsTab = {
 local craftTab = {
   type = "box", title = "Craft", dir = "vertical", gap = 0, children = {
     { type = "text", id = "crafter", text = "", h = 1, fgRole = "muted" },
-    { type = "table", id = "recipes", flex = 1, striped = true, emptyText = "No recipes yet.",
+    { type = "box", dir = "horizontal", gap = 1, h = 1, children = {
+      { type = "text", text = "Find:", w = 5, fgRole = "muted" },
+      { type = "input", id = "recipeSearch", text = "", border = false, flex = 1, h = 1, bgRole = "surface",
+        keyboardTitle = "Find a recipe", keyboardHint = recipeHint,
+        onDone = function() recipeQuery = ids.recipeSearch:getText(); updateRecipes() end },
+      { type = "button", text = "x", w = 3, onPress = function() setRecipeSearch("") end },
+      { type = "button", id = "recipeFilter", text = "Can make", w = 10, onPress = function()
+          config.recipeFilter = config.recipeFilter == "all" and "can" or "all"
+          saveConfig(config)
+          updateRecipes()
+        end },
+    } },
+    { type = "table", id = "recipes", flex = 1, striped = true, emptyText = "",
       columns = { { title = "Recipe", flex = 1 }, { title = "Makes", width = 6, align = "right" },
                   { title = "Can", width = 6, align = "right" } },
       onSelect = function(e)
-        selectedRecipe = e.row.index
+        selectedRecipe = e.row.recipe
         updateRecipes()
       end },
     { type = "text", id = "recipePicked", text = "", h = 1, fgRole = "muted" },
     { type = "grid", rows = 1, columns = 4, gap = 1, h = 1, children = {
-      { type = "button", text = "1", onPress = function() status(startCraft(recipes[selectedRecipe or 0], 1)) end },
-      { type = "button", text = "16", onPress = function() status(startCraft(recipes[selectedRecipe or 0], 16)) end },
-      { type = "button", text = "64", onPress = function() status(startCraft(recipes[selectedRecipe or 0], 64)) end },
-      { type = "button", text = "Max", onPress = function() status(startCraft(recipes[selectedRecipe or 0], "max")) end },
+      { type = "button", text = "1", onPress = function() status(startCraft(selectedRecipe, 1)) end },
+      { type = "button", text = "16", onPress = function() status(startCraft(selectedRecipe, 16)) end },
+      { type = "button", text = "64", onPress = function() status(startCraft(selectedRecipe, 64)) end },
+      { type = "button", text = "Max", onPress = function() status(startCraft(selectedRecipe, "max")) end },
     } },
     { type = "box", dir = "horizontal", gap = 1, h = 1, children = {
       { type = "input", id = "craftAmount", text = "", border = false, w = compact and 4 or 6, h = 1, bgRole = "surface",
         keyboardTitle = "How many to make?" },
       { type = "button", text = "Craft", w = 7, onPress = function()
-          status(startCraft(recipes[selectedRecipe or 0], ids.craftAmount:getText()))
+          status(startCraft(selectedRecipe, ids.craftAmount:getText()))
         end },
       { type = "button", text = "Edit", flex = 1, onPress = function()
           if remote then return status("Recipes are made and edited at the base storage.") end
           if not selectedRecipe then return status("Touch a recipe first.") end
           editRecipe(selectedRecipe)
           ids.tabs:select(RecipeTab)
+          if edit.from then status("Saving makes a copy that replaces the built-in " .. edit.from.name .. ".") end
         end },
       { type = "button", id = "craftStop", text = "New", flex = 1, onPress = function()
           if craftJob then return status(stopCraft()) end

@@ -202,7 +202,8 @@ Each of these has its own page under `docs/`:
   alerts and start jobs from the shell.
 - [Base automation](docs/base-automation.md): `storage` runs a chest
   network with search (an on-screen keyboard on a monitor), withdraw,
-  deposit, sorting, crafting saved recipes with a crafty turtle
+  deposit, sorting, crafting (built-in recipes for planks, tools,
+  armour and the like, plus your own) with a crafty turtle
   running `crafter`, and `storage remote` on a pocket computer, which
   delivers to each player's own ender chest; `doors` drives lights and
   doors on schedules and sensors; `machines` watches energy, tanks and

@@ -7,8 +7,11 @@ name#nbt), with a name and, once it has been crafted, what it makes:
   { name = "Stick", grid = { [2] = "minecraft:oak_planks", [5] = "minecraft:oak_planks" },
     output = { name = "minecraft:stick", count = 4, displayName = "Stick", maxCount = 64 } }
 
-Cells are numbered 1 to 9 row by row, as on a crafting table. The
-recipes are kept in /recipes.cfg. The storage computer works out what
+Cells are numbered 1 to 9 row by row, as on a crafting table. A cell
+can also hold a tag such as "#planks", for a recipe that takes any of
+several items (the tags are in apis/recipebook.lua, which also has the
+built-in recipes): resolve picks the one storage has most of for each
+batch. The recipes made on the panel are kept in /recipes.cfg. The storage computer works out what
 a number of crafts needs (needs, maxCrafts, batchSize) and moves the
 ingredients into the crafting chest, one cell to a chest slot: slot 1
 holds what goes in cell 1 and so on, each slot holding one item per
@@ -68,6 +71,56 @@ function saveRecipes(recipes, path)
   return true
 end
 
+-- Is a grid key a tag ("#planks") rather than an item?
+function isTag(key)
+  return type(key) == "string" and key:sub(1, 1) == "#"
+end
+
+-- The items a tag stands for (an item stands for itself).
+function members(key)
+  if not isTag(key) then return { key } end
+  local tags = recipebook and recipebook.Tags or {}
+  return tags[key:sub(2)] or {}
+end
+
+-- How many of a key storage has, and which item that is: for a tag,
+-- the member it has most of (the first member when it has none).
+-- items is the storage index (key -> { count }).
+function stock(key, items)
+  local best, bestCount = nil, -1
+  for _, name in ipairs(members(key)) do
+    local n = items[name] and items[name].count or 0
+    if n > bestCount then best, bestCount = name, n end
+  end
+  return math.max(0, bestCount), best
+end
+
+-- The recipe with each tag replaced by the item storage has most of,
+-- so one batch uses one kind of planks and so on. The same table when
+-- it has no tags.
+function resolve(recipe, items)
+  local grid, changed = {}, false
+  local picked = {}
+  for cell = 1, 9 do
+    local key = recipe.grid[cell]
+    if isTag(key) then
+      if picked[key] == nil then
+        local _, item = stock(key, items)
+        picked[key] = item or false
+      end
+      grid[cell] = picked[key] or nil
+      changed = true
+    else
+      grid[cell] = key
+    end
+  end
+  if not changed then return recipe end
+  local out = {}
+  for k, v in pairs(recipe) do out[k] = v end
+  out.grid = grid
+  return out
+end
+
 -- The cells a recipe uses, in order.
 function cells(recipe)
   local out = {}
@@ -93,7 +146,7 @@ end
 function maxCrafts(recipe, items)
   local best, short = nil, nil
   for key, per in pairs(needs(recipe)) do
-    local have = items[key] and items[key].count or 0
+    local have = stock(key, items)
     local n = math.floor(have / per)
     if not best or n < best then best, short = n, key end
   end
