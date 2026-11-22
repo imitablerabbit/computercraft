@@ -37,11 +37,12 @@ local function tabs()
   return multishell ~= nil and shell.openTab ~= nil
 end
 
--- Wait for a key, a click or a touch.
+-- Wait for a key or a click (not a monitor touch, which is meant for
+-- whatever program is on that monitor).
 local function waitForAny()
   while true do
     local e = os.pullEvent()
-    if e == "key" or e == "char" or e == "mouse_click" or e == "monitor_touch" then return end
+    if e == "key" or e == "char" or e == "mouse_click" then return end
   end
 end
 

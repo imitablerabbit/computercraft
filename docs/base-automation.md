@@ -9,7 +9,10 @@ the computer's own screen with `term` (an advanced computer or pocket
 computer, used with the mouse). With the panel on a monitor, the
 computer's own screen logs what happens and has a prompt for commands
 (`help` lists them, `quit` stops the program). On the own screen, a
-line pasted with Ctrl+V runs as a command. Settings are kept in a file
+line pasted with Ctrl+V runs as a command. Only one panel can use a
+monitor at a time: started again in another multishell tab (from the
+desktop, say), a panel takes the next free monitor, or says which
+program has the monitor it was given. Settings are kept in a file
 in the computer's root (`/storage.cfg`, `/doors.cfg`, `/machines.cfg`,
 `/lift.cfg`), which is written with defaults the first time and can be
 changed from the panel or with commands. What they do is published on
