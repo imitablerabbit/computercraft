@@ -26,21 +26,60 @@ local logWin, promptWin, reading
 local mode = "term"
 local recent = {}
 
+-- The monitors panels on this computer are using: name -> { co, name }.
+-- An API is shared by every multishell tab, so this sees the panels in
+-- other tabs too. Two panels on one monitor would both act on every
+-- touch, each on what its own copy of the screen shows.
+local claims = {}
+
+-- Who has a monitor, or nil when it is free. A claim made by this
+-- coroutine (a panel run again after it failed) or by one that has
+-- ended is forgotten.
+local function claimant(side)
+  local c = claims[side]
+  if not c then return nil end
+  if c.co == coroutine.running() or coroutine.status(c.co) == "dead" then
+    claims[side] = nil
+    return nil
+  end
+  return c
+end
+
+local function inUse(side)
+  local c = claimant(side)
+  return "monitor " .. side .. " is already showing " .. (c.name or "another program")
+    .. " in another tab; use that one, or name another monitor"
+end
+
+-- Forget the monitor a panel had (run does this when it ends).
+function release(disp)
+  local c = disp and disp.side and claims[disp.side]
+  if c and c.co == coroutine.running() then claims[disp.side] = nil end
+end
+
 -- Choose where the GUI goes. Returns { term, side, monitor, w, h,
--- compact } or nil and an error.
+-- compact } or nil and an error. A monitor another panel on this
+-- computer is using is not picked.
 function display(arg, minW, minH, scale)
   local mon, side
   if arg == "term" or arg == "screen" then
     mon = nil
   elseif arg and arg ~= "" then
     if not peripheral.hasType(arg, "monitor") then return nil, "no monitor called " .. arg end
+    if claimant(arg) then return nil, inUse(arg) end
     mon, side = peripheral.wrap(arg), arg
   else
-    mon = peripheral.find("monitor", function(name, m) return m.isColor() end)
-    if mon then side = peripheral.getName(mon) end
+    mon = peripheral.find("monitor", function(name, m) return m.isColor() and not claimant(name) end)
+    if mon then
+      side = peripheral.getName(mon)
+    else
+      local taken = peripheral.find("monitor", function(name, m) return m.isColor() end)
+      if taken then return nil, inUse(peripheral.getName(taken)) end
+    end
   end
   if mon then
     if not mon.isColor() then return nil, "an advanced monitor is needed for touch" end
+    claims[side] = { co = coroutine.running() }
     local fit = guitheme.fit(mon, minW or 30, minH or 12, scale)
     return { term = mon, side = side, monitor = true, w = fit.w, h = fit.h, compact = fit.compact }
   end
@@ -107,6 +146,7 @@ end
 -- the own screen). Returns when the GUI is closed or a loop ends.
 function run(opts)
   local disp = opts.display
+  if disp.side and claims[disp.side] then claims[disp.side].name = opts.name end
   local fns = { function() opts.app:start() end }
   for _, f in ipairs(opts.loops or {}) do fns[#fns + 1] = f end
   local function runCommand(line)
@@ -118,9 +158,9 @@ function run(opts)
       if opts.onStatus then opts.onStatus(msg) end
     end
   end
+  local native = term.current()
   if disp.monitor then
     mode = "monitor"
-    local native = term.current()
     local w, h = native.getSize()
     native.clear()
     logWin = window.create(native, 1, 1, w, math.max(1, h - 1))
@@ -152,9 +192,11 @@ function run(opts)
       end
     end)
   end
-  parallel.waitForAny(table.unpack(fns))
+  local ok, err = pcall(parallel.waitForAny, table.unpack(fns))
+  release(disp)
   if disp.monitor then
-    term.redirect(term.native())
+    -- back to this tab's screen (term.native() is the whole computer's)
+    term.redirect(native)
     disp.term.setBackgroundColor(colors.black)
     disp.term.clear()
   end
@@ -163,6 +205,7 @@ function run(opts)
   term.clear()
   term.setCursorPos(1, 1)
   mode, logWin, promptWin = "term", nil, nil
+  if not ok then error(err, 0) end
 end
 
 -- Open rednet on every modem, wired and wireless, so bus messages

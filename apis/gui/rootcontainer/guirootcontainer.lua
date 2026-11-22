@@ -15,7 +15,10 @@ setmetatable(GUIRootContainer, {__index = guicomponent.GUIComponent})
 -- t is the terminal to draw on (default: the current one). When the
 -- root is drawn on a monitor, pass the monitor's peripheral name as
 -- side so that only touches on that monitor are delivered and mouse
--- clicks on the computer's own screen are ignored.
+-- clicks on the computer's own screen are ignored. A root without a
+-- side is on the computer's own screen and ignores every monitor
+-- touch: multishell gives those to every tab, so a menu in one tab
+-- would otherwise be pressed by touches on another program's monitor.
 function GUIRootContainer.new(t, side)
     local object = guicomponent.GUIComponent.new(t)
     object.ui = guirootcontainerui.GUIRootContainerUI.new(object)
@@ -49,7 +52,7 @@ function GUIRootContainer:treeInit(parent)
 end
 
 function GUIRootContainer:triggerMonitorTouchEvent(e)
-    if self.monitorSide and e.side ~= self.monitorSide then return end
+    if e.side ~= self.monitorSide then return end
     local captured = guicomponent.getCapture(self)
     if captured then return captured:triggerMonitorTouchEvent(e) end
     guicomponent.GUIComponent.triggerMonitorTouchEvent(self, e)

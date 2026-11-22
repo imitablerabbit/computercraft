@@ -39,6 +39,12 @@ Meters and lists:
   programs in different multishell tabs, which share these APIs, never
   take each other's clicks. guicomponent.getCapture(c) and
   setCapture(c, within) find the screen from the component given.
+- Multishell gives monitor touches to every tab, so a root takes only
+  the touches of the monitor named as its side and ignores mouse
+  clicks. A root with no side is on the computer's own screen and takes
+  mouse clicks only. Pass the monitor's name as side
+  (GUIRootContainer.new(monitor, side), or side in a guibuild root)
+  for every GUI drawn on a monitor.
 - GUIKeyboard: an on-screen keyboard for touch monitors, opened over the
   whole screen like a dialog: the text being typed, an optional hint line
   (hint(text) is asked after every key), digits, letters, `_ : . -`, and
